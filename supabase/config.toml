@@ -1,1 +1,7 @@
 project_id = "fxfljmqpckujerawkwhq"
+
+[functions.twilio-voice-webhook]
+verify_jwt = false
+
+[functions.elevenlabs-postcall]
+verify_jwt = false

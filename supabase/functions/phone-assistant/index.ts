@@ -1,0 +1,168 @@
+// Manage the org's phone assistant: load/save settings, create/update the
+// ElevenLabs Conversational AI agent. Requires Premium tier.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
+const PREMIUM_PRICE_ID = "pri_01k68g8bjm87h6jydj0bzaeyy3"; // Premium $269 - keep in sync with src/lib/tiers.ts
+
+type SettingsBody = {
+  organization_id: string;
+  enabled?: boolean;
+  voice_id?: string;
+  greeting?: string;
+  transfer_number?: string | null;
+  capabilities?: Record<string, boolean>;
+};
+
+function buildSystemPrompt(orgName: string, greeting: string, capabilities: Record<string, boolean>, transfer: string | null) {
+  const caps: string[] = [];
+  if (capabilities.book_estimates) caps.push("schedule estimate appointments");
+  if (capabilities.capture_leads) caps.push("capture new lead details (name, address, phone, project scope)");
+  if (capabilities.transfer && transfer) caps.push(`transfer the caller to a teammate at ${transfer}`);
+  if (capabilities.voicemail) caps.push("take a detailed voicemail message");
+  if (capabilities.sms_followup) caps.push("offer to send an SMS follow-up");
+  if (capabilities.faq) caps.push("answer common questions about services, areas served, and pricing ranges");
+  return [
+    `You are the friendly virtual receptionist for ${orgName}, a contracting business.`,
+    `Greeting: "${greeting}"`,
+    `Your goals, in order: ${caps.join("; ")}.`,
+    `Always speak naturally, keep replies short, and confirm details by repeating them back.`,
+    `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window.`,
+    `Never invent prices. If unsure, offer to have someone follow up.`,
+    transfer ? `If they ask for a human, offer to transfer to ${transfer}.` : `If they ask for a human, take a message.`,
+  ].join("\n");
+}
+
+async function upsertAgent(opts: {
+  agentId: string | null;
+  name: string;
+  prompt: string;
+  greeting: string;
+  voiceId: string;
+}): Promise<string> {
+  const body = {
+    name: opts.name,
+    conversation_config: {
+      agent: {
+        first_message: opts.greeting,
+        language: "en",
+        prompt: { prompt: opts.prompt },
+      },
+      tts: { voice_id: opts.voiceId },
+    },
+  };
+  const url = opts.agentId
+    ? `https://api.elevenlabs.io/v1/convai/agents/${opts.agentId}`
+    : `https://api.elevenlabs.io/v1/convai/agents/create`;
+  const method = opts.agentId ? "PATCH" : "POST";
+  const res = await fetch(url, {
+    method,
+    headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${text}`);
+  const data = JSON.parse(text);
+  return opts.agentId ?? data.agent_id;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "unauthorized" }, 401);
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await userClient.auth.getUser();
+    const user = userData?.user;
+    if (!user) return json({ error: "unauthorized" }, 401);
+
+    const body = (await req.json()) as SettingsBody;
+    const orgId = body.organization_id;
+    if (!orgId) return json({ error: "organization_id required" }, 400);
+
+    // Org admin check
+    const { data: member } = await admin
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", orgId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!member || !["owner", "admin"].includes(member.role)) {
+      return json({ error: "forbidden: org admin required" }, 403);
+    }
+
+    // Premium subscription check
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("price_id, status, current_period_end")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const active = sub && (["active", "trialing", "past_due"].includes(sub.status) || sub.status === "canceled") &&
+      (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now());
+    if (!active || sub?.price_id !== PREMIUM_PRICE_ID) {
+      return json({ error: "Premium subscription required" }, 402);
+    }
+
+    const { data: org } = await admin.from("organizations").select("name").eq("id", orgId).single();
+
+    const { data: existing } = await admin
+      .from("phone_assistants")
+      .select("*")
+      .eq("organization_id", orgId)
+      .maybeSingle();
+
+    const merged = {
+      enabled: body.enabled ?? existing?.enabled ?? true,
+      voice_id: body.voice_id ?? existing?.voice_id ?? "EXAVITQu4vr4xnSDxMaL",
+      greeting: body.greeting ?? existing?.greeting ?? "",
+      transfer_number: body.transfer_number ?? existing?.transfer_number ?? null,
+      capabilities: body.capabilities ?? existing?.capabilities ?? {},
+    };
+
+    const prompt = buildSystemPrompt(org?.name ?? "the business", merged.greeting, merged.capabilities, merged.transfer_number);
+    const agentId = await upsertAgent({
+      agentId: existing?.elevenlabs_agent_id ?? null,
+      name: `${org?.name ?? "Contractor"} Receptionist`,
+      prompt,
+      greeting: merged.greeting,
+      voiceId: merged.voice_id,
+    });
+
+    const { data: saved, error } = await admin
+      .from("phone_assistants")
+      .upsert(
+        { organization_id: orgId, ...merged, elevenlabs_agent_id: agentId },
+        { onConflict: "organization_id" },
+      )
+      .select()
+      .single();
+    if (error) throw error;
+
+    return json({ assistant: saved });
+  } catch (e) {
+    console.error("phone-assistant error", e);
+    return json({ error: (e as Error).message }, 500);
+  }
+});
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
