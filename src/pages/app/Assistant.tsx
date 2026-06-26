@@ -143,7 +143,7 @@ export default function Assistant() {
           customer_id: cust.id,
           title: p.args.title,
           notes: p.args.notes ?? null,
-          subtotal, tax_rate, tax, total,
+          subtotal, tax, total,
           status: "draft",
         }).select("id").single();
         if (error) throw error;

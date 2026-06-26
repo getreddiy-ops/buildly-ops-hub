@@ -1,7 +1,6 @@
 import { StubPage } from "@/components/StubPage";
-import { Users, DollarSign, Bot, MessageSquare, Settings, User, Building2, ShieldAlert } from "lucide-react";
+import { Users, DollarSign, MessageSquare, Settings, User, Building2, ShieldAlert } from "lucide-react";
 
-export const Assistant = () => <StubPage title="AI Assistant" description="Draft follow-ups, estimates, and schedules. You approve before anything sends." icon={Bot} emptyTitle="Your assistant is ready" emptyDescription="Coming online — ask it to draft an estimate, summarize a lead, or plan tomorrow's schedule." />;
 export const Messages = () => <StubPage title="Messages" description="Customer conversations in one inbox." icon={MessageSquare} emptyTitle="No conversations yet" emptyDescription="Messages with customers will be threaded here." />;
 export const SettingsPage = () => <StubPage title="Settings" description="Company, billing, integrations." icon={Settings} emptyTitle="Settings — coming soon" emptyDescription="Profile, company, billing, and team invitations will live here." />;
 
