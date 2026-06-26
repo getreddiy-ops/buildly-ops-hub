@@ -37,7 +37,7 @@ export default function Landing() {
           </div>
           <h1 className="text-balance text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
             Run your whole<br />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">contracting business</span>
+            <span className="text-gradient-primary">contracting business</span>
             <br />from one app.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-balance text-lg text-muted-foreground">

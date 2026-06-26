@@ -124,8 +124,15 @@
 }
 
 @layer utilities {
-  .bg-gradient-primary { background: var(--gradient-primary); }
+  .bg-gradient-primary { background-image: var(--gradient-primary); }
   .bg-gradient-dark { background: var(--gradient-dark); }
+  .text-gradient-primary {
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .shadow-card { box-shadow: var(--shadow-card); }
 }
