@@ -17,15 +17,27 @@ type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error
 type Proposal = ToolCall & { status: ProposalStatus; error?: string };
 
 type Msg =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; images?: string[] }
   | { role: "assistant"; content: string; proposals?: Proposal[] };
 
 const SUGGESTIONS = [
   "Add a new lead: Sarah Lee, 555-0142, kitchen remodel referral",
   "Draft a $12,000 estimate for John Doe — demo, framing, drywall",
-  "Schedule the Miller bathroom job for next Monday 8am",
+  "Attach a photo of a wall and ask me to estimate the paint job",
   "Summarize what I should focus on today",
 ];
+
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB per image
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
 
 export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
   const { activeOrg, user } = useAuth();
