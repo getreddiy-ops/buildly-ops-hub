@@ -2,6 +2,7 @@
 // Uses Lovable AI Gateway (OpenAI-compatible).
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
