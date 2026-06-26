@@ -37,6 +37,7 @@ const nav = [
 
   { to: "/app/messages", label: "Messages", icon: MessageSquare },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
+  { to: "/app/developer", label: "Developer", icon: Code2 },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
