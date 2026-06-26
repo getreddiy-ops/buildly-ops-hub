@@ -41,7 +41,7 @@ const faqItems = [
   { q: "Does ContractorOS track crew time?", a: "Yes. Crews clock in on-site with GPS verification. Managers approve hours before they flow to payroll and job costing." },
   { q: "Is ContractorOS built for concrete contractors?", a: "Yes. ContractorOS is built for concrete contractors and other trade-based businesses. There’s a dedicated concrete page with use cases and an AI estimator tuned for driveways, patios, and slabs." },
   { q: "Can I use ContractorOS for fencing, roofing, siding, decks, or landscaping?", a: "Yes. ContractorOS supports fencing, roofing, siding, deck builders, landscapers, framers, and general contractors. Each trade has a dedicated landing page and workflow." },
-  { q: "Does ContractorOS have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking — create leads, draft estimates, schedule jobs, and send invoices." },
+  { q: "Does ContractorOS have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking. Tell it to create a lead, fill out a form, draft an estimate, schedule a job, or send an invoice — it does the work and asks you to confirm before writing anything." },
 ];
 
 const softwareSchema = {
@@ -67,7 +67,7 @@ export default function Landing() {
     <MarketingShell>
       <SEO
         title="ContractorOS | AI Contractor Estimating, CRM, Invoices & Job Management"
-        description="ContractorOS helps contractors answer calls, capture leads, create AI-assisted estimates from photos, manage jobs, send invoices, track crew time, and run their business from one simple app."
+        description="ContractorOS helps contractors answer calls, capture leads, create AI-assisted estimates from photos and voice, manage jobs, send invoices, track crew time, and run their business from one simple app."
         path="/"
         jsonLd={softwareSchema}
       />
