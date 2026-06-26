@@ -50,7 +50,7 @@ const softwareSchema = {
   name: "ContractorOS",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android",
-  description: "ContractorOS is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat."
+  description: "ContractorOS is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "GetReddiy" },
   url: "https://contractoros.online/",
