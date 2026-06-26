@@ -300,7 +300,21 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
                 ) : (
-                  m.content
+                  <div className="space-y-2">
+                    {m.images && m.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {m.images.map((src, idx) => (
+                          <img
+                            key={idx}
+                            src={src}
+                            alt={`attachment ${idx + 1}`}
+                            className="h-24 w-24 rounded-md object-cover border border-primary-foreground/20"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {m.content && <div className="whitespace-pre-wrap">{m.content}</div>}
+                  </div>
                 )}
               </div>
               {m.role === "assistant" && m.content && (
