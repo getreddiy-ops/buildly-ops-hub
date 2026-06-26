@@ -37,7 +37,6 @@ interface InviteRow {
   email: string;
   role: AppRole;
   status: string;
-  token: string;
   created_at: string;
 }
 
