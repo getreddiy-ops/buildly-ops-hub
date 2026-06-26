@@ -25,16 +25,17 @@ Deno.serve(async (req) => {
 
     // Update an in_progress row if present (matched by from/to), else insert
     const fromNumber = meta.phone_call?.external_number ?? null;
+    const transcript = data.transcript ?? null;
     let updatedRow: { id: string } | null = null;
     if (fromNumber) {
-      const { data } = await admin
+      const { data: upd } = await admin
         .from("phone_calls")
         .update({
           ended_at: endedAt,
           duration_seconds: duration,
           status: "completed",
           summary,
-          transcript: data?.transcript ?? null,
+          transcript,
           elevenlabs_conversation_id: conversationId,
         })
         .eq("organization_id", assistant.organization_id)
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .select("id")
         .maybeSingle();
-      updatedRow = data;
+      updatedRow = upd;
     }
     if (!updatedRow) {
       await admin.from("phone_calls").insert({
