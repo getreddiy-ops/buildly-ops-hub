@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Bot, Check, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useVoiceRecorder, useVoiceSpeaker } from "@/hooks/useVoice";
 import { toast } from "sonner";
+
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
@@ -32,6 +34,12 @@ export default function Assistant() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const { speak, stop: stopSpeak, speakingId, loadingId: speakLoadingId } = useVoiceSpeaker();
+  const { recording, transcribing, start: startRec, stop: stopRec } = useVoiceRecorder((text) => {
+    setInput((cur) => (cur ? `${cur} ${text}` : text));
+    setTimeout(() => inputRef.current?.focus(), 0);
+  });
+
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -242,6 +250,22 @@ export default function Assistant() {
                   m.content
                 )}
               </div>
+              {m.role === "assistant" && m.content && (
+                <button
+                  type="button"
+                  onClick={() => (speakingId === `m${i}` ? stopSpeak() : speak(`m${i}`, m.content))}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {speakLoadingId === `m${i}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : speakingId === `m${i}` ? (
+                    <VolumeX className="h-3.5 w-3.5" />
+                  ) : (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  )}
+                  {speakingId === `m${i}` ? "Stop" : "Listen"}
+                </button>
+              )}
               {m.role === "assistant" && m.proposals?.map((p) => (
                 <ProposalCard
                   key={p.id}
@@ -251,6 +275,7 @@ export default function Assistant() {
                 />
               ))}
             </div>
+
           </div>
         ))}
 
@@ -277,15 +302,26 @@ export default function Assistant() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
-          placeholder="Ask the assistant…"
+          placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask the assistant…"}
           rows={2}
           className="resize-none"
-          disabled={loading}
+          disabled={loading || recording || transcribing}
         />
-        <Button type="submit" disabled={loading || !input.trim()} size="lg">
+        <Button
+          type="button"
+          size="lg"
+          variant={recording ? "destructive" : "outline"}
+          onClick={() => (recording ? stopRec() : startRec())}
+          disabled={loading || transcribing}
+          title={recording ? "Stop recording" : "Voice input"}
+        >
+          {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
+        <Button type="submit" disabled={loading || !input.trim() || recording || transcribing} size="lg">
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
     </div>
   );
 }
