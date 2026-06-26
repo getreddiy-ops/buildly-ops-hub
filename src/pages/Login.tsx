@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { SEO } from "@/components/SEO";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-dark">
+      <SEO title="Sign in — Contractor OS" description="Sign in to your Contractor OS account to manage leads, jobs, crew, and time tracking." path="/login" noindex />
       <header className="mx-auto max-w-7xl px-4 py-5"><Logo /></header>
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
