@@ -536,6 +536,121 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_assistants: {
+        Row: {
+          capabilities: Json
+          created_at: string
+          elevenlabs_agent_id: string | null
+          elevenlabs_phone_id: string | null
+          enabled: boolean
+          greeting: string
+          id: string
+          organization_id: string
+          transfer_number: string | null
+          twilio_phone_number: string | null
+          twilio_phone_sid: string | null
+          updated_at: string
+          voice_id: string
+        }
+        Insert: {
+          capabilities?: Json
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          elevenlabs_phone_id?: string | null
+          enabled?: boolean
+          greeting?: string
+          id?: string
+          organization_id: string
+          transfer_number?: string | null
+          twilio_phone_number?: string | null
+          twilio_phone_sid?: string | null
+          updated_at?: string
+          voice_id?: string
+        }
+        Update: {
+          capabilities?: Json
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          elevenlabs_phone_id?: string | null
+          enabled?: boolean
+          greeting?: string
+          id?: string
+          organization_id?: string
+          transfer_number?: string | null
+          twilio_phone_number?: string | null
+          twilio_phone_sid?: string | null
+          updated_at?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_assistants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_calls: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          elevenlabs_conversation_id: string | null
+          ended_at: string | null
+          from_number: string | null
+          id: string
+          organization_id: string
+          outcome: string | null
+          recording_url: string | null
+          started_at: string
+          status: string
+          summary: string | null
+          to_number: string | null
+          transcript: Json | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          elevenlabs_conversation_id?: string | null
+          ended_at?: string | null
+          from_number?: string | null
+          id?: string
+          organization_id: string
+          outcome?: string | null
+          recording_url?: string | null
+          started_at?: string
+          status?: string
+          summary?: string | null
+          to_number?: string | null
+          transcript?: Json | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          elevenlabs_conversation_id?: string | null
+          ended_at?: string | null
+          from_number?: string | null
+          id?: string
+          organization_id?: string
+          outcome?: string | null
+          recording_url?: string | null
+          started_at?: string
+          status?: string
+          summary?: string | null
+          to_number?: string | null
+          transcript?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
