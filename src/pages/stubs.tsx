@@ -1,9 +1,6 @@
 import { StubPage } from "@/components/StubPage";
-import { Users, FileText, Briefcase, HardHat, Clock, CheckSquare, DollarSign, Bot, MessageSquare, Settings, MapPin, User, Building2, ShieldAlert } from "lucide-react";
+import { Users, DollarSign, Bot, MessageSquare, Settings, User, Building2, ShieldAlert } from "lucide-react";
 
-export const TimeTracking = () => <StubPage title="Time Tracking" description="GPS-verified clock in / clock out." icon={Clock} emptyTitle="No time entries this week" emptyDescription="Crew time entries from the field app will show up here." />;
-export const Approvals = () => <StubPage title="Approvals" description="Review and approve crew hours before payroll." icon={CheckSquare} emptyTitle="Nothing waiting for approval" emptyDescription="Pending time entries from your crew will appear here." />;
-export const Costing = () => <StubPage title="Job Costing" description="Labor + materials + margin per job." icon={DollarSign} emptyTitle="No job cost data yet" emptyDescription="Job costing fills in as approved hours and expenses roll in." />;
 export const Assistant = () => <StubPage title="AI Assistant" description="Draft follow-ups, estimates, and schedules. You approve before anything sends." icon={Bot} emptyTitle="Your assistant is ready" emptyDescription="Coming online — ask it to draft an estimate, summarize a lead, or plan tomorrow's schedule." />;
 export const Messages = () => <StubPage title="Messages" description="Customer conversations in one inbox." icon={MessageSquare} emptyTitle="No conversations yet" emptyDescription="Messages with customers will be threaded here." />;
 export const SettingsPage = () => <StubPage title="Settings" description="Company, billing, integrations." icon={Settings} emptyTitle="Settings — coming soon" emptyDescription="Profile, company, billing, and team invitations will live here." />;
