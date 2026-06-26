@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileText, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
