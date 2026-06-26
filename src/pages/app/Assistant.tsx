@@ -358,10 +358,39 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         )}
       </div>
 
+      {pendingImages.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {pendingImages.map((src, idx) => (
+            <div key={idx} className="relative">
+              <img src={src} alt={`pending ${idx + 1}`} className="h-16 w-16 rounded-md object-cover border border-border" />
+              <button
+                type="button"
+                aria-label="Remove image"
+                onClick={() => setPendingImages((prev) => prev.filter((_, i) => i !== idx))}
+                className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-destructive text-destructive-foreground shadow"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <form
         onSubmit={(e) => { e.preventDefault(); send(); }}
-        className="mt-4 flex gap-2 items-end"
+        className="mt-3 flex gap-2 items-end"
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            onPickImages(e.target.files);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
         <Textarea
           ref={inputRef}
           value={input}
@@ -369,11 +398,26 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
-          placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask the assistant…"}
+          placeholder={
+            recording ? "Listening…"
+            : transcribing ? "Transcribing…"
+            : pendingImages.length ? "Describe what to estimate (or leave blank)…"
+            : "Ask the assistant, or attach a photo to estimate from…"
+          }
           rows={2}
           className="resize-none"
           disabled={loading || recording || transcribing}
         />
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading || recording || transcribing || pendingImages.length >= MAX_IMAGES}
+          title="Attach photo for AI to estimate"
+        >
+          <ImagePlus className="h-4 w-4" />
+        </Button>
         <Button
           type="button"
           size="lg"
@@ -384,10 +428,15 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         >
           {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </Button>
-        <Button type="submit" disabled={loading || !input.trim() || recording || transcribing} size="lg">
+        <Button
+          type="submit"
+          disabled={loading || (!input.trim() && pendingImages.length === 0) || recording || transcribing}
+          size="lg"
+        >
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
 
     </div>
   );
