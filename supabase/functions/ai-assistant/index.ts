@@ -1,0 +1,163 @@
+// AI Assistant edge function - confirm-before-write workflow
+// Uses Lovable AI Gateway (OpenAI-compatible).
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+
+type ChatMsg = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_calls?: any; tool_call_id?: string };
+
+const WRITE_TOOLS = new Set(["create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer"]);
+
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "create_lead",
+      description: "Propose creating a new sales lead. Requires user approval before writing.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Contact name" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          source: { type: "string", description: "e.g. referral, website, call" },
+          notes: { type: "string" },
+        },
+        required: ["name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_customer",
+      description: "Propose creating a customer record. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          address: { type: "string" },
+          notes: { type: "string" },
+        },
+        required: ["name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "schedule_job",
+      description: "Propose scheduling a job for a customer. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          customer_name: { type: "string", description: "Existing customer name (matched fuzzy)" },
+          title: { type: "string" },
+          description: { type: "string" },
+          scheduled_start: { type: "string", description: "ISO timestamp" },
+          scheduled_end: { type: "string", description: "ISO timestamp" },
+          address: { type: "string" },
+        },
+        required: ["customer_name", "title"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "draft_estimate_for_customer",
+      description: "Propose drafting an estimate with line items for a customer. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          customer_name: { type: "string" },
+          title: { type: "string" },
+          line_items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                quantity: { type: "number" },
+                unit_price: { type: "number" },
+              },
+              required: ["description", "quantity", "unit_price"],
+              additionalProperties: false,
+            },
+          },
+          tax_rate: { type: "number", description: "Percentage, e.g. 8.5" },
+          notes: { type: "string" },
+        },
+        required: ["customer_name", "title", "line_items"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
+const SYSTEM = `You are the Contractor OS AI Assistant for a contracting business.
+You help the office manage leads, customers, estimates, jobs, and crew.
+When the user asks you to create, schedule, or draft anything that changes data,
+call the appropriate tool. The user MUST approve every proposed write before it is applied —
+never claim a record was created. After proposing actions, briefly explain what you proposed.
+For questions and summaries, answer directly in concise markdown.`;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const { messages, orgName } = await req.json() as { messages: ChatMsg[]; orgName?: string };
+    if (!Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "messages required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const sys = orgName ? `${SYSTEM}\n\nActive organization: ${orgName}.` : SYSTEM;
+    const payload = {
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "system", content: sys }, ...messages],
+      tools,
+      tool_choice: "auto",
+    };
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      const status = res.status === 429 || res.status === 402 ? res.status : 500;
+      return new Response(JSON.stringify({ error: `AI gateway error: ${text}` }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const data = await res.json();
+    const choice = data.choices?.[0]?.message ?? {};
+    const toolCalls = (choice.tool_calls ?? []).map((tc: any) => {
+      let args: any = {};
+      try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch { /* */ }
+      return {
+        id: tc.id,
+        name: tc.function?.name,
+        args,
+        needsApproval: WRITE_TOOLS.has(tc.function?.name),
+      };
+    });
+
+    return new Response(
+      JSON.stringify({ content: choice.content ?? "", tool_calls: toolCalls }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});

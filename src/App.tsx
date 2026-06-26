@@ -31,8 +31,9 @@ import Costing from "./pages/app/Costing";
 import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
+import Assistant from "./pages/app/Assistant";
 import {
-  Assistant, Messages, SettingsPage,
+  Messages, SettingsPage,
   FieldProfile,
   AgentOverview, AgentClients, AgentLeads, AgentPayouts,
   AdminOverview, AdminOrgs, AdminUsers, AdminAudit,
