@@ -44,6 +44,7 @@ export default function Landing() {
         </div>
       </header>
 
+      <main>
       <section className="mx-auto max-w-7xl px-4 pt-16 pb-24 sm:px-6 lg:px-8 lg:pt-28">
         <div className="mx-auto max-w-3xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
@@ -98,6 +99,7 @@ export default function Landing() {
           </Button>
         </div>
       </section>
+      </main>
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8">

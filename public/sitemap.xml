@@ -4,6 +4,8 @@
   <url><loc>https://contractoros.online/pricing</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://contractoros.online/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://contractoros.online/features/contractor-crm</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://contractoros.online/login</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://contractoros.online/signup</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
   <url><loc>https://contractoros.online/legal/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://contractoros.online/legal/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://contractoros.online/legal/refunds</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>

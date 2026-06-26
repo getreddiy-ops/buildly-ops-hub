@@ -153,7 +153,7 @@ export default function Branding() {
                 {branding?.logo_signed_url ? (
                   <img
                     src={branding.logo_signed_url}
-                    alt="Logo"
+                    alt="Organization logo"
                     className="max-h-16 max-w-16 object-contain"
                   />
                 ) : (
