@@ -36,8 +36,8 @@ const PLANS: PlanDef[] = [
     features: [
       "Everything in Contractor OS",
       "AI admin assistant",
-      "Draft estimates & schedule jobs by chat",
-      "Voice-to-text dictation",
+      "Voice-to-form: talk and it fills fields & estimates",
+      "Draft estimates & schedule jobs by chat or voice",
       "Confirm-before-write safety",
     ],
   },
