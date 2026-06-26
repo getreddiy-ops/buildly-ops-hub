@@ -18,6 +18,16 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Office portal is for owners/admins only. Workers are redirected to /field. */
+export function RequireOfficeRole({ children }: { children: ReactNode }) {
+  const { activeOrg, loading, isPlatformAdmin } = useAuth();
+  if (loading) return <FullPageSpinner />;
+  if (isPlatformAdmin) return <>{children}</>;
+  const role = activeOrg?.role;
+  if (role !== "owner" && role !== "admin") return <Navigate to="/field" replace />;
+  return <>{children}</>;
+}
+
 export function RequireRole({
   children,
   roles,
