@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "app.lovable.1d49f4768db34f42923a396122508a13",
+  appId: "app.lovable.buildlyopshub",
   appName: "buildly-ops-hub",
   webDir: "dist",
   server: {
