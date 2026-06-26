@@ -28,6 +28,7 @@ export default function EstimateSoftware() {
 
       <FAQ
         items={[
+          { q: "Can I build an estimate by talking?", a: "Yes. On the Plus and Premium plans, you can dictate the scope by voice and the AI fills out the estimate form, line items, and pricing. You review and approve before sending." },
           { q: "Can I save unit pricing and assemblies?", a: "Yes. Save your materials, labor rates, and pre-built assemblies so estimates draft in seconds." },
           { q: "Does it handle change orders?", a: "Yes. Change orders flow into the live estimate and onto the final invoice automatically." },
           { q: "Do customers e-sign estimates?", a: "Yes. Send a branded proposal with an e-signature link. Signed estimates convert to jobs in one click." },
