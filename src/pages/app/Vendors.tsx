@@ -119,7 +119,23 @@ export default function Vendors() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New vendor</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>{editing ? "Edit vendor" : "New vendor"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit vendor" : "New vendor"}</DialogTitle>
+                  <AiFormHelper
+                    formName="vendor"
+                    fields={[
+                      { name: "name", description: "Vendor / supplier name" },
+                      { name: "contact_name" },
+                      { name: "email", type: "email" },
+                      { name: "phone", type: "phone" },
+                      { name: "address" },
+                      { name: "notes" },
+                    ]}
+                    onFill={(v) => setForm((f) => ({ ...f, ...v } as typeof f))}
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <Field label="Contact name"><Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} /></Field>
