@@ -203,6 +203,7 @@ export default function AppShell() {
           <Outlet />
         </div>
       </main>
+      <FloatingAssistant />
     </div>
   );
 }
