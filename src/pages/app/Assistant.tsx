@@ -44,8 +44,10 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { speak, stop: stopSpeak, speakingId, loadingId: speakLoadingId } = useVoiceSpeaker();
   const { recording, transcribing, start: startRec, stop: stopRec } = useVoiceRecorder((text) => {
     setInput((cur) => (cur ? `${cur} ${text}` : text));
@@ -60,15 +62,52 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  const onPickImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const slots = MAX_IMAGES - pendingImages.length;
+    if (slots <= 0) {
+      toast.error(`You can attach up to ${MAX_IMAGES} images per message.`);
+      return;
+    }
+    const accepted: File[] = [];
+    for (const f of Array.from(files).slice(0, slots)) {
+      if (!f.type.startsWith("image/")) { toast.error(`${f.name} is not an image.`); continue; }
+      if (f.size > MAX_IMAGE_BYTES) { toast.error(`${f.name} is larger than 8 MB.`); continue; }
+      accepted.push(f);
+    }
+    try {
+      const urls = await Promise.all(accepted.map(fileToDataUrl));
+      setPendingImages((prev) => [...prev, ...urls]);
+    } catch {
+      toast.error("Could not read one of the images.");
+    }
+  };
+
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || loading) return;
+    const images = pendingImages;
+    if ((!content && images.length === 0) || loading) return;
     setInput("");
-    const next: Msg[] = [...messages, { role: "user", content }];
+    setPendingImages([]);
+    const next: Msg[] = [
+      ...messages,
+      { role: "user", content: content || "(image attached)", images: images.length ? images : undefined },
+    ];
     setMessages(next);
     setLoading(true);
     try {
-      const apiMessages = next.map((m) => ({ role: m.role, content: m.content }));
+      const apiMessages = next.map((m) => {
+        if (m.role === "user" && m.images && m.images.length) {
+          return {
+            role: "user" as const,
+            content: [
+              { type: "text" as const, text: m.content },
+              ...m.images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+            ],
+          };
+        }
+        return { role: m.role, content: m.content };
+      });
       const { getPaddleEnvironment } = await import("@/lib/paddle");
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
