@@ -107,7 +107,7 @@ export default function Branding() {
         tax_id: taxId || null,
         brand_color: brandColor || null,
         brand_color_secondary: brandColor2 || null,
-        document_defaults: docs as unknown as Record<string, unknown>,
+        document_defaults: docs as any,
       })
       .eq("id", orgId);
     setSaving(false);

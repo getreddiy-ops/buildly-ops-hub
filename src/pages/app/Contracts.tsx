@@ -126,8 +126,9 @@ export default function Contracts() {
 
   const renderBody = (raw: string, customerName?: string) =>
     (raw ?? "")
-      .replaceAll("{{company}}", branding?.name ?? "Company")
-      .replaceAll("{{customer}}", customerName ?? "Customer");
+      .split("{{company}}").join(branding?.name ?? "Company")
+      .split("{{customer}}").join(customerName ?? "Customer");
+
 
   return (
     <div>
