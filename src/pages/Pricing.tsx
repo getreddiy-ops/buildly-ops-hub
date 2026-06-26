@@ -108,7 +108,8 @@ export default function Pricing() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your crew.</h1>
-          <p className="mt-3 text-muted-foreground">Monthly billing per company. Cancel anytime.</p>
+          <p className="mt-3 text-muted-foreground">Start with a 7-day free trial on any plan. Monthly billing per company. Cancel anytime.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Card required — you won't be charged until your trial ends.</p>
         </div>
         <h2 className="mb-6 text-center text-xl font-medium tracking-tight">Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
@@ -154,7 +155,7 @@ export default function Pricing() {
                 >
                   {loading ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening checkout…</>
-                  ) : user ? "Subscribe" : "Get started"}
+                  ) : user ? "Start 7-day free trial" : "Start free trial"}
                 </Button>
               </div>
             );

@@ -146,7 +146,7 @@ export default function Billing() {
               const currentIdx = tier ? ORDER.indexOf(tier) : -1;
               const targetIdx = ORDER.indexOf(t);
               const action = !isActive
-                ? "Subscribe"
+                ? "Start 7-day free trial"
                 : isCurrent
                 ? "Current plan"
                 : targetIdx > currentIdx
