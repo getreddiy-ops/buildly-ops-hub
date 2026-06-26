@@ -97,7 +97,7 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Pricing — Contractor OS"
-        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant), Premium $269 (adds AI phone answering). Cancel anytime."
+        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant with voice form filling), Premium $269 (adds AI phone answering). Cancel anytime."
         path="/pricing"
         jsonLd={productLd}
       />
