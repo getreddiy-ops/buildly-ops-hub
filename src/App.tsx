@@ -111,7 +111,7 @@ const App = () => (
             <Route path="/general-contractor-software" element={<TradePage />} />
 
             {/* Main app (office) */}
-            <Route path="/app" element={<RequireAuth><RequireOrg><BrandingProvider><AppShell /></BrandingProvider></RequireOrg></RequireAuth>}>
+            <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
               <Route path="customers" element={<Customers />} />
