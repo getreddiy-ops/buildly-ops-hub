@@ -81,10 +81,11 @@ function buildSystemPrompt(
     `Greeting: "${greeting}"`,
     `Your goals, in order: ${caps.join("; ")}.`,
     `Always speak naturally, keep replies short, and confirm details by repeating them back.`,
-    `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window.`,
-    `Never invent prices. If unsure, offer to have someone follow up.`,
+    `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window. Also confirm the state where the work will be performed so the office can apply the correct licensing, contract, and sales-tax rules.`,
+    `Never invent prices, license numbers, or legal/tax requirements. If unsure, offer to have someone follow up.`,
+    `Do not give legal advice. If a caller asks about cancellation rights, lien notices, warranty, or contract terms, summarize that the written contract will follow the laws of the state where the work is performed and offer to have a teammate confirm specifics.`,
     transfer ? `If they ask for a human, offer to transfer to ${transfer}.` : `If they ask for a human, take a message.`,
-  ].join("\n") + bpBlock;
+  ].join("\n") + bpBlock + jurisdictionPromptBlock(orgAddress, bp?.service_area ?? null);
 }
 
 
