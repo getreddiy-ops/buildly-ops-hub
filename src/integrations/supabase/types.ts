@@ -500,6 +500,7 @@ export type Database = {
       organizations: {
         Row: {
           agent_id: string | null
+          business_profile: Json
           created_at: string
           id: string
           name: string
@@ -510,6 +511,7 @@ export type Database = {
         }
         Insert: {
           agent_id?: string | null
+          business_profile?: Json
           created_at?: string
           id?: string
           name: string
@@ -520,6 +522,7 @@ export type Database = {
         }
         Update: {
           agent_id?: string | null
+          business_profile?: Json
           created_at?: string
           id?: string
           name?: string

@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
-  CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone,
+  CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
 } from "lucide-react";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,10 @@ const nav = [
   { to: "/app/time", label: "Time Tracking", icon: Clock },
   { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
+  { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
+
   { to: "/app/messages", label: "Messages", icon: MessageSquare },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/settings", label: "Settings", icon: Settings },

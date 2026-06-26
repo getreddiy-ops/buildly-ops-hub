@@ -22,7 +22,13 @@ type SettingsBody = {
   capabilities?: Record<string, boolean>;
 };
 
-function buildSystemPrompt(orgName: string, greeting: string, capabilities: Record<string, boolean>, transfer: string | null) {
+function buildSystemPrompt(
+  orgName: string,
+  greeting: string,
+  capabilities: Record<string, boolean>,
+  transfer: string | null,
+  bp: Record<string, any>,
+) {
   const caps: string[] = [];
   if (capabilities.book_estimates) caps.push("schedule estimate appointments");
   if (capabilities.capture_leads) caps.push("capture new lead details (name, address, phone, project scope)");
@@ -30,6 +36,44 @@ function buildSystemPrompt(orgName: string, greeting: string, capabilities: Reco
   if (capabilities.voicemail) caps.push("take a detailed voicemail message");
   if (capabilities.sms_followup) caps.push("offer to send an SMS follow-up");
   if (capabilities.faq) caps.push("answer common questions about services, areas served, and pricing ranges");
+
+  const bpLines: string[] = [];
+  const add = (label: string, val: any) => {
+    if (val == null) return;
+    if (Array.isArray(val) && val.length === 0) return;
+    if (typeof val === "string" && !val.trim()) return;
+    bpLines.push(`- ${label}: ${Array.isArray(val) ? val.join(", ") : val}`);
+  };
+  add("Industry", bp.industry);
+  add("Sub-trades", bp.sub_trades);
+  add("Services offered", bp.services);
+  add("Jobs we do NOT take", bp.out_of_scope);
+  add("Service area", bp.service_area);
+  add("Years in business", bp.years_in_business);
+  add("Crew size", bp.crew_size);
+  add("License", bp.license_info);
+  add("Insurance", bp.insurance_info);
+  add("Business hours", bp.business_hours);
+  add("After-hours / emergency", bp.emergency_hours);
+  add("Pricing model", bp.pricing_model);
+  add("Typical price ranges", bp.typical_price_range);
+  if (bp.free_estimates) bpLines.push("- Free estimates: yes");
+  add("Payment terms", bp.payment_terms);
+  add("Warranty", bp.warranty);
+  add("Brand voice", bp.brand_voice);
+  add("Never say / never promise", bp.do_not_say);
+  add("Unique selling points", bp.unique_selling_points);
+  add("Competitors", bp.competitors);
+  add("Lead qualification questions", bp.lead_qualification);
+  add("Booking policy", bp.booking_policy);
+  add("Cancellation policy", bp.cancellation_policy);
+  add("Escalation contact", bp.escalation_contact);
+  add("FAQs", bp.faqs);
+  add("Additional notes", bp.notes);
+  const bpBlock = bpLines.length
+    ? `\n\nBusiness profile (authoritative — use these facts, do not invent others):\n${bpLines.join("\n")}`
+    : "";
+
   return [
     `You are the friendly virtual receptionist for ${orgName}, a contracting business.`,
     `Greeting: "${greeting}"`,
@@ -38,8 +82,9 @@ function buildSystemPrompt(orgName: string, greeting: string, capabilities: Reco
     `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window.`,
     `Never invent prices. If unsure, offer to have someone follow up.`,
     transfer ? `If they ask for a human, offer to transfer to ${transfer}.` : `If they ask for a human, take a message.`,
-  ].join("\n");
+  ].join("\n") + bpBlock;
 }
+
 
 async function upsertAgent(opts: {
   agentId: string | null;
@@ -138,7 +183,7 @@ Deno.serve(async (req) => {
       return json({ error: "Premium subscription required" }, 402);
     }
 
-    const { data: org } = await admin.from("organizations").select("name").eq("id", orgId).single();
+    const { data: org } = await admin.from("organizations").select("name, business_profile").eq("id", orgId).single();
 
     const { data: existing } = await admin
       .from("phone_assistants")
@@ -154,7 +199,14 @@ Deno.serve(async (req) => {
       capabilities: body.capabilities ?? existing?.capabilities ?? {},
     };
 
-    const prompt = buildSystemPrompt(org?.name ?? "the business", merged.greeting, merged.capabilities, merged.transfer_number);
+    const prompt = buildSystemPrompt(
+      org?.name ?? "the business",
+      merged.greeting,
+      merged.capabilities,
+      merged.transfer_number,
+      (org?.business_profile as Record<string, any>) ?? {},
+    );
+
     const agentId = await upsertAgent({
       agentId: existing?.elevenlabs_agent_id ?? null,
       name: `${org?.name ?? "Contractor"} Receptionist`,

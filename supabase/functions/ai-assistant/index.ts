@@ -176,7 +176,18 @@ Deno.serve(async (req) => {
     }
     // --- End gate ---
 
-    const sys = orgName ? `${SYSTEM}\n\nActive organization: ${orgName}.` : SYSTEM;
+    // Fetch business profile for context
+    const { data: orgRow } = await admin
+      .from("organizations")
+      .select("name, business_profile")
+      .eq("id", organizationId)
+      .maybeSingle();
+    const bp = (orgRow?.business_profile ?? {}) as Record<string, unknown>;
+    const bpText = Object.keys(bp).length
+      ? `\n\nBusiness profile (treat as authoritative facts about this business):\n${JSON.stringify(bp, null, 2)}`
+      : "";
+    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}`;
+
     const payload = {
       model: "google/gemini-2.5-flash",
       messages: [{ role: "system", content: sys }, ...messages],

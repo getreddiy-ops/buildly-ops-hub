@@ -34,6 +34,8 @@ import FieldMap from "./pages/field/FieldMap";
 import Assistant from "./pages/app/Assistant";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
+import BusinessProfile from "./pages/app/BusinessProfile";
+
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
 import AgentClients from "./pages/agent/AgentClients";
@@ -78,7 +80,9 @@ const App = () => (
               <Route path="phone-assistant" element={<PaywallGate feature="Phone Assistant" requires="premium"><PhoneAssistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
               <Route path="billing" element={<Billing />} />
+              <Route path="business-profile" element={<BusinessProfile />} />
               <Route path="settings" element={<SettingsPage />} />
+
             </Route>
 
             {/* Field app (mobile) */}
