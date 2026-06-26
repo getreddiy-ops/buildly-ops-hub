@@ -62,18 +62,21 @@ export default function Crew() {
   const load = async () => {
     if (!activeOrg) return;
     setLoading(true);
-    const [{ data: mems, error }, { data: invs }] = await Promise.all([
+    const [{ data: mems, error }, { data: invs }, { data: rates }] = await Promise.all([
       supabase
         .from("organization_members")
-        .select("id, user_id, role, hourly_rate")
+        .select("id, user_id, role")
         .eq("organization_id", activeOrg.organization_id),
       supabase
         .from("invitations")
         .select("id, email, role, status, created_at")
         .eq("organization_id", activeOrg.organization_id)
         .order("created_at", { ascending: false }),
+      supabase.rpc("get_org_hourly_rates", { _org_id: activeOrg.organization_id }),
     ]);
     if (error) toast.error(error.message);
+    const rateMap = new Map<string, number | null>();
+    (rates ?? []).forEach((r: any) => rateMap.set(r.user_id, r.hourly_rate));
     const userIds = (mems ?? []).map((m: any) => m.user_id);
     let profs: any[] = [];
     if (userIds.length > 0) {
@@ -83,7 +86,8 @@ export default function Crew() {
     setMembers(((mems ?? []) as any[]).map((m) => {
       const p = profs.find((x) => x.id === m.user_id);
       return {
-        id: m.id, user_id: m.user_id, role: m.role, hourly_rate: m.hourly_rate,
+        id: m.id, user_id: m.user_id, role: m.role,
+        hourly_rate: rateMap.has(m.user_id) ? (rateMap.get(m.user_id) as number | null) : null,
         name: p?.full_name || p?.email || m.user_id.slice(0, 8),
         email: p?.email ?? null,
       };

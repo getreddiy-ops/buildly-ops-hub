@@ -1178,6 +1178,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_org_hourly_rates: {
+        Args: { _org_id: string }
+        Returns: {
+          hourly_rate: number
+          user_id: string
+        }[]
+      }
       has_active_org_subscription: {
         Args: { check_env?: string; org_id: string }
         Returns: boolean

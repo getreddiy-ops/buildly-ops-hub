@@ -64,7 +64,7 @@ export default function Costing() {
       supabase.from("jobs").select("id, title, budget, status").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from("job_costs").select("*").order("incurred_on", { ascending: false }),
       supabase.from("time_entries").select("id, job_id, user_id, approved_hours, status").eq("organization_id", activeOrg.organization_id).eq("status", "approved"),
-      supabase.from("organization_members").select("user_id, hourly_rate").eq("organization_id", activeOrg.organization_id),
+      supabase.rpc("get_org_hourly_rates", { _org_id: activeOrg.organization_id }),
     ]);
     setJobs((js ?? []) as JobLite[]);
     setCosts((cs ?? []) as CostRow[]);
