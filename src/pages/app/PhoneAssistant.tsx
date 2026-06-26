@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useConversation } from "@elevenlabs/react";
+import { useConversation, ConversationProvider } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -325,11 +325,19 @@ function PhoneAssistant() {
   );
 }
 
-function TestConsole({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
+function TestConsole(props: { agentReady: boolean; orgId: string | null }) {
+  return (
+    <ConversationProvider
+      onError={(e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error")}
+    >
+      <TestConsoleInner {...props} />
+    </ConversationProvider>
+  );
+}
+
+function TestConsoleInner({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
   const [connecting, setConnecting] = useState(false);
-  const conversation = useConversation({
-    onError: (e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error"),
-  });
+  const conversation = useConversation();
 
   const start = async () => {
     if (!orgId) return;
