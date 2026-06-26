@@ -34,6 +34,12 @@ export default function Assistant() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const { speak, stop: stopSpeak, speakingId, loadingId: speakLoadingId } = useVoiceSpeaker();
+  const { recording, transcribing, start: startRec, stop: stopRec } = useVoiceRecorder((text) => {
+    setInput((cur) => (cur ? `${cur} ${text}` : text));
+    setTimeout(() => inputRef.current?.focus(), 0);
+  });
+
 
   useEffect(() => {
     inputRef.current?.focus();
