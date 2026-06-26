@@ -1,0 +1,18 @@
+# Contractor OS
+
+> The operating system for contracting businesses — leads, estimates, jobs, GPS-verified time tracking, boss-approved hours, job costing, and an AI admin & phone answering assistant.
+
+Contractor OS helps small and mid-size contractors run their business end-to-end from one app. Crews clock in on-site with GPS, owners approve hours, and the AI assistant drafts estimates, schedules jobs, and answers phone calls.
+
+## Pages
+
+- [Home](/): Product overview and core features.
+- [Pricing](/pricing): Monthly plans — Base ($69), Plus ($169, adds AI assistant), Premium ($269, adds AI phone answering).
+- [CRM for contractors](/features/contractor-crm): Centralized lead, customer, and communication tracking built for contractors.
+- [Contact](/contact): Get in touch with the Contractor OS team.
+
+## Optional
+
+- [Privacy policy](/legal/privacy): How customer data is handled.
+- [Terms of service](/legal/terms): Subscription and use terms.
+- [Refund policy](/legal/refunds): 30-day money-back guarantee.
