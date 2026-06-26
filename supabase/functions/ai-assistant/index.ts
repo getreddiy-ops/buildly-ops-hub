@@ -149,14 +149,28 @@ Deno.serve(async (req) => {
     if (!membership) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    // Check org has an active subscription in this environment
-    const { data: entitled } = await admin.rpc("has_active_org_subscription", {
-      org_id: organizationId,
-      check_env: environment,
-    });
-    if (!entitled) {
+    // Check org has an active subscription in this environment, on Plus or Premium tier
+    const { data: subRow } = await admin
+      .from("subscriptions")
+      .select("price_id,status,current_period_end")
+      .eq("organization_id", organizationId)
+      .eq("environment", environment)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const ASSISTANT_PRICE_IDS = new Set([
+      "contractor_os_plus_monthly",
+      "contractor_os_premium_monthly",
+    ]);
+    const now = Date.now();
+    const periodEnd = subRow?.current_period_end ? new Date(subRow.current_period_end).getTime() : null;
+    const activeStatus =
+      subRow &&
+      ((["active", "trialing", "past_due"].includes(subRow.status) && (!periodEnd || periodEnd > now)) ||
+        (subRow.status === "canceled" && !!periodEnd && periodEnd > now));
+    if (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id)) {
       return new Response(
-        JSON.stringify({ error: "Pro subscription required", code: "subscription_required" }),
+        JSON.stringify({ error: "Plus or Premium subscription required", code: "subscription_required" }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
