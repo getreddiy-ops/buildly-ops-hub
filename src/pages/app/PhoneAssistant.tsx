@@ -81,7 +81,12 @@ function PhoneAssistant() {
   const [calls, setCalls] = useState<CallRow[]>([]);
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [areaCode, setAreaCode] = useState("");
+  const [numberType, setNumberType] = useState<"local" | "toll_free">("local");
+  const [byoNumber, setByoNumber] = useState("");
+  const [available, setAvailable] = useState<Array<{ phone_number: string; friendly_name: string; locality?: string; region?: string }>>([]);
+  const [searching, setSearching] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
+  const [releasing, setReleasing] = useState(false);
 
   const load = useCallback(async () => {
     if (!orgId) return;
