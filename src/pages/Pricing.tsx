@@ -7,6 +7,7 @@ import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
+import { SEO } from "@/components/SEO";
 
 type PlanDef = {
   tier: Tier;
@@ -77,8 +78,29 @@ export default function Pricing() {
     }
   };
 
+  const productLd = Object.values(TIERS).map((t) => ({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `Contractor OS — ${t.name}`,
+    description: `Contractor OS ${t.name} plan at $${t.price}/month.`,
+    brand: { "@type": "Brand", name: "Contractor OS" },
+    offers: {
+      "@type": "Offer",
+      price: String(t.price),
+      priceCurrency: "USD",
+      url: "https://contractoros.online/pricing",
+      availability: "https://schema.org/InStock",
+    },
+  }));
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Pricing — Contractor OS"
+        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant), Premium $269 (adds AI phone answering). Cancel anytime."
+        path="/pricing"
+        jsonLd={productLd}
+      />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Button variant="ghost" asChild><Link to="/">Back</Link></Button>
@@ -88,6 +110,7 @@ export default function Pricing() {
           <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your crew.</h1>
           <p className="mt-3 text-muted-foreground">Monthly billing per company. Cancel anytime.</p>
         </div>
+        <h2 className="mb-6 text-center text-xl font-medium tracking-tight">Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {PLANS.map((plan) => {
             const t = TIERS[plan.tier];
