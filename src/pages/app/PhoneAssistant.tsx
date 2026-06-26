@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Plus } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Plus, Mic, MicOff, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,61 +11,144 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useConversation } from "@elevenlabs/react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PaywallGate } from "@/components/PaywallGate";
 
-type Call = {
+type Assistant = {
   id: string;
-  caller: string;
-  number: string;
-  at: string;
-  duration: string;
-  outcome: "Booked estimate" | "Took message" | "Transferred" | "Voicemail";
-  summary: string;
+  organization_id: string;
+  enabled: boolean;
+  voice_id: string;
+  greeting: string;
+  transfer_number: string | null;
+  capabilities: Record<string, boolean>;
+  elevenlabs_agent_id: string | null;
+  twilio_phone_number: string | null;
+  twilio_phone_sid: string | null;
 };
 
-const SAMPLE_CALLS: Call[] = [
-  {
-    id: "1",
-    caller: "Maria Gonzales",
-    number: "+1 (415) 555-0182",
-    at: "Today, 10:42 AM",
-    duration: "3m 18s",
-    outcome: "Booked estimate",
-    summary: "Kitchen remodel inquiry. Wants estimate next Tue between 1–4 PM. Address captured. Created lead + scheduled visit.",
-  },
-  {
-    id: "2",
-    caller: "Unknown",
-    number: "+1 (628) 555-0119",
-    at: "Today, 9:11 AM",
-    duration: "1m 02s",
-    outcome: "Took message",
-    summary: "Asked about pricing for a deck rebuild. Left callback number, prefers texts after 5pm.",
-  },
-  {
-    id: "3",
-    caller: "Dan Pierce",
-    number: "+1 (510) 555-0144",
-    at: "Yesterday, 4:55 PM",
-    duration: "0m 47s",
-    outcome: "Transferred",
-    summary: "Existing customer, asked about invoice #1042. Transferred to office line.",
-  },
+type CallRow = {
+  id: string;
+  from_number: string | null;
+  to_number: string | null;
+  started_at: string;
+  duration_seconds: number | null;
+  status: string;
+  outcome: string | null;
+  summary: string | null;
+};
+
+const VOICES = [
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+  { id: "9BWtsMINqrJLrRacOk9x", name: "Aria" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
+  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica" },
 ];
 
-export default function PhoneAssistant() {
-  const [enabled, setEnabled] = useState(true);
-  const [forwarding, setForwarding] = useState("");
-  const [greeting, setGreeting] = useState(
-    "Hi, you've reached our office. Our virtual assistant can help schedule an estimate, take a message, or transfer you to a team member.",
-  );
-  const [voice, setVoice] = useState("Aria");
-  const [calls] = useState<Call[]>(SAMPLE_CALLS);
-  const [open, setOpen] = useState(false);
-  const [newNumber, setNewNumber] = useState("");
+const CAPS: Array<[keyof Assistant["capabilities"], string]> = [
+  ["book_estimates", "Book estimates on calendar"],
+  ["capture_leads", "Capture lead details"],
+  ["sms_followup", "Send SMS follow-up"],
+  ["transfer", "Transfer to a teammate"],
+  ["voicemail", "Take voicemail"],
+  ["faq", "Answer FAQ"],
+];
 
-  const handleSave = () => {
-    toast.success("Phone assistant settings saved");
+export default function PhoneAssistantPage() {
+  return (
+    <PaywallGate feature="Phone Assistant" requires="premium">
+      <PhoneAssistant />
+    </PaywallGate>
+  );
+}
+
+function PhoneAssistant() {
+  const { activeOrg } = useAuth();
+  const { isOwner } = useSubscription();
+  const orgId = activeOrg?.organization_id ?? null;
+  const canEdit = activeOrg?.role === "owner" || activeOrg?.role === "admin";
+
+  const [assistant, setAssistant] = useState<Assistant | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [calls, setCalls] = useState<CallRow[]>([]);
+  const [provisionOpen, setProvisionOpen] = useState(false);
+  const [areaCode, setAreaCode] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!orgId) return;
+    const [a, c] = await Promise.all([
+      supabase.from("phone_assistants").select("*").eq("organization_id", orgId).maybeSingle(),
+      supabase.from("phone_calls").select("*").eq("organization_id", orgId).order("started_at", { ascending: false }).limit(25),
+    ]);
+    setAssistant((a.data as Assistant | null) ?? null);
+    setCalls((c.data as CallRow[] | null) ?? []);
+    setLoading(false);
+  }, [orgId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const [draft, setDraft] = useState<Partial<Assistant>>({});
+  useEffect(() => { setDraft({}); }, [assistant?.id]);
+  const merged = useMemo<Assistant | null>(() => assistant ? { ...assistant, ...draft } : null, [assistant, draft]);
+
+  // Defaults when no assistant yet
+  const editing: Partial<Assistant> = merged ?? {
+    enabled: true,
+    voice_id: "EXAVITQu4vr4xnSDxMaL",
+    greeting: "Hi, you have reached our office. I can help schedule an estimate, take a message, or transfer you to a team member.",
+    transfer_number: "",
+    capabilities: { book_estimates: true, capture_leads: true, transfer: true, voicemail: true, sms_followup: false, faq: true },
+    ...draft,
   };
+
+  const save = async () => {
+    if (!orgId) return;
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke("phone-assistant", {
+      body: {
+        organization_id: orgId,
+        enabled: editing.enabled,
+        voice_id: editing.voice_id,
+        greeting: editing.greeting,
+        transfer_number: editing.transfer_number || null,
+        capabilities: editing.capabilities,
+      },
+    });
+    setSaving(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Failed to save");
+      return;
+    }
+    toast.success("Assistant saved");
+    setDraft({});
+    load();
+  };
+
+  const provision = async () => {
+    if (!orgId) return;
+    setProvisioning(true);
+    const { data, error } = await supabase.functions.invoke("phone-assistant-provision", {
+      body: { organization_id: orgId, area_code: areaCode || undefined },
+    });
+    setProvisioning(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Provisioning failed");
+      return;
+    }
+    toast.success(`Number connected: ${(data as any).assistant.twilio_phone_number}`);
+    setProvisionOpen(false);
+    setAreaCode("");
+    load();
+  };
+
+  if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
 
   return (
     <div className="space-y-6">
@@ -76,51 +159,38 @@ export default function PhoneAssistant() {
             Phone Assistant
           </h1>
           <p className="mt-1 text-muted-foreground">
-            24/7 AI receptionist that answers calls, books estimates, and logs every conversation.
+            24/7 AI receptionist powered by ElevenLabs. Answers calls, books estimates, and logs every conversation.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={provisionOpen} onOpenChange={setProvisionOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Provision number
+            <Button disabled={!canEdit || !assistant?.elevenlabs_agent_id || !!assistant?.twilio_phone_sid}>
+              <Plus className="mr-2 h-4 w-4" />
+              {assistant?.twilio_phone_number ? "Number connected" : "Connect phone number"}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Provision a new phone number</DialogTitle>
+              <DialogTitle>Connect a phone number</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
-              <Label>Area code</Label>
-              <Input
-                placeholder="e.g. 415"
-                value={newNumber}
-                onChange={(e) => setNewNumber(e.target.value)}
-              />
+              <Label>Area code (optional)</Label>
+              <Input placeholder="e.g. 415" value={areaCode} onChange={(e) => setAreaCode(e.target.value)} />
               <p className="text-xs text-muted-foreground">
-                We'll provision a local number you can forward your business line to.
+                We'll buy a local Twilio number and route incoming calls directly to your assistant.
               </p>
             </div>
             <DialogFooter>
-              <Button
-                onClick={() => {
-                  toast.success("Number request submitted");
-                  setOpen(false);
-                  setNewNumber("");
-                }}
-              >
-                Request number
+              <Button onClick={provision} disabled={provisioning}>
+                {provisioning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {provisioning ? "Provisioning…" : "Provision number"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard icon={PhoneIncoming} label="Calls answered (7d)" value="42" />
-        <StatCard icon={Sparkles} label="Estimates booked" value="11" />
-        <StatCard icon={Clock} label="Avg handle time" value="2m 14s" />
-        <StatCard icon={Voicemail} label="Voicemails" value="3" />
-      </div>
+      <StatCards calls={calls} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="space-y-5 p-6 lg:col-span-2">
@@ -128,143 +198,213 @@ export default function PhoneAssistant() {
             <div>
               <h2 className="text-lg font-semibold">Assistant configuration</h2>
               <p className="text-sm text-muted-foreground">
-                Customize how your AI receptionist greets and handles callers.
+                Saving will create or update your ElevenLabs agent.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={enabled} onCheckedChange={setEnabled} id="enabled" />
-              <Label htmlFor="enabled" className="text-sm">
-                {enabled ? "Active" : "Paused"}
-              </Label>
+              <Switch
+                checked={!!editing.enabled}
+                onCheckedChange={(v) => setDraft((d) => ({ ...d, enabled: v }))}
+                disabled={!canEdit}
+                id="enabled"
+              />
+              <Label htmlFor="enabled" className="text-sm">{editing.enabled ? "Active" : "Paused"}</Label>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="voice">Voice</Label>
+              <Label>Voice</Label>
               <select
-                id="voice"
-                value={voice}
-                onChange={(e) => setVoice(e.target.value)}
+                value={editing.voice_id}
+                onChange={(e) => setDraft((d) => ({ ...d, voice_id: e.target.value }))}
+                disabled={!canEdit}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option>Aria</option>
-                <option>Cole</option>
-                <option>Nova</option>
-                <option>River</option>
+                {VOICES.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="forward">Transfer-to number</Label>
+              <Label>Transfer-to number</Label>
               <Input
-                id="forward"
-                placeholder="+1 (555) 000-0000"
-                value={forwarding}
-                onChange={(e) => setForwarding(e.target.value)}
+                placeholder="+1 555 000 0000"
+                value={editing.transfer_number ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, transfer_number: e.target.value }))}
+                disabled={!canEdit}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="greeting">Greeting script</Label>
+            <Label>Greeting script</Label>
             <Textarea
-              id="greeting"
               rows={4}
-              value={greeting}
-              onChange={(e) => setGreeting(e.target.value)}
+              value={editing.greeting ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, greeting: e.target.value }))}
+              disabled={!canEdit}
             />
           </div>
 
           <div className="space-y-2">
             <Label>Capabilities</Label>
             <div className="grid gap-2 sm:grid-cols-2">
-              {[
-                "Book estimates on calendar",
-                "Capture lead details",
-                "Send SMS follow-up",
-                "Transfer to a teammate",
-                "Take voicemail",
-                "Answer FAQ from knowledge base",
-              ].map((c) => (
-                <label key={c} className="flex items-center gap-2 rounded-md border p-2 text-sm">
-                  <input type="checkbox" defaultChecked className="h-4 w-4" />
-                  {c}
+              {CAPS.map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 rounded-md border p-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={!!editing.capabilities?.[key]}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        capabilities: { ...(editing.capabilities ?? {}), [key]: e.target.checked },
+                      }))
+                    }
+                    disabled={!canEdit}
+                  />
+                  {label}
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={handleSave}>Save changes</Button>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {assistant?.elevenlabs_agent_id ? `Agent ID: ${assistant.elevenlabs_agent_id}` : "No agent yet — saving will create one."}
+            </span>
+            <Button onClick={save} disabled={!canEdit || saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {assistant?.elevenlabs_agent_id ? "Save changes" : "Create assistant"}
+            </Button>
           </div>
         </Card>
 
-        <Card className="space-y-4 p-6">
-          <div>
-            <h2 className="text-lg font-semibold">Routing</h2>
-            <p className="text-sm text-muted-foreground">
-              How calls reach your assistant.
-            </p>
-          </div>
-          <div className="space-y-3 text-sm">
-            <div className="rounded-md border p-3">
-              <div className="text-xs text-muted-foreground">Assistant number</div>
-              <div className="font-mono">+1 (415) 555-0100</div>
+        <div className="space-y-6">
+          <Card className="space-y-4 p-6">
+            <div>
+              <h2 className="text-lg font-semibold">Routing</h2>
+              <p className="text-sm text-muted-foreground">How calls reach your assistant.</p>
             </div>
-            <div className="rounded-md border p-3">
-              <div className="text-xs text-muted-foreground">Forwarded from</div>
-              <div className="font-mono">{forwarding || "Not configured"}</div>
+            <div className="space-y-3 text-sm">
+              <div className="rounded-md border p-3">
+                <div className="text-xs text-muted-foreground">Assistant number</div>
+                <div className="font-mono">{assistant?.twilio_phone_number ?? "Not connected"}</div>
+              </div>
+              <div className="rounded-md border p-3">
+                <div className="text-xs text-muted-foreground">Transfer to</div>
+                <div className="font-mono">{editing.transfer_number || "Not set"}</div>
+              </div>
+              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                Forward your business line to the assistant number so missed and after-hours calls land here.
+              </div>
             </div>
-            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Set up call forwarding on your business line so missed and after-hours calls land here automatically.
-            </div>
-          </div>
-        </Card>
+          </Card>
+
+          <TestConsole agentReady={!!assistant?.elevenlabs_agent_id} orgId={orgId} />
+        </div>
       </div>
 
       <Card className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Recent calls</h2>
-            <p className="text-sm text-muted-foreground">
-              Every conversation is transcribed and summarized.
-            </p>
+            <p className="text-sm text-muted-foreground">Every conversation is transcribed and summarized.</p>
           </div>
         </div>
-        <div className="divide-y">
-          {calls.map((c) => (
-            <div key={c.id} className="grid gap-2 py-4 sm:grid-cols-12">
-              <div className="sm:col-span-3">
-                <div className="font-medium">{c.caller}</div>
-                <div className="text-xs text-muted-foreground">{c.number}</div>
-              </div>
-              <div className="text-xs text-muted-foreground sm:col-span-2">
-                <div>{c.at}</div>
-                <div>{c.duration}</div>
-              </div>
-              <div className="sm:col-span-2">
-                <OutcomeBadge outcome={c.outcome} />
-              </div>
-              <div className="text-sm text-muted-foreground sm:col-span-5">
-                {c.summary}
-              </div>
-            </div>
-          ))}
-        </div>
+        {calls.length === 0 ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            No calls yet. Connect a phone number and test it by calling.
+          </div>
+        ) : (
+          <div className="divide-y">
+            {calls.map((c) => <CallRowItem key={c.id} call={c} />)}
+          </div>
+        )}
       </Card>
     </div>
   );
 }
 
-function StatCard({
-  icon: Icon, label, value,
-}: { icon: typeof Phone; label: string; value: string }) {
+function TestConsole({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
+  const [connecting, setConnecting] = useState(false);
+  const conversation = useConversation({
+    onError: (e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error"),
+  });
+
+  const start = async () => {
+    if (!orgId) return;
+    setConnecting(true);
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const { data, error } = await supabase.functions.invoke("phone-assistant-token", {
+        body: { organization_id: orgId },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error ?? error?.message);
+      await conversation.startSession({
+        conversationToken: (data as any).token,
+        connectionType: "webrtc",
+      });
+    } catch (e) {
+      toast.error((e as Error).message ?? "Failed to start");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const stop = async () => { await conversation.endSession(); };
+  const connected = conversation.status === "connected";
+
+  return (
+    <Card className="space-y-4 p-6">
+      <div>
+        <h2 className="text-lg font-semibold">Test in browser</h2>
+        <p className="text-sm text-muted-foreground">Talk to your assistant live before going on a real call.</p>
+      </div>
+      {!agentReady ? (
+        <p className="text-sm text-muted-foreground">Save the configuration to create your agent first.</p>
+      ) : (
+        <div className="flex flex-col items-center gap-3 py-2">
+          <button
+            onClick={connected ? stop : start}
+            disabled={connecting}
+            className={`flex h-20 w-20 items-center justify-center rounded-full transition ${
+              connected ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-primary text-primary-foreground hover:opacity-90"
+            }`}
+          >
+            {connecting ? <Loader2 className="h-7 w-7 animate-spin" /> : connected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+          </button>
+          <div className="text-xs text-muted-foreground">
+            {connected ? (conversation.isSpeaking ? "Assistant is speaking…" : "Listening…") : "Tap to start a test call"}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function StatCards({ calls }: { calls: CallRow[] }) {
+  const sevenDayAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const recent = calls.filter((c) => new Date(c.started_at).getTime() >= sevenDayAgo);
+  const answered = recent.length;
+  const booked = recent.filter((c) => /book|schedul|estimate/i.test(c.summary ?? "")).length;
+  const durations = recent.map((c) => c.duration_seconds ?? 0).filter((n) => n > 0);
+  const avg = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+  const vm = recent.filter((c) => (c.outcome ?? "").toLowerCase().includes("voicemail")).length;
+  return (
+    <div className="grid gap-4 md:grid-cols-4">
+      <StatCard icon={PhoneIncoming} label="Calls answered (7d)" value={String(answered)} />
+      <StatCard icon={Sparkles} label="Estimates mentioned" value={String(booked)} />
+      <StatCard icon={Clock} label="Avg handle time" value={fmtDuration(avg)} />
+      <StatCard icon={Voicemail} label="Voicemails" value={String(vm)} />
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value }: { icon: typeof Phone; label: string; value: string }) {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
-        <div className="rounded-md bg-primary/10 p-2 text-primary">
-          <Icon className="h-5 w-5" />
-        </div>
+        <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-5 w-5" /></div>
         <div>
           <div className="text-xs text-muted-foreground">{label}</div>
           <div className="text-xl font-semibold">{value}</div>
@@ -274,17 +414,33 @@ function StatCard({
   );
 }
 
-function OutcomeBadge({ outcome }: { outcome: Call["outcome"] }) {
-  const map: Record<Call["outcome"], { className: string; icon: typeof Phone }> = {
-    "Booked estimate": { className: "bg-primary/15 text-primary", icon: Sparkles },
-    "Took message": { className: "bg-muted text-foreground", icon: PhoneIncoming },
-    "Transferred": { className: "bg-accent text-accent-foreground", icon: Phone },
-    "Voicemail": { className: "bg-muted text-muted-foreground", icon: PhoneOff },
-  };
-  const { className, icon: Icon } = map[outcome];
+function CallRowItem({ call }: { call: CallRow }) {
   return (
-    <Badge variant="secondary" className={`gap-1 ${className}`}>
-      <Icon className="h-3 w-3" /> {outcome}
-    </Badge>
+    <div className="grid gap-2 py-4 sm:grid-cols-12">
+      <div className="sm:col-span-3">
+        <div className="font-medium">{call.from_number ?? "Unknown"}</div>
+        <div className="text-xs text-muted-foreground">→ {call.to_number}</div>
+      </div>
+      <div className="text-xs text-muted-foreground sm:col-span-2">
+        <div>{new Date(call.started_at).toLocaleString()}</div>
+        <div>{fmtDuration(call.duration_seconds ?? 0)}</div>
+      </div>
+      <div className="sm:col-span-2">
+        <Badge variant="secondary" className="gap-1">
+          {call.status === "in_progress" ? <Phone className="h-3 w-3" /> : <PhoneOff className="h-3 w-3" />}
+          {call.status}
+        </Badge>
+      </div>
+      <div className="text-sm text-muted-foreground sm:col-span-5">
+        {call.summary ?? "—"}
+      </div>
+    </div>
   );
+}
+
+function fmtDuration(s: number) {
+  if (!s) return "0m 0s";
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}m ${sec}s`;
 }
