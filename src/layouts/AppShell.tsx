@@ -1,8 +1,9 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette, Code2, Truck, Package,
+  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone,
 } from "lucide-react";
 
 
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useBranding } from "@/hooks/useBranding";
-import { Link } from "react-router-dom";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 
