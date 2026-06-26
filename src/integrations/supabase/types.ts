@@ -1058,6 +1058,97 @@ export type Database = {
         }
         Relationships: []
       }
+      quickbooks_connections: {
+        Row: {
+          access_token: string
+          connected_by: string | null
+          created_at: string
+          environment: string
+          id: string
+          organization_id: string
+          realm_id: string
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          connected_by?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          organization_id: string
+          realm_id: string
+          refresh_token: string
+          token_expires_at: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          connected_by?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          organization_id?: string
+          realm_id?: string
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quickbooks_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quickbooks_sync_log: {
+        Row: {
+          created_at: string
+          direction: string
+          entity_type: string
+          error: string | null
+          id: string
+          local_id: string | null
+          organization_id: string
+          quickbooks_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          entity_type: string
+          error?: string | null
+          id?: string
+          local_id?: string | null
+          organization_id: string
+          quickbooks_id?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          entity_type?: string
+          error?: string | null
+          id?: string
+          local_id?: string | null
+          organization_id?: string
+          quickbooks_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quickbooks_sync_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
