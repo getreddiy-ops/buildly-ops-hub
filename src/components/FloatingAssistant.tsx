@@ -116,9 +116,7 @@ export function FloatingAssistant() {
               </Button>
             </SheetHeader>
             <div className="flex-1 overflow-hidden px-4 py-3">
-              <div className="h-full [&_h1]:hidden [&_[data-page-header-description]]:hidden">
-                <Assistant />
-              </div>
+              <Assistant compact />
             </div>
           </div>
         </SheetContent>
