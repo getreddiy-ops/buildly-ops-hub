@@ -1,6 +1,7 @@
 // Manage the org's phone assistant: load/save settings, create/update the
 // ElevenLabs Conversational AI agent. Requires Premium tier.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,7 @@ function buildSystemPrompt(
   capabilities: Record<string, boolean>,
   transfer: string | null,
   bp: Record<string, any>,
+  orgAddress: string | null,
 ) {
   const caps: string[] = [];
   if (capabilities.book_estimates) caps.push("schedule estimate appointments");
@@ -79,10 +81,11 @@ function buildSystemPrompt(
     `Greeting: "${greeting}"`,
     `Your goals, in order: ${caps.join("; ")}.`,
     `Always speak naturally, keep replies short, and confirm details by repeating them back.`,
-    `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window.`,
-    `Never invent prices. If unsure, offer to have someone follow up.`,
+    `If the caller wants to book an estimate, collect: full name, phone, address, type of work, preferred day & time window. Also confirm the state where the work will be performed so the office can apply the correct licensing, contract, and sales-tax rules.`,
+    `Never invent prices, license numbers, or legal/tax requirements. If unsure, offer to have someone follow up.`,
+    `Do not give legal advice. If a caller asks about cancellation rights, lien notices, warranty, or contract terms, summarize that the written contract will follow the laws of the state where the work is performed and offer to have a teammate confirm specifics.`,
     transfer ? `If they ask for a human, offer to transfer to ${transfer}.` : `If they ask for a human, take a message.`,
-  ].join("\n") + bpBlock;
+  ].join("\n") + bpBlock + jurisdictionPromptBlock(orgAddress, bp?.service_area ?? null);
 }
 
 
@@ -183,7 +186,11 @@ Deno.serve(async (req) => {
       return json({ error: "Premium subscription required" }, 402);
     }
 
-    const { data: org } = await admin.from("organizations").select("name, business_profile").eq("id", orgId).single();
+    const { data: org } = await admin
+      .from("organizations")
+      .select("name, address, business_profile")
+      .eq("id", orgId)
+      .single();
 
     const { data: existing } = await admin
       .from("phone_assistants")
@@ -205,6 +212,7 @@ Deno.serve(async (req) => {
       merged.capabilities,
       merged.transfer_number,
       (org?.business_profile as Record<string, any>) ?? {},
+      (org?.address as string | null) ?? null,
     );
 
     const agentId = await upsertAgent({
