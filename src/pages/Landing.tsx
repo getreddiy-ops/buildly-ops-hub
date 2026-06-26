@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowRight, MapPin, Bot, FileText, Briefcase, Clock, DollarSign, ShieldCheck,
 } from "lucide-react";
@@ -15,8 +17,14 @@ const features = [
 ];
 
 export default function Landing() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!loading && user) navigate("/app", { replace: true });
+  }, [user, loading, navigate]);
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
+
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <nav className="hidden gap-8 text-sm text-muted-foreground md:flex">
