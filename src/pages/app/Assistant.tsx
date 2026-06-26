@@ -250,6 +250,22 @@ export default function Assistant() {
                   m.content
                 )}
               </div>
+              {m.role === "assistant" && m.content && (
+                <button
+                  type="button"
+                  onClick={() => (speakingId === `m${i}` ? stopSpeak() : speak(`m${i}`, m.content))}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {speakLoadingId === `m${i}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : speakingId === `m${i}` ? (
+                    <VolumeX className="h-3.5 w-3.5" />
+                  ) : (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  )}
+                  {speakingId === `m${i}` ? "Stop" : "Listen"}
+                </button>
+              )}
               {m.role === "assistant" && m.proposals?.map((p) => (
                 <ProposalCard
                   key={p.id}
@@ -259,6 +275,7 @@ export default function Assistant() {
                 />
               ))}
             </div>
+
           </div>
         ))}
 
