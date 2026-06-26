@@ -549,3 +549,30 @@ function fmtDuration(s: number) {
   const sec = s % 60;
   return `${m}m ${sec}s`;
 }
+
+function NumberList({
+  numbers, onPick, provisioning,
+}: {
+  numbers: Array<{ phone_number: string; friendly_name: string; locality?: string; region?: string }>;
+  onPick: (n: string) => void;
+  provisioning: boolean;
+}) {
+  if (numbers.length === 0) return null;
+  return (
+    <div className="max-h-64 space-y-2 overflow-y-auto">
+      {numbers.map((n) => (
+        <div key={n.phone_number} className="flex items-center justify-between rounded-md border p-2">
+          <div>
+            <div className="font-mono text-sm">{n.friendly_name || n.phone_number}</div>
+            {(n.locality || n.region) && (
+              <div className="text-xs text-muted-foreground">{[n.locality, n.region].filter(Boolean).join(", ")}</div>
+            )}
+          </div>
+          <Button size="sm" onClick={() => onPick(n.phone_number)} disabled={provisioning}>
+            {provisioning ? <Loader2 className="h-4 w-4 animate-spin" /> : "Use"}
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
