@@ -262,7 +262,7 @@ export default function Crew() {
                           <TableCell className="capitalize">{i.role}</TableCell>
                           <TableCell><Badge variant="outline">{i.status}</Badge></TableCell>
                           <TableCell className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => copyLink(i.token)}>
+                            <Button size="sm" variant="ghost" onClick={() => copyLink(i.id)} disabled={!inviteTokens[i.id]}>
                               <Copy className="h-3.5 w-3.5" /> Copy link
                             </Button>
                             <Button size="sm" variant="ghost" className="text-destructive" onClick={() => revoke(i.id)}>Revoke</Button>
