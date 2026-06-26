@@ -52,6 +52,7 @@ export default function Crew() {
   const isAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [invEmail, setInvEmail] = useState("");
@@ -68,7 +69,7 @@ export default function Crew() {
         .eq("organization_id", activeOrg.organization_id),
       supabase
         .from("invitations")
-        .select("id, email, role, status, token, created_at")
+        .select("id, email, role, status, created_at")
         .eq("organization_id", activeOrg.organization_id)
         .order("created_at", { ascending: false }),
     ]);
@@ -100,27 +101,44 @@ export default function Crew() {
     load();
   };
 
+  const sha256Hex = async (input: string) => {
+    const bytes = new TextEncoder().encode(input);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
+
   const invite = async () => {
     const parsed = inviteSchema.safeParse({ email: invEmail, role: invRole });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (!activeOrg || !user) return;
     setSaving(true);
-    const token = crypto.randomUUID().replace(/-/g, "");
-    const { error } = await supabase.from("invitations").insert({
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const token_hash = await sha256Hex(token);
+    const { data: inserted, error } = await supabase.from("invitations").insert({
       organization_id: activeOrg.organization_id,
       email: parsed.data.email,
       role: parsed.data.role,
-      token,
+      token_hash,
       invited_by: user.id,
-    });
+    }).select("id").maybeSingle();
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Invitation created — share the link with your teammate");
+    if (inserted?.id) {
+      setInviteTokens((m) => ({ ...m, [inserted.id]: token }));
+      const url = `${window.location.origin}/signup?invite=${token}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      toast.success("Invite link copied — it will not be shown again");
+    }
     setInvEmail(""); setInvRole("worker"); setOpen(false);
     load();
   };
 
-  const copyLink = (token: string) => {
+  const copyLink = (id: string) => {
+    const token = inviteTokens[id];
+    if (!token) {
+      toast.error("Invite link is only available right after creation. Revoke and re-invite to get a new link.");
+      return;
+    }
     const url = `${window.location.origin}/signup?invite=${token}`;
     navigator.clipboard.writeText(url);
     toast.success("Invite link copied");
