@@ -21,6 +21,7 @@ const nav = [
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/messages", label: "Messages", icon: MessageSquare },
+  { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
