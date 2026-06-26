@@ -34,6 +34,8 @@ import Costing from "./pages/app/Costing";
 import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
+import FieldCrew from "./pages/field/FieldCrew";
+import FieldAssistant from "./pages/field/FieldAssistant";
 import Assistant from "./pages/app/Assistant";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
@@ -111,6 +113,8 @@ const App = () => (
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
               <Route index element={<FieldClock />} />
               <Route path="jobs" element={<FieldJobs />} />
+              <Route path="crew" element={<FieldCrew />} />
+              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><FieldAssistant /></PaywallGate>} />
               <Route path="map" element={<FieldMap />} />
               <Route path="profile" element={<FieldProfile />} />
             </Route>

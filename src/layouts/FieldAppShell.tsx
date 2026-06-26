@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Clock, Briefcase, User, LogOut, MapPin } from "lucide-react";
+import { Clock, Briefcase, User, LogOut, Users, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 const items = [
   { to: "/field", label: "Clock", icon: Clock, end: true },
   { to: "/field/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/field/map", label: "Map", icon: MapPin },
+  { to: "/field/crew", label: "Crew", icon: Users },
+  { to: "/field/assistant", label: "AI", icon: Sparkles },
   { to: "/field/profile", label: "Profile", icon: User },
 ];
 
@@ -30,7 +31,7 @@ export default function FieldAppShell() {
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-24">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 grid grid-cols-4 border-t border-border bg-card">
+      <nav className="fixed bottom-0 left-0 right-0 grid grid-cols-5 border-t border-border bg-card">
         {items.map((it) => (
           <NavLink
             key={it.to}
