@@ -36,8 +36,8 @@ const PLANS: PlanDef[] = [
     features: [
       "Everything in Contractor OS",
       "AI admin assistant",
-      "Draft estimates & schedule jobs by chat",
-      "Voice-to-text dictation",
+      "Voice-to-form: talk and it fills fields & estimates",
+      "Draft estimates & schedule jobs by chat or voice",
       "Confirm-before-write safety",
     ],
   },
@@ -97,7 +97,7 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Pricing — Contractor OS"
-        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant), Premium $269 (adds AI phone answering). Cancel anytime."
+        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant with voice form filling), Premium $269 (adds AI phone answering). Cancel anytime."
         path="/pricing"
         jsonLd={productLd}
       />

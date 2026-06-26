@@ -11,7 +11,7 @@ const features = [
   { icon: Receipt, title: "Invoices & Payments", to: "/invoice-software", desc: "Deposit, progress, and final invoices with online payment links." },
   { icon: Calendar, title: "Job Scheduling", to: "/features", desc: "Crew and sub scheduling across every active job." },
   { icon: Clock, title: "Crew Time Tracking", to: "/features", desc: "GPS-verified clock-in, boss-approved hours, and job-costed payroll." },
-  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business from one AI chat — leads, estimates, jobs, invoices." },
+  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business by typing or talking — AI fills forms, drafts estimates, and creates jobs while you confirm before it writes." },
 ];
 
 export default function Features() {
@@ -19,7 +19,7 @@ export default function Features() {
     <MarketingShell>
       <SEO
         title="Features | Contractor Software for Estimating, CRM, Jobs & Invoicing — ContractorOS"
-        description="See every feature in ContractorOS: AI phone answering, AI photo estimating, contractor CRM, estimates, invoices, job scheduling, crew time tracking, and an AI command chat."
+        description="See every feature in ContractorOS: AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, estimates, invoices, job scheduling, crew time tracking, and an AI command chat."
         path="/features"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
@@ -27,7 +27,7 @@ export default function Features() {
           Every tool a contractor needs — in one app.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          ContractorOS is the AI-powered operating system for contractors. Answer calls, capture leads, estimate from photos, schedule crews, track time, send invoices, and collect payments.
+          ContractorOS is the AI-powered operating system for contractors. Answer calls, capture leads, estimate from photos and voice, schedule crews, track time, send invoices, and collect payments.
         </p>
         <CTARow />
       </section>

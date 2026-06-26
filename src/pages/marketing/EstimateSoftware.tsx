@@ -8,16 +8,16 @@ export default function EstimateSoftware() {
   return (
     <MarketingShell>
       <SEO
-        title="Construction Estimate Software | AI Contractor Estimating — ContractorOS"
-        description="ContractorOS is AI contractor estimating software. Draft construction estimates from photos, apply your unit pricing, send branded proposals, and convert to jobs."
+        title="Construction Estimate Software | AI Voice & Photo Estimating — ContractorOS"
+        description="ContractorOS is AI contractor estimating software. Draft construction estimates from photos or by talking, apply your unit pricing, send branded proposals, and convert to jobs."
         path="/estimate-software"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-          Construction Estimate Software With AI
+          Construction Estimate Software With AI Voice & Photo Estimating
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          ContractorOS drafts estimates from photos and your unit pricing. You approve, send a branded proposal, capture an e-signature, and convert it to a scheduled job — all in one app.
+          ContractorOS drafts estimates from photos, voice, or your unit pricing. You approve, send a branded proposal, capture an e-signature, and convert it to a scheduled job — all in one app.
         </p>
         <CTARow />
       </section>
@@ -28,6 +28,7 @@ export default function EstimateSoftware() {
 
       <FAQ
         items={[
+          { q: "Can I build an estimate by talking?", a: "Yes. On the Plus and Premium plans, you can dictate the scope by voice and the AI fills out the estimate form, line items, and pricing. You review and approve before sending." },
           { q: "Can I save unit pricing and assemblies?", a: "Yes. Save your materials, labor rates, and pre-built assemblies so estimates draft in seconds." },
           { q: "Does it handle change orders?", a: "Yes. Change orders flow into the live estimate and onto the final invoice automatically." },
           { q: "Do customers e-sign estimates?", a: "Yes. Send a branded proposal with an e-signature link. Signed estimates convert to jobs in one click." },

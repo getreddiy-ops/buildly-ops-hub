@@ -9,7 +9,7 @@ export default function AIPhoneAgent() {
     <MarketingShell>
       <SEO
         title="AI Phone Answering for Contractors | 24/7 Receptionist — ContractorOS"
-        description="ContractorOS answers contractor calls 24/7, captures lead details, books appointments, and writes everything back to your CRM. Stop missing leads while you’re on the job."
+        description="ContractorOS answers contractor calls 24/7, captures lead details, books appointments, fills out CRM forms by voice, and writes everything back to your CRM. Stop missing leads while you’re on the job."
         path="/ai-phone-agent"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">

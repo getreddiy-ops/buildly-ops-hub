@@ -17,7 +17,7 @@ const sections = [
   { icon: Receipt, title: "Invoices and Payments", to: "/invoice-software", desc: "Deposit, progress, and final invoices. Online payment links by email or text." },
   { icon: Calendar, title: "Job Scheduling", to: "/features", desc: "Schedule crews and subs across every active job. Everyone knows where to be." },
   { icon: Clock, title: "Crew Time Tracking", to: "/features", desc: "GPS clock-in, boss-approved hours, and payroll-ready exports." },
-  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business from one AI chat — create leads, estimates, jobs, and invoices by asking." },
+  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business by typing or talking — AI fills out forms, drafts estimates, and creates jobs while you’re between sites." },
 ];
 
 const trades = [
@@ -41,7 +41,7 @@ const faqItems = [
   { q: "Does ContractorOS track crew time?", a: "Yes. Crews clock in on-site with GPS verification. Managers approve hours before they flow to payroll and job costing." },
   { q: "Is ContractorOS built for concrete contractors?", a: "Yes. ContractorOS is built for concrete contractors and other trade-based businesses. There’s a dedicated concrete page with use cases and an AI estimator tuned for driveways, patios, and slabs." },
   { q: "Can I use ContractorOS for fencing, roofing, siding, decks, or landscaping?", a: "Yes. ContractorOS supports fencing, roofing, siding, deck builders, landscapers, framers, and general contractors. Each trade has a dedicated landing page and workflow." },
-  { q: "Does ContractorOS have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking — create leads, draft estimates, schedule jobs, and send invoices." },
+  { q: "Does ContractorOS have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking. Tell it to create a lead, fill out a form, draft an estimate, schedule a job, or send an invoice — it does the work and asks you to confirm before writing anything." },
 ];
 
 const softwareSchema = {
@@ -50,7 +50,7 @@ const softwareSchema = {
   name: "ContractorOS",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android",
-  description: "ContractorOS is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
+  description: "ContractorOS is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "GetReddiy" },
   url: "https://contractoros.online/",
@@ -67,7 +67,7 @@ export default function Landing() {
     <MarketingShell>
       <SEO
         title="ContractorOS | AI Contractor Estimating, CRM, Invoices & Job Management"
-        description="ContractorOS helps contractors answer calls, capture leads, create AI-assisted estimates from photos, manage jobs, send invoices, track crew time, and run their business from one simple app."
+        description="ContractorOS helps contractors answer calls, capture leads, create AI-assisted estimates from photos and voice, manage jobs, send invoices, track crew time, and run their business from one simple app."
         path="/"
         jsonLd={softwareSchema}
       />
@@ -83,11 +83,11 @@ export default function Landing() {
           <span className="text-gradient-primary">Office, Estimates, Jobs, and Invoices</span>
         </h1>
         <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-muted-foreground">
-          ContractorOS combines AI phone answering, photo-based estimating, customer management, job scheduling, invoicing, crew time tracking, and an AI command chat so contractors can run the whole business from one dashboard.
+          ContractorOS combines AI phone answering, photo-based estimating, voice-driven AI form filling, customer management, job scheduling, invoicing, crew time tracking, and an AI command chat so contractors can run the whole business from one dashboard.
         </p>
         <CTARow />
         <p className="mx-auto mt-6 max-w-2xl text-sm text-muted-foreground">
-          Stop missing calls. Stop rebuilding estimates from scratch. Stop chasing notes across texts, photos, and paper. ContractorOS gives contractors one AI-powered dashboard for leads, estimates, jobs, invoices, crew time, and customer follow-up.
+          Stop missing calls. Stop typing estimates from scratch. Stop chasing notes across texts, photos, and paper. Just talk to the AI — it fills out forms, drafts estimates, and builds jobs while you drive between sites.
         </p>
       </section>
 
