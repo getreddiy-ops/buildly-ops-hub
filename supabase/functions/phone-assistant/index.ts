@@ -1,6 +1,7 @@
 // Manage the org's phone assistant: load/save settings, create/update the
 // ElevenLabs Conversational AI agent. Requires Premium tier.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
