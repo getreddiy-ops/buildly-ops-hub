@@ -36,6 +36,7 @@ import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
 import BusinessProfile from "./pages/app/BusinessProfile";
 import Branding from "./pages/app/Branding";
+import Developer from "./pages/app/Developer";
 import Invoices from "./pages/app/Invoices";
 import Contracts from "./pages/app/Contracts";
 import { BrandingProvider } from "./components/BrandingProvider";
