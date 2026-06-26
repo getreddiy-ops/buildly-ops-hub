@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Plus, Truck } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Vendor = Database["public"]["Tables"]["vendors"]["Row"];
