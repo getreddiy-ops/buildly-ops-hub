@@ -39,13 +39,15 @@ export function useSubscription() {
     }
     const { data } = await supabase
       .from("subscriptions")
-      .select("*")
+      .select(
+        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,environment,created_at",
+      )
       .eq("organization_id", orgId)
       .eq("environment", getPaddleEnvironment())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    setSubscription((data as SubscriptionRow | null) ?? null);
+    setSubscription((data as unknown as SubscriptionRow | null) ?? null);
     setLoading(false);
   }, [user, orgId]);
 
