@@ -139,24 +139,72 @@ function PhoneAssistant() {
     load();
   };
 
-  const provision = async () => {
-    if (!orgId) return;
-    setProvisioning(true);
+  const callProvision = async (payload: Record<string, unknown>) => {
+    if (!orgId) return null;
     const { data, error } = await supabase.functions.invoke("phone-assistant-provision", {
-      body: { organization_id: orgId, area_code: areaCode || undefined },
+      body: { organization_id: orgId, ...payload },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Request failed");
+      return null;
+    }
+    return data as any;
+  };
+
+  const searchNumbers = async () => {
+    setSearching(true);
+    setAvailable([]);
+    const data = await callProvision({
+      action: "search",
+      number_type: numberType,
+      area_code: numberType === "local" ? (areaCode || undefined) : undefined,
+    });
+    setSearching(false);
+    if (data?.numbers) setAvailable(data.numbers);
+    if (data?.numbers?.length === 0) toast.message("No numbers found — try a different area code.");
+  };
+
+  const purchase = async (phone_number?: string) => {
+    setProvisioning(true);
+    const data = await callProvision({
+      action: "purchase",
+      number_type: numberType,
+      area_code: numberType === "local" ? (areaCode || undefined) : undefined,
+      phone_number,
     });
     setProvisioning(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error ?? error?.message ?? "Provisioning failed");
-      return;
-    }
-    toast.success(`Number connected: ${(data as any).assistant.twilio_phone_number}`);
+    if (!data) return;
+    toast.success(`Number connected: ${data.assistant.twilio_phone_number}`);
     setProvisionOpen(false);
-    setAreaCode("");
+    setAreaCode(""); setAvailable([]); setByoNumber("");
+    load();
+  };
+
+  const bringYourOwn = async () => {
+    if (!byoNumber.trim()) return toast.error("Enter a phone number");
+    setProvisioning(true);
+    const data = await callProvision({ action: "byo", phone_number: byoNumber.trim() });
+    setProvisioning(false);
+    if (!data) return;
+    toast.success("Number saved. Forward your line to the assistant to take live calls.");
+    setProvisionOpen(false);
+    setByoNumber("");
+    load();
+  };
+
+  const release = async () => {
+    if (!confirm("Release this number? Incoming calls will stop reaching your assistant.")) return;
+    setReleasing(true);
+    const data = await callProvision({ action: "release" });
+    setReleasing(false);
+    if (!data) return;
+    toast.success("Number released");
     load();
   };
 
   if (loading) return <div className="p-6 text-muted-foreground">Loading…</div>;
+
+  const hasNumber = !!assistant?.twilio_phone_number;
 
   return (
     <div className="space-y-6">
@@ -170,32 +218,73 @@ function PhoneAssistant() {
             24/7 AI receptionist powered by ElevenLabs. Answers calls, books estimates, and logs every conversation.
           </p>
         </div>
-        <Dialog open={provisionOpen} onOpenChange={setProvisionOpen}>
-          <DialogTrigger asChild>
-            <Button disabled={!canEdit || !assistant?.elevenlabs_agent_id || !!assistant?.twilio_phone_sid}>
-              <Plus className="mr-2 h-4 w-4" />
-              {assistant?.twilio_phone_number ? "Number connected" : "Connect phone number"}
+        <div className="flex items-center gap-2">
+          {hasNumber && canEdit && (
+            <Button variant="outline" onClick={release} disabled={releasing}>
+              {releasing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Release number
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Connect a phone number</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <Label>Area code (optional)</Label>
-              <Input placeholder="e.g. 415" value={areaCode} onChange={(e) => setAreaCode(e.target.value)} />
-              <p className="text-xs text-muted-foreground">
-                We'll buy a local Twilio number and route incoming calls directly to your assistant.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button onClick={provision} disabled={provisioning}>
-                {provisioning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {provisioning ? "Provisioning…" : "Provision number"}
+          )}
+          <Dialog open={provisionOpen} onOpenChange={setProvisionOpen}>
+            <DialogTrigger asChild>
+              <Button disabled={!canEdit || !assistant?.elevenlabs_agent_id || hasNumber}>
+                <Plus className="mr-2 h-4 w-4" />
+                {hasNumber ? "Number connected" : "Get a phone number"}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Get a phone number for your assistant</DialogTitle>
+              </DialogHeader>
+              <Tabs defaultValue="local" onValueChange={(v) => { setNumberType(v === "tollfree" ? "toll_free" : "local"); setAvailable([]); }}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="local">Local</TabsTrigger>
+                  <TabsTrigger value="tollfree">Toll-free</TabsTrigger>
+                  <TabsTrigger value="byo">Bring your own</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="local" className="space-y-3 pt-3">
+                  <Label>Area code (optional)</Label>
+                  <div className="flex gap-2">
+                    <Input placeholder="e.g. 415" value={areaCode} onChange={(e) => setAreaCode(e.target.value)} />
+                    <Button variant="outline" onClick={searchNumbers} disabled={searching}>
+                      {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                    </Button>
+                  </div>
+                  <NumberList numbers={available} onPick={purchase} provisioning={provisioning} />
+                  <p className="text-xs text-muted-foreground">
+                    Included with your Premium plan. We'll buy a local number and route calls to your assistant.
+                  </p>
+                </TabsContent>
+
+                <TabsContent value="tollfree" className="space-y-3 pt-3">
+                  <Button variant="outline" onClick={searchNumbers} disabled={searching} className="w-full">
+                    {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Search toll-free numbers
+                  </Button>
+                  <NumberList numbers={available} onPick={purchase} provisioning={provisioning} />
+                  <p className="text-xs text-muted-foreground">
+                    800/888/877-style numbers. Included with your Premium plan.
+                  </p>
+                </TabsContent>
+
+                <TabsContent value="byo" className="space-y-3 pt-3">
+                  <Label>Your existing business number</Label>
+                  <Input placeholder="+1 555 000 0000" value={byoNumber} onChange={(e) => setByoNumber(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">
+                    Save your number here, then forward it (carrier call-forwarding or SIP) to the assistant. To port the number to us instead, contact support.
+                  </p>
+                  <DialogFooter>
+                    <Button onClick={bringYourOwn} disabled={provisioning}>
+                      {provisioning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save number
+                    </Button>
+                  </DialogFooter>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <StatCards calls={calls} />
