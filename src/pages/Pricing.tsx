@@ -155,7 +155,7 @@ export default function Pricing() {
                 >
                   {loading ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening checkout…</>
-                  ) : user ? "Subscribe" : "Get started"}
+                  ) : user ? "Start 7-day free trial" : "Start free trial"}
                 </Button>
               </div>
             );
