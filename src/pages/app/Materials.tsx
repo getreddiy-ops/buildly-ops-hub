@@ -127,7 +127,29 @@ export default function Materials() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New material</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>{editing ? "Edit material" : "New material"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit material" : "New material"}</DialogTitle>
+                  <AiFormHelper
+                    formName="material"
+                    fields={[
+                      { name: "name", description: "Material name" },
+                      { name: "sku", description: "SKU / part number" },
+                      { name: "category" },
+                      { name: "unit", description: "Unit of measure (ea, ft, sqft, gal, etc.)" },
+                      { name: "unit_cost", type: "number", description: "Cost per unit in dollars" },
+                      { name: "notes" },
+                    ]}
+                    onFill={(v) =>
+                      setForm((f) => ({
+                        ...f,
+                        ...v,
+                        unit_cost: v.unit_cost !== undefined ? String(v.unit_cost) : f.unit_cost,
+                      } as typeof f))
+                    }
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">
