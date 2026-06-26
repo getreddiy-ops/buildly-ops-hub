@@ -110,7 +110,22 @@ export default function Customers() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New customer</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>{editing ? "Edit customer" : "New customer"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit customer" : "New customer"}</DialogTitle>
+                  <AiFormHelper
+                    formName="customer"
+                    fields={[
+                      { name: "name", description: "Full name of the customer" },
+                      { name: "email", type: "email" },
+                      { name: "phone", type: "phone" },
+                      { name: "address", description: "Street address" },
+                      { name: "notes", description: "Anything else noteworthy" },
+                    ]}
+                    onFill={(v) => setForm((f) => ({ ...f, ...v } as typeof f))}
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">
