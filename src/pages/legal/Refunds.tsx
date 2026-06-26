@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
+import { SEO } from "@/components/SEO";
 
 export default function Refunds() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
+      <SEO title="Refund Policy — Contractor OS" description="Contractor OS offers a 30-day money-back guarantee. Learn how to request a refund through Paddle." path="/legal/refunds" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
