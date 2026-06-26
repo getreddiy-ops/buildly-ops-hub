@@ -325,7 +325,17 @@ function PhoneAssistant() {
   );
 }
 
-function TestConsole({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
+function TestConsole(props: { agentReady: boolean; orgId: string | null }) {
+  return (
+    <ConversationProvider
+      onError={(e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error")}
+    >
+      <TestConsoleInner {...props} />
+    </ConversationProvider>
+  );
+}
+
+function TestConsoleInner({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
   const [connecting, setConnecting] = useState(false);
   const conversation = useConversation({
     onError: (e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error"),
