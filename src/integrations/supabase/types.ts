@@ -58,6 +58,76 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          id: string
+          job_id: string | null
+          organization_id: string
+          sent_at: string | null
+          signed_at: string | null
+          signed_name: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          job_id?: string | null
+          organization_id: string
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          job_id?: string | null
+          organization_id?: string
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_assignments: {
         Row: {
           created_at: string
@@ -286,6 +356,142 @@ export type Database = {
           },
         ]
       }
+      invoice_line_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          position: number
+          quantity: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          position?: number
+          quantity?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          position?: number
+          quantity?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          due_date: string | null
+          estimate_id: string | null
+          id: string
+          issue_date: string
+          job_id: string | null
+          notes: string | null
+          number: string | null
+          organization_id: string
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          terms: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          due_date?: string | null
+          estimate_id?: string | null
+          id?: string
+          issue_date?: string
+          job_id?: string | null
+          notes?: string | null
+          number?: string | null
+          organization_id: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          due_date?: string | null
+          estimate_id?: string | null
+          id?: string
+          issue_date?: string
+          job_id?: string | null
+          notes?: string | null
+          number?: string | null
+          organization_id?: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_costs: {
         Row: {
           amount: number
@@ -499,37 +705,67 @@ export type Database = {
       }
       organizations: {
         Row: {
+          address: string | null
           agent_id: string | null
+          brand_color: string | null
+          brand_color_secondary: string | null
           business_profile: Json
           created_at: string
+          document_defaults: Json
+          email: string | null
           id: string
+          legal_name: string | null
+          logo_url: string | null
           name: string
           owner_id: string
+          phone: string | null
           plan: string
           slug: string | null
+          tax_id: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
+          address?: string | null
           agent_id?: string | null
+          brand_color?: string | null
+          brand_color_secondary?: string | null
           business_profile?: Json
           created_at?: string
+          document_defaults?: Json
+          email?: string | null
           id?: string
+          legal_name?: string | null
+          logo_url?: string | null
           name: string
           owner_id: string
+          phone?: string | null
           plan?: string
           slug?: string | null
+          tax_id?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          address?: string | null
           agent_id?: string | null
+          brand_color?: string | null
+          brand_color_secondary?: string | null
           business_profile?: Json
           created_at?: string
+          document_defaults?: Json
+          email?: string | null
           id?: string
+          legal_name?: string | null
+          logo_url?: string | null
           name?: string
           owner_id?: string
+          phone?: string | null
           plan?: string
           slug?: string | null
+          tax_id?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }

@@ -2,26 +2,36 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
+  Receipt, FileSignature, Palette,
 } from "lucide-react";
+
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
+import { useBranding } from "@/hooks/useBranding";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/app/leads", label: "Leads", icon: Users },
   { to: "/app/customers", label: "Customers", icon: Users },
   { to: "/app/estimates", label: "Estimates", icon: FileText },
+  { to: "/app/invoices", label: "Invoices", icon: Receipt },
+  { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+
   { to: "/app/jobs", label: "Jobs", icon: Briefcase },
   { to: "/app/crew", label: "Crew", icon: HardHat },
   { to: "/app/time", label: "Time Tracking", icon: Clock },
   { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
   { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },
+  { to: "/app/branding", label: "Branding", icon: Palette },
+
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
 
@@ -32,14 +42,27 @@ const nav = [
 
 export default function AppShell() {
   const { user, activeOrg, signOut, memberships, setActiveOrgId } = useAuth();
+  const { branding } = useBranding();
+
   const navigate = useNavigate();
 
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="border-b border-sidebar-border p-4">
-          <Logo to="/app" />
+          {branding?.logo_signed_url ? (
+            <Link to="/app" className="flex items-center gap-2">
+              <img
+                src={branding.logo_signed_url}
+                alt={branding.name}
+                className="max-h-10 max-w-[180px] object-contain"
+              />
+            </Link>
+          ) : (
+            <Logo to="/app" />
+          )}
         </div>
+
         {memberships.length > 1 && (
           <div className="border-b border-sidebar-border p-3">
             <select
