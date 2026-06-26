@@ -1,0 +1,89 @@
+import { useEffect, useState } from "react";
+import { Users, ShieldCheck, ShieldOff } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/EmptyState";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type AppRole = "platform_admin" | "agent" | "owner" | "admin" | "worker";
+type Profile = { id: string; full_name: string | null; email: string | null; created_at: string };
+
+export default function AdminUsers() {
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [roles, setRoles] = useState<Record<string, AppRole[]>>({});
+  const [q, setQ] = useState("");
+
+  const load = async () => {
+    const { data: ps } = await supabase.from("profiles").select("id, full_name, email, created_at").order("created_at", { ascending: false });
+    setUsers((ps ?? []) as Profile[]);
+    const { data: rs } = await supabase.from("user_roles").select("user_id, role");
+    const map: Record<string, AppRole[]> = {};
+    (rs ?? []).forEach((r: any) => { (map[r.user_id] ??= []).push(r.role); });
+    setRoles(map);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggle = async (uid: string, role: AppRole) => {
+    const has = roles[uid]?.includes(role);
+    if (has) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", role);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: uid, role });
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Role updated");
+    load();
+  };
+
+  const filtered = users.filter((u) =>
+    (u.email ?? "").toLowerCase().includes(q.toLowerCase()) ||
+    (u.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
+  );
+
+  return (
+    <>
+      <PageHeader title="Users" description="Every user on the platform, with global role management." />
+      <Input placeholder="Search users…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm mb-4" />
+      {filtered.length === 0 ? (
+        <EmptyState icon={Users} title="No users yet" />
+      ) : (
+        <Card className="divide-y divide-border">
+          {filtered.map((u) => {
+            const userRoles = roles[u.id] ?? [];
+            return (
+              <div key={u.id} className="p-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{u.full_name || u.email || u.id}</div>
+                  <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {userRoles.length === 0
+                      ? <span className="text-xs text-muted-foreground">No platform roles</span>
+                      : userRoles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant={userRoles.includes("agent") ? "default" : "outline"}
+                    onClick={() => toggle(u.id, "agent")}>
+                    {userRoles.includes("agent") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                    Agent
+                  </Button>
+                  <Button size="sm" variant={userRoles.includes("platform_admin") ? "default" : "outline"}
+                    onClick={() => toggle(u.id, "platform_admin")}>
+                    {userRoles.includes("platform_admin") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                    Admin
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+    </>
+  );
+}

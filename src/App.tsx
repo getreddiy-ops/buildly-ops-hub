@@ -32,12 +32,15 @@ import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
 import Assistant from "./pages/app/Assistant";
-import {
-  Messages, SettingsPage,
-  FieldProfile,
-  AgentOverview, AgentClients, AgentLeads, AgentPayouts,
-  AdminOverview, AdminOrgs, AdminUsers, AdminAudit,
-} from "./pages/stubs";
+import AgentOverview from "./pages/agent/AgentOverview";
+import AgentClients from "./pages/agent/AgentClients";
+import AgentLeads from "./pages/agent/AgentLeads";
+import AgentPayouts from "./pages/agent/AgentPayouts";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminOrgs from "./pages/admin/AdminOrgs";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminAudit from "./pages/admin/AdminAudit";
+import { Messages, SettingsPage, FieldProfile } from "./pages/stubs";
 
 const queryClient = new QueryClient();
 
