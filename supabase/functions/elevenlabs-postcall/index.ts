@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
         duration_seconds: duration,
         status: "completed",
         summary,
-        transcript: data.transcript ?? null,
+        transcript,
         elevenlabs_conversation_id: conversationId,
       });
     }
