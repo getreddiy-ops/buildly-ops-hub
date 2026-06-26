@@ -2,12 +2,57 @@
 // the org's ElevenLabs Conversational AI agent via a signed Media Stream URL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+
+async function hmacSha1Base64(key: string, data: string): Promise<string> {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(key),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data));
+  const bytes = new Uint8Array(sig);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+async function verifyTwilioSignature(req: Request, params: Record<string, string>): Promise<boolean> {
+  if (!TWILIO_AUTH_TOKEN) return false;
+  const signature = req.headers.get("x-twilio-signature") ?? "";
+  if (!signature) return false;
+  // Twilio signs: full URL + sorted concatenation of param name + value
+  const url = req.url;
+  const sortedKeys = Object.keys(params).sort();
+  const data = url + sortedKeys.map((k) => k + params[k]).join("");
+  const expected = await hmacSha1Base64(TWILIO_AUTH_TOKEN, data);
+  return timingSafeEqual(expected, signature);
+}
+
 Deno.serve(async (req) => {
   try {
     const form = await req.formData();
-    const to = String(form.get("To") ?? "");
-    const from = String(form.get("From") ?? "");
-    const callSid = String(form.get("CallSid") ?? "");
+    const params: Record<string, string> = {};
+    for (const [k, v] of form.entries()) params[k] = String(v);
+
+    const ok = await verifyTwilioSignature(req, params);
+    if (!ok) {
+      console.warn("twilio-voice-webhook: invalid signature");
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const to = params.To ?? "";
+    const from = params.From ?? "";
+    const callSid = params.CallSid ?? "";
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: assistant } = await admin
