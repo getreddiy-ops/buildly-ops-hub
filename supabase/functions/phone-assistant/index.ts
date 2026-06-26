@@ -186,7 +186,11 @@ Deno.serve(async (req) => {
       return json({ error: "Premium subscription required" }, 402);
     }
 
-    const { data: org } = await admin.from("organizations").select("name, business_profile").eq("id", orgId).single();
+    const { data: org } = await admin
+      .from("organizations")
+      .select("name, address, business_profile")
+      .eq("id", orgId)
+      .single();
 
     const { data: existing } = await admin
       .from("phone_assistants")
@@ -208,6 +212,7 @@ Deno.serve(async (req) => {
       merged.capabilities,
       merged.transfer_number,
       (org?.business_profile as Record<string, any>) ?? {},
+      (org?.address as string | null) ?? null,
     );
 
     const agentId = await upsertAgent({
