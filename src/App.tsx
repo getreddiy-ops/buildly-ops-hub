@@ -20,8 +20,11 @@ import AgentShell from "./layouts/AgentShell";
 import AdminShell from "./layouts/AdminShell";
 
 import Dashboard from "./pages/app/Dashboard";
+import Leads from "./pages/app/Leads";
+import Customers from "./pages/app/Customers";
+import Estimates from "./pages/app/Estimates";
 import {
-  Leads, Customers, Estimates, Jobs, Crew, TimeTracking, Approvals, Costing,
+  Jobs, Crew, TimeTracking, Approvals, Costing,
   Assistant, Messages, SettingsPage,
   FieldClock, FieldJobs, FieldMap, FieldProfile,
   AgentOverview, AgentClients, AgentLeads, AgentPayouts,
