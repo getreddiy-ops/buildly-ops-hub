@@ -55,8 +55,8 @@ export function useSubscription() {
 
   useEffect(() => {
     if (!orgId) return;
-    const channel = supabase
-      .channel(`subs:org:${orgId}`)
+    const channel = supabase.channel(`subs:org:${orgId}:${Math.random().toString(36).slice(2)}`);
+    channel
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `organization_id=eq.${orgId}` },
