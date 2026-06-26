@@ -74,6 +74,26 @@ async function upsertAgent(opts: {
   return opts.agentId ?? data.agent_id;
 }
 
+// Best-effort: register the post-call webhook at the workspace level so
+// ElevenLabs POSTs conversation summaries to our edge function. Idempotent;
+// safe to call on every save. Failures are logged, not thrown.
+async function ensurePostCallWebhook() {
+  const url = `${SUPABASE_URL}/functions/v1/elevenlabs-postcall`;
+  try {
+    const res = await fetch("https://api.elevenlabs.io/v1/convai/settings", {
+      method: "PATCH",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversation_initiation_client_data_webhook: { url, request_headers: {} },
+        webhooks: { post_call_webhook_url: url },
+      }),
+    });
+    if (!res.ok) console.warn("post-call webhook register failed", res.status, await res.text());
+  } catch (e) {
+    console.warn("post-call webhook register error", (e as Error).message);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
