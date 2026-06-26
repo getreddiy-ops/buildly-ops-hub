@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /field
+Disallow: /field/
+Disallow: /agent
+Disallow: /agent/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /onboarding
 
 Sitemap: https://contractoros.online/sitemap.xml
