@@ -16,7 +16,17 @@ import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
 import Refunds from "./pages/legal/Refunds";
-import ContractorCRM from "./pages/features/ContractorCRM";
+import ContractorCRMOld from "./pages/features/ContractorCRM";
+import Features from "./pages/marketing/Features";
+import AIPhotoEstimator from "./pages/marketing/AIPhotoEstimator";
+import AIPhoneAgent from "./pages/marketing/AIPhoneAgent";
+import ContractorCRMPage from "./pages/marketing/ContractorCRM";
+import EstimateSoftware from "./pages/marketing/EstimateSoftware";
+import InvoiceSoftware from "./pages/marketing/InvoiceSoftware";
+import Resellers from "./pages/marketing/Resellers";
+import TradePage from "./pages/marketing/TradePage";
+import BlogIndex from "./pages/marketing/blog/BlogIndex";
+import BlogPost from "./pages/marketing/blog/BlogPost";
 
 import AppShell from "./layouts/AppShell";
 import FieldAppShell from "./layouts/FieldAppShell";
@@ -81,7 +91,24 @@ const App = () => (
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refunds" element={<Refunds />} />
-            <Route path="/features/contractor-crm" element={<ContractorCRM />} />
+            <Route path="/features/contractor-crm" element={<ContractorCRMOld />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/ai-photo-estimator" element={<AIPhotoEstimator />} />
+            <Route path="/ai-phone-agent" element={<AIPhoneAgent />} />
+            <Route path="/contractor-crm" element={<ContractorCRMPage />} />
+            <Route path="/estimate-software" element={<EstimateSoftware />} />
+            <Route path="/invoice-software" element={<InvoiceSoftware />} />
+            <Route path="/resellers" element={<Resellers />} />
+            <Route path="/blog" element={<BlogIndex />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/concrete-contractor-software" element={<TradePage />} />
+            <Route path="/framing-contractor-software" element={<TradePage />} />
+            <Route path="/fencing-contractor-software" element={<TradePage />} />
+            <Route path="/landscaping-contractor-software" element={<TradePage />} />
+            <Route path="/roofing-contractor-software" element={<TradePage />} />
+            <Route path="/siding-contractor-software" element={<TradePage />} />
+            <Route path="/deck-builder-software" element={<TradePage />} />
+            <Route path="/general-contractor-software" element={<TradePage />} />
 
             {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><BrandingProvider><AppShell /></BrandingProvider></RequireOrg></RequireAuth>}>
