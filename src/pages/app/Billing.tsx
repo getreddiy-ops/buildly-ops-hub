@@ -51,7 +51,7 @@ export default function Billing() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title="Billing" subtitle="Manage your Contractor OS subscription" />
+      <PageHeader title="Billing" description="Manage your Contractor OS subscription" />
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
