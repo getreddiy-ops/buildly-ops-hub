@@ -95,7 +95,13 @@ export default function Landing() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
           <Logo />
-          <div>© {new Date().getFullYear()} Contractor OS</div>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/legal/terms" className="hover:text-foreground">Terms</Link>
+            <Link to="/legal/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link to="/legal/refunds" className="hover:text-foreground">Refunds</Link>
+            <Link to="/contact" className="hover:text-foreground">Contact</Link>
+          </div>
+          <div>© {new Date().getFullYear()} Morgan Marc Lynch</div>
         </div>
       </footer>
     </div>
