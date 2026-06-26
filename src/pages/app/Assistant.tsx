@@ -302,15 +302,26 @@ export default function Assistant() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
-          placeholder="Ask the assistant…"
+          placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask the assistant…"}
           rows={2}
           className="resize-none"
-          disabled={loading}
+          disabled={loading || recording || transcribing}
         />
-        <Button type="submit" disabled={loading || !input.trim()} size="lg">
+        <Button
+          type="button"
+          size="lg"
+          variant={recording ? "destructive" : "outline"}
+          onClick={() => (recording ? stopRec() : startRec())}
+          disabled={loading || transcribing}
+          title={recording ? "Stop recording" : "Voice input"}
+        >
+          {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
+        <Button type="submit" disabled={loading || !input.trim() || recording || transcribing} size="lg">
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
     </div>
   );
 }
