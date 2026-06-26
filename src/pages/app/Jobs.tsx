@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
