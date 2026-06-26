@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Bot, Check, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useVoiceRecorder, useVoiceSpeaker } from "@/hooks/useVoice";
 import { toast } from "sonner";
+
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
