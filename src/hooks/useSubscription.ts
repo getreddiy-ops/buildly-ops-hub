@@ -8,8 +8,6 @@ export type SubscriptionRow = {
   id: string;
   user_id: string;
   organization_id: string | null;
-  paddle_subscription_id: string;
-  paddle_customer_id: string;
   product_id: string;
   price_id: string;
   status: string;
