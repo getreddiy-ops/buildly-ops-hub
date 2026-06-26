@@ -2,7 +2,9 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
+  Receipt, FileSignature, Palette,
 } from "lucide-react";
+
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
@@ -16,12 +18,17 @@ const nav = [
   { to: "/app/leads", label: "Leads", icon: Users },
   { to: "/app/customers", label: "Customers", icon: Users },
   { to: "/app/estimates", label: "Estimates", icon: FileText },
+  { to: "/app/invoices", label: "Invoices", icon: Receipt },
+  { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+
   { to: "/app/jobs", label: "Jobs", icon: Briefcase },
   { to: "/app/crew", label: "Crew", icon: HardHat },
   { to: "/app/time", label: "Time Tracking", icon: Clock },
   { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
   { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },
+  { to: "/app/branding", label: "Branding", icon: Palette },
+
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
 

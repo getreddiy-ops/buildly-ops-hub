@@ -35,6 +35,11 @@ import Assistant from "./pages/app/Assistant";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
 import BusinessProfile from "./pages/app/BusinessProfile";
+import Branding from "./pages/app/Branding";
+import Invoices from "./pages/app/Invoices";
+import Contracts from "./pages/app/Contracts";
+import { BrandingProvider } from "./components/BrandingProvider";
+
 
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
@@ -66,11 +71,14 @@ const App = () => (
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
 
             {/* Main app (office) */}
-            <Route path="/app" element={<RequireAuth><RequireOrg><AppShell /></RequireOrg></RequireAuth>}>
+            <Route path="/app" element={<RequireAuth><RequireOrg><BrandingProvider><AppShell /></BrandingProvider></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
               <Route path="customers" element={<Customers />} />
               <Route path="estimates" element={<Estimates />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="contracts" element={<Contracts />} />
+
               <Route path="jobs" element={<Jobs />} />
               <Route path="crew" element={<Crew />} />
               <Route path="time" element={<TimeTracking />} />
@@ -81,6 +89,8 @@ const App = () => (
               <Route path="messages" element={<Messages />} />
               <Route path="billing" element={<Billing />} />
               <Route path="business-profile" element={<BusinessProfile />} />
+              <Route path="branding" element={<Branding />} />
+
               <Route path="settings" element={<SettingsPage />} />
 
             </Route>
