@@ -113,6 +113,8 @@ const App = () => (
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
               <Route index element={<FieldClock />} />
               <Route path="jobs" element={<FieldJobs />} />
+              <Route path="crew" element={<FieldCrew />} />
+              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><FieldAssistant /></PaywallGate>} />
               <Route path="map" element={<FieldMap />} />
               <Route path="profile" element={<FieldProfile />} />
             </Route>
