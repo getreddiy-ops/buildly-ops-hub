@@ -47,63 +47,90 @@ const nav = [
 export default function AppShell() {
   const { user, activeOrg, signOut, memberships, setActiveOrgId } = useAuth();
   const { branding } = useBranding();
-
   const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close drawer on route change
+  const currentPath = location.pathname;
+
+  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <ul className="space-y-0.5">
+      {nav.map((item) => (
+        <li key={item.to}>
+          <NavLink
+            to={item.to}
+            end={item.end}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              )
+            }
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </NavLink>
+        </li>
+      ))}
+      <li className="pt-2 mt-2 border-t border-sidebar-border">
+        <NavLink
+          to="/field"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <Smartphone className="h-4 w-4" />
+          Field App (Mobile)
+        </NavLink>
+      </li>
+    </ul>
+  );
+
+  const BrandHeader = () =>
+    branding?.logo_signed_url ? (
+      <Link to="/app" className="flex items-center gap-2">
+        <img
+          src={branding.logo_signed_url}
+          alt={branding.name}
+          className="max-h-10 max-w-[180px] object-contain"
+        />
+      </Link>
+    ) : (
+      <Logo to="/app" />
+    );
+
+  const OrgSwitcher = () =>
+    memberships.length > 1 ? (
+      <select
+        value={activeOrg?.organization_id}
+        onChange={(e) => setActiveOrgId(e.target.value)}
+        className="w-full rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1.5 text-sm"
+      >
+        {memberships.map((m) => (
+          <option key={m.organization_id} value={m.organization_id}>
+            {m.organization.name}
+          </option>
+        ))}
+      </select>
+    ) : null;
 
   return (
     <div className="flex min-h-screen w-full bg-background">
+      {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="border-b border-sidebar-border p-4">
-          {branding?.logo_signed_url ? (
-            <Link to="/app" className="flex items-center gap-2">
-              <img
-                src={branding.logo_signed_url}
-                alt={branding.name}
-                className="max-h-10 max-w-[180px] object-contain"
-              />
-            </Link>
-          ) : (
-            <Logo to="/app" />
-          )}
+          <BrandHeader />
         </div>
-
         {memberships.length > 1 && (
           <div className="border-b border-sidebar-border p-3">
-            <select
-              value={activeOrg?.organization_id}
-              onChange={(e) => setActiveOrgId(e.target.value)}
-              className="w-full rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1.5 text-sm"
-            >
-              {memberships.map((m) => (
-                <option key={m.organization_id} value={m.organization_id}>
-                  {m.organization.name}
-                </option>
-              ))}
-            </select>
+            <OrgSwitcher />
           </div>
         )}
         <nav className="flex-1 overflow-y-auto p-3">
-          <ul className="space-y-0.5">
-            {nav.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    )
-                  }
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+          <NavList />
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60">
@@ -119,10 +146,60 @@ export default function AppShell() {
           </Button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto">
+
+      <main className="flex flex-1 flex-col overflow-y-auto">
+        {/* Mobile top bar */}
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen} key={currentPath}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
+              <SheetHeader className="border-b border-sidebar-border p-4">
+                <SheetTitle className="text-left">
+                  <BrandHeader />
+                </SheetTitle>
+              </SheetHeader>
+              {memberships.length > 1 && (
+                <div className="border-b border-sidebar-border p-3">
+                  <OrgSwitcher />
+                </div>
+              )}
+              <nav className="flex-1 overflow-y-auto p-3">
+                <NavList onNavigate={() => setMobileOpen(false)} />
+              </nav>
+              <div className="border-t border-sidebar-border p-3">
+                <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60">
+                  {user?.email}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent"
+                  onClick={async () => { await signOut(); navigate("/"); }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" /> Sign out
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1 truncate">
+            <BrandHeader />
+          </div>
+          <Link
+            to="/field"
+            className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Open field app"
+          >
+            Field
+          </Link>
+        </header>
+
         <PaymentTestModeBanner />
         <PastDueBanner />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           <Outlet />
         </div>
       </main>
