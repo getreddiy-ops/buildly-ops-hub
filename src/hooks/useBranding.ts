@@ -51,13 +51,16 @@ export function useBranding() {
     setLoading(true);
     const { data } = await supabase
       .from("organizations")
-      .select("id,name,legal_name,logo_url,brand_color,brand_color_secondary,address,phone,email,website,tax_id,document_defaults")
+      .select("id,name,legal_name,logo_url,brand_color,brand_color_secondary,address,phone,email,website,document_defaults")
       .eq("id", orgId)
       .maybeSingle();
     if (data) {
       const signed = await signLogo(data.logo_url);
+      // tax_id is admin-only; fetch via RPC (returns null for non-admins).
+      const { data: taxId } = await supabase.rpc("get_org_tax_id", { _org_id: orgId });
       setBranding({
         ...data,
+        tax_id: (taxId as string | null) ?? null,
         document_defaults: (data.document_defaults ?? {}) as DocumentDefaults,
         logo_signed_url: signed,
       });
