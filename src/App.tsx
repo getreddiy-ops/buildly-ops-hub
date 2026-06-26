@@ -32,6 +32,8 @@ import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
 import Assistant from "./pages/app/Assistant";
+import Billing from "./pages/app/Billing";
+import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
 import AgentClients from "./pages/agent/AgentClients";
 import AgentLeads from "./pages/agent/AgentLeads";
