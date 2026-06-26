@@ -173,6 +173,9 @@ Deno.serve(async (req) => {
       .single();
     if (error) throw error;
 
+    await ensurePostCallWebhook();
+
+
     return json({ assistant: saved });
   } catch (e) {
     console.error("phone-assistant error", e);
