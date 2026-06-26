@@ -27,7 +27,7 @@ const SUGGESTIONS = [
   "Summarize what I should focus on today",
 ];
 
-export default function Assistant() {
+export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
   const { activeOrg, user } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
