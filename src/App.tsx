@@ -32,6 +32,7 @@ import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
 import Assistant from "./pages/app/Assistant";
+import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
               <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
+              <Route path="phone-assistant" element={<PaywallGate feature="Phone Assistant" requires="premium"><PhoneAssistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
               <Route path="billing" element={<Billing />} />
               <Route path="settings" element={<SettingsPage />} />
