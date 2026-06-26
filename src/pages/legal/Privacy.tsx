@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
+import { SEO } from "@/components/SEO";
 
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
+      <SEO title="Privacy Policy — Contractor OS" description="How Contractor OS (Morgan Marc Lynch) collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>

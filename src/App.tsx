@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
 import Refunds from "./pages/legal/Refunds";
+import ContractorCRM from "./pages/features/ContractorCRM";
 
 import AppShell from "./layouts/AppShell";
 import FieldAppShell from "./layouts/FieldAppShell";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refunds" element={<Refunds />} />
+            <Route path="/features/contractor-crm" element={<ContractorCRM />} />
 
             {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><BrandingProvider><AppShell /></BrandingProvider></RequireOrg></RequireAuth>}>
