@@ -29,6 +29,7 @@ function buildSystemPrompt(
   capabilities: Record<string, boolean>,
   transfer: string | null,
   bp: Record<string, any>,
+  orgAddress: string | null,
 ) {
   const caps: string[] = [];
   if (capabilities.book_estimates) caps.push("schedule estimate appointments");
