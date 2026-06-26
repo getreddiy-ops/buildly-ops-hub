@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { SEO } from "@/components/SEO";
 import {
   ArrowRight, MapPin, Bot, FileText, Briefcase, Clock, DollarSign, ShieldCheck,
 } from "lucide-react";
@@ -24,6 +25,12 @@ export default function Landing() {
   }, [user, loading, navigate]);
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
+      <SEO
+        title="Contractor OS — Run your contracting business from one app"
+        description="Leads, estimates, jobs, GPS-verified hours, job costing, and an AI admin assistant. The operating system for contractors."
+        path="/"
+      />
+
 
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
