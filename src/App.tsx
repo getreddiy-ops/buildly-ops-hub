@@ -32,6 +32,8 @@ import FieldClock from "./pages/field/FieldClock";
 import FieldJobs from "./pages/field/FieldJobs";
 import FieldMap from "./pages/field/FieldMap";
 import Assistant from "./pages/app/Assistant";
+import Billing from "./pages/app/Billing";
+import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
 import AgentClients from "./pages/agent/AgentClients";
 import AgentLeads from "./pages/agent/AgentLeads";
@@ -71,8 +73,9 @@ const App = () => (
               <Route path="time" element={<TimeTracking />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
-              <Route path="assistant" element={<Assistant />} />
+              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
+              <Route path="billing" element={<Billing />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 

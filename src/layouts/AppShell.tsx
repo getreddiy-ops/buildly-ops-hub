@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
-  CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut,
+  CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -20,6 +21,7 @@ const nav = [
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/messages", label: "Messages", icon: MessageSquare },
+  { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -86,6 +88,7 @@ export default function AppShell() {
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">
+        <PaymentTestModeBanner />
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <Outlet />
         </div>
