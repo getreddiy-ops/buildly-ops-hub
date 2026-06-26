@@ -14,6 +14,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useBranding } from "@/hooks/useBranding";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { cn } from "@/lib/utils";
 
 
@@ -203,6 +204,7 @@ export default function AppShell() {
           <Outlet />
         </div>
       </main>
+      <FloatingAssistant />
     </div>
   );
 }

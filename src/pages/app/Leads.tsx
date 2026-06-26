@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Plus, Users, UserCheck } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -133,7 +134,24 @@ export default function Leads() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New lead</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>{editing ? "Edit lead" : "New lead"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit lead" : "New lead"}</DialogTitle>
+                  <AiFormHelper
+                    formName="lead"
+                    fields={[
+                      { name: "name", description: "Prospect name" },
+                      { name: "email", type: "email" },
+                      { name: "phone", type: "phone" },
+                      { name: "address" },
+                      { name: "source", description: "Where the lead came from (referral, web, call)" },
+                      { name: "status", enum: STATUSES as unknown as string[] },
+                      { name: "notes" },
+                    ]}
+                    onFill={(v) => setForm((f) => ({ ...f, ...v } as typeof f))}
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">

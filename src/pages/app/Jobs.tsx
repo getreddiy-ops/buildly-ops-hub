@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
@@ -176,7 +177,37 @@ export default function Jobs() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New job</Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
-              <DialogHeader><DialogTitle>{editing ? "Edit job" : "New job"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit job" : "New job"}</DialogTitle>
+                  <AiFormHelper
+                    formName="job"
+                    fields={[
+                      { name: "title", description: "Short job title" },
+                      { name: "customer_name", description: "Match to one of the existing customers below by name" },
+                      { name: "address" },
+                      { name: "description" },
+                      { name: "budget", type: "number", description: "Budget in dollars" },
+                      { name: "scheduled_start", type: "date" },
+                      { name: "scheduled_end", type: "date" },
+                      { name: "status", enum: STATUSES as unknown as string[] },
+                    ]}
+                    context={{ customers: customers.map((c) => ({ id: c.id, name: c.name })) }}
+                    onFill={(v: any) => {
+                      const matched =
+                        v.customer_name && customers.find(
+                          (c) => c.name.toLowerCase() === String(v.customer_name).toLowerCase(),
+                        );
+                      setForm((f) => ({
+                        ...f,
+                        ...v,
+                        customer_id: matched ? matched.id : f.customer_id,
+                        budget: v.budget !== undefined ? v.budget : f.budget,
+                      } as typeof f));
+                    }}
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-3 max-h-[70vh] overflow-y-auto pr-1">
                 <Field label="Title"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">

@@ -27,7 +27,7 @@ const SUGGESTIONS = [
   "Summarize what I should focus on today",
 ];
 
-export default function Assistant() {
+export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
   const { activeOrg, user } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -209,8 +209,10 @@ export default function Assistant() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader title="AI Assistant" description="Draft leads, estimates, jobs, and more. You approve every write." />
+    <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100vh-8rem)]"}>
+      {!compact && (
+        <PageHeader title="AI Assistant" description="Draft leads, estimates, jobs, and more. You approve every write." />
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
         {messages.length === 0 && (

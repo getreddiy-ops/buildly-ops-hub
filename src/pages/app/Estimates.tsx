@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileText, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { AiFormHelper } from "@/components/AiFormHelper";
 import type { Database } from "@/integrations/supabase/types";
 
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
@@ -175,7 +176,47 @@ export default function Estimates() {
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New estimate</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle>{editing ? "Edit estimate" : "New estimate"}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DialogTitle>{editing ? "Edit estimate" : "New estimate"}</DialogTitle>
+                  <AiFormHelper
+                    formName="estimate"
+                    fields={[
+                      { name: "title", description: "Short estimate title" },
+                      { name: "customer_name", description: "Match an existing customer by name" },
+                      { name: "tax_percent", type: "number", description: "Tax percentage (0-100)" },
+                      { name: "notes" },
+                      { name: "line_items", description: "JSON array of {description, quantity, unit_price} for each item" },
+                    ]}
+                    context={{ customers: customers.map((c) => ({ id: c.id, name: c.name })) }}
+                    onFill={(v: any) => {
+                      if (v.title) setTitle(String(v.title));
+                      if (v.notes) setNotes(String(v.notes));
+                      if (v.tax_percent !== undefined) setTaxPct(Number(v.tax_percent) || 0);
+                      if (v.customer_name) {
+                        const m = customers.find(
+                          (c) => c.name.toLowerCase() === String(v.customer_name).toLowerCase(),
+                        );
+                        if (m) setCustomerId(m.id);
+                      }
+                      if (v.line_items) {
+                        try {
+                          const arr = typeof v.line_items === "string" ? JSON.parse(v.line_items) : v.line_items;
+                          if (Array.isArray(arr) && arr.length) {
+                            setItems(
+                              arr.map((it: any) => ({
+                                description: String(it.description ?? ""),
+                                quantity: Number(it.quantity) || 1,
+                                unit_price: Number(it.unit_price) || 0,
+                              })),
+                            );
+                          }
+                        } catch { /* ignore */ }
+                      }
+                    }}
+                  />
+                </div>
+              </DialogHeader>
               <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-1">
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
