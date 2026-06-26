@@ -73,8 +73,9 @@ const App = () => (
               <Route path="time" element={<TimeTracking />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
-              <Route path="assistant" element={<Assistant />} />
+              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
+              <Route path="billing" element={<Billing />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 
