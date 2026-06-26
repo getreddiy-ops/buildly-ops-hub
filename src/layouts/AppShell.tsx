@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette, Code2,
+  Receipt, FileSignature, Palette, Code2, Truck, Package,
 } from "lucide-react";
 
 
@@ -26,6 +26,8 @@ const nav = [
 
   { to: "/app/jobs", label: "Jobs", icon: Briefcase },
   { to: "/app/crew", label: "Crew", icon: HardHat },
+  { to: "/app/vendors", label: "Vendors", icon: Truck },
+  { to: "/app/materials", label: "Materials", icon: Package },
   { to: "/app/time", label: "Time Tracking", icon: Clock },
   { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },

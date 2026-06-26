@@ -39,6 +39,8 @@ import Branding from "./pages/app/Branding";
 import Developer from "./pages/app/Developer";
 import Invoices from "./pages/app/Invoices";
 import Contracts from "./pages/app/Contracts";
+import Vendors from "./pages/app/Vendors";
+import Materials from "./pages/app/Materials";
 import { BrandingProvider } from "./components/BrandingProvider";
 
 
@@ -82,6 +84,8 @@ const App = () => (
 
               <Route path="jobs" element={<Jobs />} />
               <Route path="crew" element={<Crew />} />
+              <Route path="vendors" element={<Vendors />} />
+              <Route path="materials" element={<Materials />} />
               <Route path="time" element={<TimeTracking />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
