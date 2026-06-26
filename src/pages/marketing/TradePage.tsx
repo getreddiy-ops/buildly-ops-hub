@@ -1,4 +1,4 @@
-import { useParams, Navigate, Link } from "react-router-dom";
+import { useLocation, Navigate, Link } from "react-router-dom";
 import { tradeBySlug } from "./trades";
 import { MarketingShell, CTARow } from "@/components/marketing/MarketingShell";
 import { SEO } from "@/components/SEO";
@@ -19,8 +19,8 @@ function Section({ title, items }: { title: string; items: string[] }) {
 }
 
 export default function TradePage() {
-  const { slug } = useParams();
-  const cfg = slug ? tradeBySlug[slug] : undefined;
+  const slug = useLocation().pathname.replace(/^\//, "");
+  const cfg = tradeBySlug[slug];
   if (!cfg) return <Navigate to="/" replace />;
 
   return (
