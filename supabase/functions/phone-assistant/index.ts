@@ -12,10 +12,11 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
-const PREMIUM_PRICE_ID = "pri_01k68g8bjm87h6jydj0bzaeyy3"; // Premium $269 - keep in sync with src/lib/tiers.ts
+const PREMIUM_PRICE_IDS = new Set(["contractor_os_premium_monthly", "contractor_os_premium"]);
 
 type SettingsBody = {
   organization_id: string;
+  environment?: "sandbox" | "live";
   enabled?: boolean;
   voice_id?: string;
   greeting?: string;
@@ -160,6 +161,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as SettingsBody;
     const orgId = body.organization_id;
     if (!orgId) return json({ error: "organization_id required" }, 400);
+    const environment = body.environment === "live" ? "live" : "sandbox";
 
     // Org admin check
     const { data: member } = await admin
@@ -177,12 +179,13 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .select("price_id, status, current_period_end")
       .eq("organization_id", orgId)
+      .eq("environment", environment)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     const active = sub && (["active", "trialing", "past_due"].includes(sub.status) || sub.status === "canceled") &&
       (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now());
-    if (!active || sub?.price_id !== PREMIUM_PRICE_ID) {
+    if (!active || !PREMIUM_PRICE_IDS.has(sub?.price_id)) {
       return json({ error: "Premium subscription required" }, 402);
     }
 
