@@ -1,0 +1,2 @@
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS business_profile jsonb NOT NULL DEFAULT '{}'::jsonb;
+GRANT SELECT (business_profile), UPDATE (business_profile) ON public.organizations TO authenticated;
