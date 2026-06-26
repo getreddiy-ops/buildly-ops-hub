@@ -82,13 +82,15 @@ export default function Leads() {
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (!activeOrg || !user) return;
     setSaving(true);
+    const d = parsed.data;
     const payload = {
-      ...parsed.data,
-      email: parsed.data.email || null,
-      phone: parsed.data.phone || null,
-      address: parsed.data.address || null,
-      source: parsed.data.source || null,
-      notes: parsed.data.notes || null,
+      name: d.name,
+      status: d.status,
+      email: d.email || null,
+      phone: d.phone || null,
+      address: d.address || null,
+      source: d.source || null,
+      notes: d.notes || null,
     };
     const res = editing
       ? await supabase.from("leads").update(payload).eq("id", editing.id)
