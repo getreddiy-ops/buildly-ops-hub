@@ -72,15 +72,21 @@ export default function Jobs() {
     const [{ data: jobs, error }, { data: custs }, { data: mems }] = await Promise.all([
       supabase.from("jobs").select("*, customers(name)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from("customers").select("*").eq("organization_id", activeOrg.organization_id).order("name"),
-      supabase.from("organization_members").select("user_id, profiles:profiles!organization_members_user_id_fkey(full_name, email)").eq("organization_id", activeOrg.organization_id),
+      supabase.from("organization_members").select("user_id").eq("organization_id", activeOrg.organization_id),
     ]);
     if (error) toast.error(error.message);
     setRows((jobs ?? []) as any);
     setCustomers(custs ?? []);
-    setMembers(((mems ?? []) as any[]).map((m) => ({
-      user_id: m.user_id,
-      name: m.profiles?.full_name || m.profiles?.email || m.user_id.slice(0, 8),
-    })));
+    const userIds = (mems ?? []).map((m: any) => m.user_id);
+    let profs: any[] = [];
+    if (userIds.length > 0) {
+      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+      profs = data ?? [];
+    }
+    setMembers(userIds.map((uid: string) => {
+      const p = profs.find((x) => x.id === uid);
+      return { user_id: uid, name: p?.full_name || p?.email || uid.slice(0, 8) };
+    }));
     setLoading(false);
   };
 

@@ -23,10 +23,15 @@ import Dashboard from "./pages/app/Dashboard";
 import Leads from "./pages/app/Leads";
 import Customers from "./pages/app/Customers";
 import Estimates from "./pages/app/Estimates";
+import Jobs from "./pages/app/Jobs";
+import Crew from "./pages/app/Crew";
+import FieldClock from "./pages/field/FieldClock";
+import FieldJobs from "./pages/field/FieldJobs";
+import FieldMap from "./pages/field/FieldMap";
 import {
-  Jobs, Crew, TimeTracking, Approvals, Costing,
+  TimeTracking, Approvals, Costing,
   Assistant, Messages, SettingsPage,
-  FieldClock, FieldJobs, FieldMap, FieldProfile,
+  FieldProfile,
   AgentOverview, AgentClients, AgentLeads, AgentPayouts,
   AdminOverview, AdminOrgs, AdminUsers, AdminAudit,
 } from "./pages/stubs";

@@ -65,7 +65,7 @@ export default function Crew() {
     const [{ data: mems, error }, { data: invs }] = await Promise.all([
       supabase
         .from("organization_members")
-        .select("id, user_id, role, hourly_rate, profiles:profiles!organization_members_user_id_fkey(full_name, email)")
+        .select("id, user_id, role, hourly_rate")
         .eq("organization_id", activeOrg.organization_id),
       supabase
         .from("invitations")
@@ -74,11 +74,20 @@ export default function Crew() {
         .order("created_at", { ascending: false }),
     ]);
     if (error) toast.error(error.message);
-    setMembers(((mems ?? []) as any[]).map((m) => ({
-      id: m.id, user_id: m.user_id, role: m.role, hourly_rate: m.hourly_rate,
-      name: m.profiles?.full_name || m.profiles?.email || m.user_id.slice(0, 8),
-      email: m.profiles?.email ?? null,
-    })));
+    const userIds = (mems ?? []).map((m: any) => m.user_id);
+    let profs: any[] = [];
+    if (userIds.length > 0) {
+      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+      profs = data ?? [];
+    }
+    setMembers(((mems ?? []) as any[]).map((m) => {
+      const p = profs.find((x) => x.id === m.user_id);
+      return {
+        id: m.id, user_id: m.user_id, role: m.role, hourly_rate: m.hourly_rate,
+        name: p?.full_name || p?.email || m.user_id.slice(0, 8),
+        email: p?.email ?? null,
+      };
+    }));
     setInvites((invs ?? []) as InviteRow[]);
     setLoading(false);
   };
