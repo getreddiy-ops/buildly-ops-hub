@@ -190,7 +190,7 @@ export default function Leads() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" aria-label="Lead actions"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEdit(l)}>Edit</DropdownMenuItem>

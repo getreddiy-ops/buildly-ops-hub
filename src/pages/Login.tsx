@@ -40,7 +40,7 @@ export default function Login() {
       <header className="mx-auto max-w-7xl px-4 py-5"><Logo /></header>
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
-          <h1 className="text-2xl font-semibold">Welcome back</h1>
+          <h1 className="text-2xl font-semibold">Sign in to Contractor OS</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to your Contractor OS account.</p>
           <Button variant="outline" className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google
