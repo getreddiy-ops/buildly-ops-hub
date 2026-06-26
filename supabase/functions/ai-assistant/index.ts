@@ -1,6 +1,7 @@
 // AI Assistant edge function - confirm-before-write workflow
 // Uses Lovable AI Gateway (OpenAI-compatible).
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -111,10 +112,55 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, orgName } = await req.json() as { messages: ChatMsg[]; orgName?: string };
+    const { messages, orgName, organizationId, environment } = await req.json() as {
+      messages: ChatMsg[];
+      orgName?: string;
+      organizationId?: string;
+      environment?: "sandbox" | "live";
+    };
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // --- Authn + subscription gate ---
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (!organizationId || !environment || !["sandbox", "live"].includes(environment)) {
+      return new Response(JSON.stringify({ error: "organizationId and environment required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await userClient.auth.getUser();
+    if (!userData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // Ensure caller is a member of the org they claim
+    const { data: membership } = await admin
+      .from("organization_members")
+      .select("user_id")
+      .eq("user_id", userData.user.id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    // Check org has an active subscription in this environment
+    const { data: entitled } = await admin.rpc("has_active_org_subscription", {
+      org_id: organizationId,
+      check_env: environment,
+    });
+    if (!entitled) {
+      return new Response(
+        JSON.stringify({ error: "Pro subscription required", code: "subscription_required" }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    // --- End gate ---
 
     const sys = orgName ? `${SYSTEM}\n\nActive organization: ${orgName}.` : SYSTEM;
     const payload = {
