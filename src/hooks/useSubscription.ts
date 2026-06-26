@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPaddleEnvironment } from "@/lib/paddle";
+import { tierFromPriceId, hasAssistant, hasPhoneAssistant } from "@/lib/tiers";
 
 export type SubscriptionRow = {
   id: string;
@@ -79,6 +80,19 @@ export function useSubscription() {
       (subscription.status === "canceled" && !!periodEnd && periodEnd > now));
   const isPastDue = subscription?.status === "past_due";
   const isOwner = activeOrg?.role === "owner";
+  const tier = isActive ? tierFromPriceId(subscription?.price_id) : null;
+  const canUseAssistant = hasAssistant(tier);
+  const canUsePhoneAssistant = hasPhoneAssistant(tier);
 
-  return { subscription, isActive, isPastDue, isOwner, loading, refetch: fetchSub };
+  return {
+    subscription,
+    isActive,
+    isPastDue,
+    isOwner,
+    tier,
+    canUseAssistant,
+    canUsePhoneAssistant,
+    loading,
+    refetch: fetchSub,
+  };
 }
