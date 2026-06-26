@@ -337,9 +337,7 @@ function TestConsole(props: { agentReady: boolean; orgId: string | null }) {
 
 function TestConsoleInner({ agentReady, orgId }: { agentReady: boolean; orgId: string | null }) {
   const [connecting, setConnecting] = useState(false);
-  const conversation = useConversation({
-    onError: (e: unknown) => toast.error(typeof e === "string" ? e : (e as Error)?.message ?? "Voice error"),
-  });
+  const conversation = useConversation();
 
   const start = async () => {
     if (!orgId) return;
