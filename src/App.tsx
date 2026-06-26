@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin } from "@/components/auth/Guards";
+import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOfficeRole } from "@/components/auth/Guards";
 
 import Landing from "./pages/Landing";
 import Pricing from "./pages/Pricing";
@@ -111,7 +111,7 @@ const App = () => (
             <Route path="/general-contractor-software" element={<TradePage />} />
 
             {/* Main app (office) */}
-            <Route path="/app" element={<RequireAuth><RequireOrg><BrandingProvider><AppShell /></BrandingProvider></RequireOrg></RequireAuth>}>
+            <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
               <Route path="customers" element={<Customers />} />
