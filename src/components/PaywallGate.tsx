@@ -34,10 +34,10 @@ export function PaywallGate({
         </div>
         <h2 className="text-2xl font-semibold">{feature} requires {required.name}</h2>
         <p className="mt-2 text-muted-foreground">
-          Upgrade to {required.name} (${required.price}/mo) to unlock {feature.toLowerCase()}.
+          Start a 7-day free trial of {required.name} (${required.price}/mo after) to unlock {feature.toLowerCase()}.
         </p>
         <Button asChild className="mt-6">
-          <Link to="/app/billing">Upgrade plan</Link>
+          <Link to="/app/billing">Start free trial</Link>
         </Button>
       </Card>
     </div>
