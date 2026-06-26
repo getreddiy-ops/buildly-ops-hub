@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette,
+  Receipt, FileSignature, Palette, Code2,
 } from "lucide-react";
 
 
@@ -37,6 +37,7 @@ const nav = [
 
   { to: "/app/messages", label: "Messages", icon: MessageSquare },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
+  { to: "/app/developer", label: "Developer", icon: Code2 },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
