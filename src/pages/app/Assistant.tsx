@@ -49,8 +49,14 @@ export default function Assistant() {
     setLoading(true);
     try {
       const apiMessages = next.map((m) => ({ role: m.role, content: m.content }));
+      const { getPaddleEnvironment } = await import("@/lib/paddle");
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: apiMessages, orgName: activeOrg?.organization.name },
+        body: {
+          messages: apiMessages,
+          orgName: activeOrg?.organization.name,
+          organizationId: activeOrg?.organization_id,
+          environment: getPaddleEnvironment(),
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

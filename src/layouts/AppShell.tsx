@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { PastDueBanner } from "@/components/PastDueBanner";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -89,6 +90,7 @@ export default function AppShell() {
       </aside>
       <main className="flex-1 overflow-y-auto">
         <PaymentTestModeBanner />
+        <PastDueBanner />
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <Outlet />
         </div>

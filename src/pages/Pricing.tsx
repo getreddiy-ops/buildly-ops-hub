@@ -18,17 +18,22 @@ const FEATURES = [
 ];
 
 export default function Pricing() {
-  const { user } = useAuth();
+  const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
   const { openCheckout, loading } = usePaddleCheckout();
 
   const onCta = async () => {
     if (!user) { navigate("/signup"); return; }
+    if (!activeOrg) { navigate("/onboarding"); return; }
+    if (activeOrg.role !== "owner") {
+      toast.error("Only the organization owner can subscribe.");
+      return;
+    }
     try {
       await openCheckout({
         priceId: "contractor_os_pro_monthly",
         customerEmail: user.email ?? undefined,
-        customData: { userId: user.id },
+        customData: { userId: user.id, orgId: activeOrg.organization_id },
       });
     } catch (e) {
       toast.error("Could not open checkout");

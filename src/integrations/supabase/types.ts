@@ -574,6 +574,7 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
+          organization_id: string | null
           paddle_customer_id: string
           paddle_subscription_id: string
           price_id: string
@@ -589,6 +590,7 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          organization_id?: string | null
           paddle_customer_id: string
           paddle_subscription_id: string
           price_id: string
@@ -604,6 +606,7 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          organization_id?: string | null
           paddle_customer_id?: string
           paddle_subscription_id?: string
           price_id?: string
@@ -612,7 +615,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_entries: {
         Row: {
@@ -712,6 +723,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_active_org_subscription: {
+        Args: { check_env?: string; org_id: string }
+        Returns: boolean
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean

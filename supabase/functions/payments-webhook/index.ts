@@ -15,7 +15,9 @@ function getSupabase() {
 async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
   const { id, customerId, items, status, currentBillingPeriod, customData } = data;
   const userId = customData?.userId;
+  const organizationId = customData?.orgId ?? customData?.organizationId ?? null;
   if (!userId) { console.error('No userId in customData'); return; }
+  if (!organizationId) { console.warn('No orgId in customData; subscription will be user-only'); }
   const item = items[0];
   const priceId = item.price.importMeta?.externalId;
   const productId = item.product.importMeta?.externalId;
@@ -25,6 +27,7 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
   }
   await getSupabase().from('subscriptions').upsert({
     user_id: userId,
+    organization_id: organizationId,
     paddle_subscription_id: id,
     paddle_customer_id: customerId,
     product_id: productId,
