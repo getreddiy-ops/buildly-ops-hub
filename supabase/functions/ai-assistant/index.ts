@@ -6,7 +6,15 @@ import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-type ChatMsg = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_calls?: any; tool_call_id?: string };
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+type ChatMsg = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | ContentPart[];
+  tool_calls?: any;
+  tool_call_id?: string;
+};
 
 const WRITE_TOOLS = new Set(["create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer"]);
 
@@ -104,9 +112,20 @@ const tools = [
 
 const SYSTEM = `You are the Contractor OS AI Assistant for a contracting business.
 You help the office manage leads, customers, estimates, jobs, and crew.
+
+When the user attaches a photo of a job site, surface, or object, look at it carefully and:
+- Identify what work is needed (paint, drywall, demo, flooring, framing, roofing, etc.).
+- Estimate dimensions using visible reference objects when no measurement is given. Common references:
+  standard interior door ≈ 80 in × 36 in, standard outlet plate ≈ 4.5 in tall, brick course ≈ 2.67 in,
+  standard step rise ≈ 7 in, 2x4 stud width ≈ 1.5 in, sheet of drywall ≈ 4 ft × 8 ft.
+- Always state the assumptions you made and the rough size you derived (e.g. "wall ≈ 12 ft × 9 ft = 108 sqft").
+- Ask for measurements when the photo doesn't give a clear reference.
+- Use the derived size + the business's typical pricing (from the business profile, if present) to draft estimate line items.
+- When the user wants to save an estimate, call draft_estimate_for_customer with realistic quantities and unit prices.
+
 When the user asks you to create, schedule, or draft anything that changes data,
 call the appropriate tool. The user MUST approve every proposed write before it is applied —
-never claim a record was created. After proposing actions, briefly explain what you proposed.
+never claim a record was created. After proposing actions, briefly explain what you proposed and the assumptions.
 For questions and summaries, answer directly in concise markdown.`;
 
 Deno.serve(async (req) => {

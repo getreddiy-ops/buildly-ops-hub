@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Check, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,23 +17,37 @@ type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error
 type Proposal = ToolCall & { status: ProposalStatus; error?: string };
 
 type Msg =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; images?: string[] }
   | { role: "assistant"; content: string; proposals?: Proposal[] };
 
 const SUGGESTIONS = [
   "Add a new lead: Sarah Lee, 555-0142, kitchen remodel referral",
   "Draft a $12,000 estimate for John Doe — demo, framing, drywall",
-  "Schedule the Miller bathroom job for next Monday 8am",
+  "Attach a photo of a wall and ask me to estimate the paint job",
   "Summarize what I should focus on today",
 ];
+
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB per image
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
 
 export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
   const { activeOrg, user } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { speak, stop: stopSpeak, speakingId, loadingId: speakLoadingId } = useVoiceSpeaker();
   const { recording, transcribing, start: startRec, stop: stopRec } = useVoiceRecorder((text) => {
     setInput((cur) => (cur ? `${cur} ${text}` : text));
@@ -48,15 +62,52 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  const onPickImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const slots = MAX_IMAGES - pendingImages.length;
+    if (slots <= 0) {
+      toast.error(`You can attach up to ${MAX_IMAGES} images per message.`);
+      return;
+    }
+    const accepted: File[] = [];
+    for (const f of Array.from(files).slice(0, slots)) {
+      if (!f.type.startsWith("image/")) { toast.error(`${f.name} is not an image.`); continue; }
+      if (f.size > MAX_IMAGE_BYTES) { toast.error(`${f.name} is larger than 8 MB.`); continue; }
+      accepted.push(f);
+    }
+    try {
+      const urls = await Promise.all(accepted.map(fileToDataUrl));
+      setPendingImages((prev) => [...prev, ...urls]);
+    } catch {
+      toast.error("Could not read one of the images.");
+    }
+  };
+
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || loading) return;
+    const images = pendingImages;
+    if ((!content && images.length === 0) || loading) return;
     setInput("");
-    const next: Msg[] = [...messages, { role: "user", content }];
+    setPendingImages([]);
+    const next: Msg[] = [
+      ...messages,
+      { role: "user", content: content || "(image attached)", images: images.length ? images : undefined },
+    ];
     setMessages(next);
     setLoading(true);
     try {
-      const apiMessages = next.map((m) => ({ role: m.role, content: m.content }));
+      const apiMessages = next.map((m) => {
+        if (m.role === "user" && m.images && m.images.length) {
+          return {
+            role: "user" as const,
+            content: [
+              { type: "text" as const, text: m.content },
+              ...m.images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+            ],
+          };
+        }
+        return { role: m.role, content: m.content };
+      });
       const { getPaddleEnvironment } = await import("@/lib/paddle");
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
@@ -249,7 +300,21 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
                 ) : (
-                  m.content
+                  <div className="space-y-2">
+                    {m.images && m.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {m.images.map((src, idx) => (
+                          <img
+                            key={idx}
+                            src={src}
+                            alt={`attachment ${idx + 1}`}
+                            className="h-24 w-24 rounded-md object-cover border border-primary-foreground/20"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {m.content && <div className="whitespace-pre-wrap">{m.content}</div>}
+                  </div>
                 )}
               </div>
               {m.role === "assistant" && m.content && (
@@ -293,10 +358,39 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         )}
       </div>
 
+      {pendingImages.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {pendingImages.map((src, idx) => (
+            <div key={idx} className="relative">
+              <img src={src} alt={`pending ${idx + 1}`} className="h-16 w-16 rounded-md object-cover border border-border" />
+              <button
+                type="button"
+                aria-label="Remove image"
+                onClick={() => setPendingImages((prev) => prev.filter((_, i) => i !== idx))}
+                className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-destructive text-destructive-foreground shadow"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <form
         onSubmit={(e) => { e.preventDefault(); send(); }}
-        className="mt-4 flex gap-2 items-end"
+        className="mt-3 flex gap-2 items-end"
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            onPickImages(e.target.files);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+        />
         <Textarea
           ref={inputRef}
           value={input}
@@ -304,11 +398,26 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
-          placeholder={recording ? "Listening…" : transcribing ? "Transcribing…" : "Ask the assistant…"}
+          placeholder={
+            recording ? "Listening…"
+            : transcribing ? "Transcribing…"
+            : pendingImages.length ? "Describe what to estimate (or leave blank)…"
+            : "Ask the assistant, or attach a photo to estimate from…"
+          }
           rows={2}
           className="resize-none"
           disabled={loading || recording || transcribing}
         />
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading || recording || transcribing || pendingImages.length >= MAX_IMAGES}
+          title="Attach photo for AI to estimate"
+        >
+          <ImagePlus className="h-4 w-4" />
+        </Button>
         <Button
           type="button"
           size="lg"
@@ -319,10 +428,15 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         >
           {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </Button>
-        <Button type="submit" disabled={loading || !input.trim() || recording || transcribing} size="lg">
+        <Button
+          type="submit"
+          disabled={loading || (!input.trim() && pendingImages.length === 0) || recording || transcribing}
+          size="lg"
+        >
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
 
     </div>
   );
