@@ -8,16 +8,16 @@ export default function AIPhotoEstimator() {
   return (
     <MarketingShell>
       <SEO
-        title="AI Photo Estimator for Contractors | Quote From Photos — ContractorOS"
-        description="ContractorOS turns customer photos into draft contractor estimates in minutes. AI-assisted measurements, your unit pricing, and your final approval before sending."
+        title="AI Photo & Voice Estimator for Contractors | Quote From Photos — ContractorOS"
+        description="ContractorOS turns customer photos and voice descriptions into draft contractor estimates in minutes. AI-assisted measurements, your unit pricing, and your final approval before sending."
         path="/ai-photo-estimator"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-          AI Photo Estimator for Contractors
+          AI Photo & Voice Estimator for Contractors
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Customers send photos. ContractorOS drafts a rough estimate using AI-assisted measurements and your unit pricing. You review, adjust, and send — no all-day driveway visits.
+          Customers send photos or describe the job by voice. ContractorOS drafts a rough estimate using AI-assisted measurements and your unit pricing. You review, adjust, and send — no all-day driveway visits.
         </p>
         <CTARow />
       </section>
@@ -46,10 +46,10 @@ export default function AIPhotoEstimator() {
 
       <FAQ
         items={[
-          { q: "How accurate is the AI estimate?", a: "It’s a draft. AI-assisted measurements give you a fast starting point. We recommend on-site verification before sending a final quote." },
+          { q: "How accurate is the AI estimate?", a: "It’s a draft. AI-assisted measurements and voice descriptions give you a fast starting point. We recommend on-site verification before sending a final quote." },
           { q: "Can I use my own pricing?", a: "Yes. Plug in your unit pricing, assemblies, and markups. The AI uses your numbers — not generic averages." },
-          { q: "What kinds of jobs work best?", a: "Concrete driveways and patios, fences, decks, roofs, siding, framing, landscaping, and most exterior work where photos capture the scope." },
-          { q: "Do customers need an app?", a: "No. They upload photos via a link you send by text or email." },
+          { q: "What kinds of jobs work best?", a: "Concrete driveways and patios, fences, decks, roofs, siding, framing, landscaping, and most exterior work where photos or voice notes capture the scope." },
+          { q: "Do customers need an app?", a: "No. They upload photos or leave a voice description via a link you send by text or email." },
         ]}
       />
     </MarketingShell>
