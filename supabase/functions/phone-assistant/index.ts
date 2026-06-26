@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
       return json({ error: "Premium subscription required" }, 402);
     }
 
-    const { data: org } = await admin.from("organizations").select("name").eq("id", orgId).single();
+    const { data: org } = await admin.from("organizations").select("name, business_profile").eq("id", orgId).single();
 
     const { data: existing } = await admin
       .from("phone_assistants")
@@ -199,7 +199,14 @@ Deno.serve(async (req) => {
       capabilities: body.capabilities ?? existing?.capabilities ?? {},
     };
 
-    const prompt = buildSystemPrompt(org?.name ?? "the business", merged.greeting, merged.capabilities, merged.transfer_number);
+    const prompt = buildSystemPrompt(
+      org?.name ?? "the business",
+      merged.greeting,
+      merged.capabilities,
+      merged.transfer_number,
+      (org?.business_profile as Record<string, any>) ?? {},
+    );
+
     const agentId = await upsertAgent({
       agentId: existing?.elevenlabs_agent_id ?? null,
       name: `${org?.name ?? "Contractor"} Receptionist`,
