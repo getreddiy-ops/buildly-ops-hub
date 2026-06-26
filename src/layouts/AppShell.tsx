@@ -11,7 +11,10 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
+import { useBranding } from "@/hooks/useBranding";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -39,14 +42,27 @@ const nav = [
 
 export default function AppShell() {
   const { user, activeOrg, signOut, memberships, setActiveOrgId } = useAuth();
+  const { branding } = useBranding();
+
   const navigate = useNavigate();
 
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="border-b border-sidebar-border p-4">
-          <Logo to="/app" />
+          {branding?.logo_signed_url ? (
+            <Link to="/app" className="flex items-center gap-2">
+              <img
+                src={branding.logo_signed_url}
+                alt={branding.name}
+                className="max-h-10 max-w-[180px] object-contain"
+              />
+            </Link>
+          ) : (
+            <Logo to="/app" />
+          )}
         </div>
+
         {memberships.length > 1 && (
           <div className="border-b border-sidebar-border p-3">
             <select
