@@ -17,6 +17,7 @@ type ChatMsg = {
 };
 
 const WRITE_TOOLS = new Set(["create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer"]);
+// generate_document is auto-executed client-side (produces a PDF, no DB write).
 
 const tools = [
   {
