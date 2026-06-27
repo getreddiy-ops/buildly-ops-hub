@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Check, Download, FileText, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { generateDocumentPdf, type DocArgs } from "@/lib/generateDocumentPdf";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
