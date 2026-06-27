@@ -1,0 +1,2 @@
+REVOKE SELECT ON public.quickbooks_connections FROM authenticated;
+GRANT SELECT (id, organization_id, realm_id, token_expires_at, environment, connected_by, created_at, updated_at) ON public.quickbooks_connections TO authenticated;
