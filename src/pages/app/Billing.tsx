@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
+import { trackTrialStart } from "@/lib/gtag";
 import { cn } from "@/lib/utils";
 
 const ORDER: Tier[] = ["base", "plus", "premium"];
