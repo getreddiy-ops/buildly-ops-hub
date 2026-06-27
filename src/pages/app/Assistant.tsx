@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Check, Download, FileText, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { generateDocumentPdf, type DocArgs } from "@/lib/generateDocumentPdf";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,9 +17,11 @@ type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
 type Proposal = ToolCall & { status: ProposalStatus; error?: string };
 
+type DocAttachment = { id: string; filename: string; url: string; docType: string; title: string };
+
 type Msg =
   | { role: "user"; content: string; images?: string[] }
-  | { role: "assistant"; content: string; proposals?: Proposal[] };
+  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[] };
 
 const SUGGESTIONS = [
   "Add a new lead: Sarah Lee, 555-0142, kitchen remodel referral",
@@ -119,13 +122,48 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      const proposals: Proposal[] = (data.tool_calls ?? [])
-        .filter((t: ToolCall) => t.needsApproval)
-        .map((t: ToolCall) => ({ ...t, status: "pending" as ProposalStatus }));
+      const allTools = (data.tool_calls ?? []) as ToolCall[];
+      const proposals: Proposal[] = allTools
+        .filter((t) => t.needsApproval && t.name !== "generate_document")
+        .map((t) => ({ ...t, status: "pending" as ProposalStatus }));
+
+      // Auto-execute generate_document → produce a real PDF the user can download
+      const docTools = allTools.filter((t) => t.name === "generate_document");
+      const documents: DocAttachment[] = [];
+      const org = activeOrg?.organization as any;
+      const orgHeader = org
+        ? {
+            name: org.name,
+            address: org.address ?? undefined,
+            email: org.business_profile?.contact_email ?? undefined,
+            phone: org.business_profile?.contact_phone ?? undefined,
+            website: org.business_profile?.website ?? undefined,
+          }
+        : {};
+      for (const t of docTools) {
+        try {
+          const { blob, filename } = generateDocumentPdf(t.args as DocArgs, orgHeader);
+          documents.push({
+            id: t.id,
+            filename,
+            url: URL.createObjectURL(blob),
+            docType: (t.args as DocArgs).doc_type,
+            title: (t.args as DocArgs).title,
+          });
+        } catch (err) {
+          console.error("PDF generation failed", err);
+          toast.error("Could not build the PDF — please try again.");
+        }
+      }
+
       const assistantText =
         data.content?.trim() ||
-        (proposals.length ? `I drafted ${proposals.length} action${proposals.length > 1 ? "s" : ""} for your approval below.` : "Done.");
-      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals }]);
+        (documents.length
+          ? `Your ${documents[0].docType.replace(/_/g, " ")} is ready below.`
+          : proposals.length
+          ? `I drafted ${proposals.length} action${proposals.length > 1 ? "s" : ""} for your approval below.`
+          : "Done.");
+      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents }]);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
       toast.error(e?.message ?? "Assistant failed");
@@ -333,6 +371,9 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
                   {speakingId === `m${i}` ? "Stop" : "Listen"}
                 </button>
               )}
+              {m.role === "assistant" && m.documents?.map((d) => (
+                <DocumentCard key={d.id} doc={d} />
+              ))}
               {m.role === "assistant" && m.proposals?.map((p) => (
                 <ProposalCard
                   key={p.id}
@@ -486,6 +527,36 @@ function ProposalCard({ proposal, onApprove, onReject }: { proposal: Proposal; o
           <Loader2 className="h-3 w-3 animate-spin" /> Applying…
         </div>
       )}
+    </Card>
+  );
+}
+
+function DocumentCard({ doc }: { doc: DocAttachment }) {
+  return (
+    <Card className="p-4 border-primary/40 bg-gradient-to-br from-accent/40 to-transparent">
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-md bg-primary/15 text-primary">
+          <FileText className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium truncate">{doc.title}</div>
+          <div className="text-xs text-muted-foreground capitalize">
+            {doc.docType.replace(/_/g, " ")} · PDF
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a href={doc.url} target="_blank" rel="noopener noreferrer">
+              Preview
+            </a>
+          </Button>
+          <Button asChild size="sm">
+            <a href={doc.url} download={doc.filename}>
+              <Download className="h-4 w-4 mr-1" /> Download
+            </a>
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

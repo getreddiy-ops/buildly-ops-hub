@@ -17,6 +17,7 @@ type ChatMsg = {
 };
 
 const WRITE_TOOLS = new Set(["create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer"]);
+// generate_document is auto-executed client-side (produces a PDF, no DB write).
 
 const tools = [
   {
@@ -108,10 +109,86 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_document",
+      description:
+        "Produce a real, downloadable business document (PDF) for the user. ALWAYS use this whenever the user asks for an estimate, invoice, quote, proposal, contract, agreement, scope of work, change order, letter, memo, receipt, or any other written document. NEVER paste the document content as markdown or a code block — call this tool instead. The user will see a downloadable PDF attachment in the chat.",
+      parameters: {
+        type: "object",
+        properties: {
+          doc_type: {
+            type: "string",
+            enum: ["estimate", "invoice", "quote", "proposal", "contract", "agreement", "scope_of_work", "change_order", "letter", "memo", "receipt", "other"],
+          },
+          title: { type: "string", description: "Document title shown at the top, e.g. 'Estimate #1042'." },
+          recipient: {
+            type: "object",
+            description: "Who the document is addressed to.",
+            properties: {
+              name: { type: "string" },
+              company: { type: "string" },
+              address: { type: "string" },
+              email: { type: "string" },
+              phone: { type: "string" },
+            },
+            additionalProperties: false,
+          },
+          intro: { type: "string", description: "Short opening paragraph or summary (1-3 sentences)." },
+          sections: {
+            type: "array",
+            description: "Body sections rendered in order. Use for narrative content (scope, terms, conditions, notes).",
+            items: {
+              type: "object",
+              properties: {
+                heading: { type: "string" },
+                body: { type: "string", description: "Plain prose. Use blank lines to separate paragraphs. No markdown." },
+              },
+              required: ["heading", "body"],
+              additionalProperties: false,
+            },
+          },
+          line_items: {
+            type: "array",
+            description: "Optional priced line items (for estimates, invoices, quotes, change orders).",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                quantity: { type: "number" },
+                unit: { type: "string", description: "e.g. hr, sqft, each" },
+                unit_price: { type: "number" },
+              },
+              required: ["description", "quantity", "unit_price"],
+              additionalProperties: false,
+            },
+          },
+          tax_rate: { type: "number", description: "Percentage, e.g. 8.5. Omit for documents without tax." },
+          terms: { type: "string", description: "Payment terms, warranty, or legal terms. Plain prose." },
+          signature_block: { type: "boolean", description: "Include client + contractor signature lines at the bottom." },
+        },
+        required: ["doc_type", "title"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const SYSTEM = `You are the Contractor OS AI Assistant for a contracting business.
 You help the office manage leads, customers, estimates, jobs, and crew.
+
+OUTPUT RULES — read carefully:
+- When the user asks you to produce ANY document (estimate, invoice, quote, proposal, contract,
+  agreement, scope of work, change order, letter, memo, receipt, terms, warranty, etc.),
+  you MUST call the generate_document tool. The user will receive a real, downloadable PDF.
+- NEVER paste a document's body into the chat as markdown, plain text, or a fenced code block.
+  Do not write "\`\`\`" code fences containing document content. Do not embed JSON or HTML of
+  the document in your reply. Always use generate_document so the user gets an actual file.
+- For document requests, your chat reply should be one short sentence ("Here is your estimate
+  for the Smith kitchen — review the PDF below.") and the tool call carries the real content.
+- For non-document questions and summaries, answer directly in concise markdown — no code fences
+  unless the user explicitly asked for code.
 
 When the user attaches a photo of a job site, surface, or object, look at it carefully and:
 - Identify what work is needed (paint, drywall, demo, flooring, framing, roofing, etc.).
@@ -121,12 +198,11 @@ When the user attaches a photo of a job site, surface, or object, look at it car
 - Always state the assumptions you made and the rough size you derived (e.g. "wall ≈ 12 ft × 9 ft = 108 sqft").
 - Ask for measurements when the photo doesn't give a clear reference.
 - Use the derived size + the business's typical pricing (from the business profile, if present) to draft estimate line items.
-- When the user wants to save an estimate, call draft_estimate_for_customer with realistic quantities and unit prices.
 
-When the user asks you to create, schedule, or draft anything that changes data,
-call the appropriate tool. The user MUST approve every proposed write before it is applied —
-never claim a record was created. After proposing actions, briefly explain what you proposed and the assumptions.
-For questions and summaries, answer directly in concise markdown.`;
+When the user asks you to create, schedule, or persist data in the system,
+call create_lead / create_customer / schedule_job / draft_estimate_for_customer. The user
+MUST approve every proposed write before it is applied — never claim a record was created.
+generate_document does NOT need approval (it just produces a PDF for the user to download).`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
