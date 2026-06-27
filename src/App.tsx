@@ -81,6 +81,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <GoogleAdsTracker />
           <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
