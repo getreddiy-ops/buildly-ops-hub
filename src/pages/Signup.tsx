@@ -30,6 +30,7 @@ export default function Signup() {
     });
     setLoading(false);
     if (error) return toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+    trackSignup();
     toast({ title: "Account created", description: "Let's set up your company." });
     navigate("/onboarding");
   };
