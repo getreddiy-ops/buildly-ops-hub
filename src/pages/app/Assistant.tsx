@@ -530,3 +530,33 @@ function ProposalCard({ proposal, onApprove, onReject }: { proposal: Proposal; o
     </Card>
   );
 }
+
+function DocumentCard({ doc }: { doc: DocAttachment }) {
+  return (
+    <Card className="p-4 border-primary/40 bg-gradient-to-br from-accent/40 to-transparent">
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-md bg-primary/15 text-primary">
+          <FileText className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium truncate">{doc.title}</div>
+          <div className="text-xs text-muted-foreground capitalize">
+            {doc.docType.replace(/_/g, " ")} · PDF
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a href={doc.url} target="_blank" rel="noopener noreferrer">
+              Preview
+            </a>
+          </Button>
+          <Button asChild size="sm">
+            <a href={doc.url} download={doc.filename}>
+              <Download className="h-4 w-4 mr-1" /> Download
+            </a>
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
