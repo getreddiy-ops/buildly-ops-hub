@@ -47,6 +47,7 @@ export default function Billing() {
 
   useEffect(() => {
     if (params.get("checkout") === "success") {
+      trackTrialStart();
       toast.success("Subscription activated!");
       const t = setInterval(() => refetch(), 2000);
       const stop = setTimeout(() => clearInterval(t), 15000);
