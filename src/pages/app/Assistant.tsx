@@ -17,9 +17,11 @@ type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
 type Proposal = ToolCall & { status: ProposalStatus; error?: string };
 
+type DocAttachment = { id: string; filename: string; url: string; docType: string; title: string };
+
 type Msg =
   | { role: "user"; content: string; images?: string[] }
-  | { role: "assistant"; content: string; proposals?: Proposal[] };
+  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[] };
 
 const SUGGESTIONS = [
   "Add a new lead: Sarah Lee, 555-0142, kitchen remodel referral",
