@@ -109,6 +109,70 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_document",
+      description:
+        "Produce a real, downloadable business document (PDF) for the user. ALWAYS use this whenever the user asks for an estimate, invoice, quote, proposal, contract, agreement, scope of work, change order, letter, memo, receipt, or any other written document. NEVER paste the document content as markdown or a code block — call this tool instead. The user will see a downloadable PDF attachment in the chat.",
+      parameters: {
+        type: "object",
+        properties: {
+          doc_type: {
+            type: "string",
+            enum: ["estimate", "invoice", "quote", "proposal", "contract", "agreement", "scope_of_work", "change_order", "letter", "memo", "receipt", "other"],
+          },
+          title: { type: "string", description: "Document title shown at the top, e.g. 'Estimate #1042'." },
+          recipient: {
+            type: "object",
+            description: "Who the document is addressed to.",
+            properties: {
+              name: { type: "string" },
+              company: { type: "string" },
+              address: { type: "string" },
+              email: { type: "string" },
+              phone: { type: "string" },
+            },
+            additionalProperties: false,
+          },
+          intro: { type: "string", description: "Short opening paragraph or summary (1-3 sentences)." },
+          sections: {
+            type: "array",
+            description: "Body sections rendered in order. Use for narrative content (scope, terms, conditions, notes).",
+            items: {
+              type: "object",
+              properties: {
+                heading: { type: "string" },
+                body: { type: "string", description: "Plain prose. Use blank lines to separate paragraphs. No markdown." },
+              },
+              required: ["heading", "body"],
+              additionalProperties: false,
+            },
+          },
+          line_items: {
+            type: "array",
+            description: "Optional priced line items (for estimates, invoices, quotes, change orders).",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                quantity: { type: "number" },
+                unit: { type: "string", description: "e.g. hr, sqft, each" },
+                unit_price: { type: "number" },
+              },
+              required: ["description", "quantity", "unit_price"],
+              additionalProperties: false,
+            },
+          },
+          tax_rate: { type: "number", description: "Percentage, e.g. 8.5. Omit for documents without tax." },
+          terms: { type: "string", description: "Payment terms, warranty, or legal terms. Plain prose." },
+          signature_block: { type: "boolean", description: "Include client + contractor signature lines at the bottom." },
+        },
+        required: ["doc_type", "title"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const SYSTEM = `You are the Contractor OS AI Assistant for a contracting business.
