@@ -371,6 +371,9 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
                   {speakingId === `m${i}` ? "Stop" : "Listen"}
                 </button>
               )}
+              {m.role === "assistant" && m.documents?.map((d) => (
+                <DocumentCard key={d.id} doc={d} />
+              ))}
               {m.role === "assistant" && m.proposals?.map((p) => (
                 <ProposalCard
                   key={p.id}
