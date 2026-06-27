@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOfficeRole } from "@/components/auth/Guards";
+import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
 
 import Landing from "./pages/Landing";
 import Pricing from "./pages/Pricing";
@@ -80,6 +81,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <GoogleAdsTracker />
           <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />

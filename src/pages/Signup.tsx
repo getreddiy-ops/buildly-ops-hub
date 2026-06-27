@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
+import { trackSignup } from "@/lib/gtag";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function Signup() {
     });
     setLoading(false);
     if (error) return toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+    trackSignup();
     toast({ title: "Account created", description: "Let's set up your company." });
     navigate("/onboarding");
   };

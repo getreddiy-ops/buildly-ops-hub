@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
+import { trackTrialStart } from "@/lib/gtag";
 import { cn } from "@/lib/utils";
 
 const ORDER: Tier[] = ["base", "plus", "premium"];
@@ -46,6 +47,7 @@ export default function Billing() {
 
   useEffect(() => {
     if (params.get("checkout") === "success") {
+      trackTrialStart();
       toast.success("Subscription activated!");
       const t = setInterval(() => refetch(), 2000);
       const stop = setTimeout(() => clearInterval(t), 15000);
