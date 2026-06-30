@@ -1,6 +1,7 @@
 // AI Form Fill — converts free-text prompts into structured form values.
 // Returns a JSON object keyed by the requested field names.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
