@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-do
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone,
+  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck,
 } from "lucide-react";
 
 
