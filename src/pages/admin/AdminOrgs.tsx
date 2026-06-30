@@ -67,7 +67,7 @@ export default function AdminOrgs() {
 
   return (
     <>
-      <PageHeader title="Organizations" description="Every contractor on the platform.">
+      <PageHeader title="Organizations" description="Every contractor on the platform." actions={
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-1" /> New organization</Button>
@@ -96,7 +96,8 @@ export default function AdminOrgs() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </PageHeader>
+      } />
+
 
       <Input placeholder="Search organizations…" value={q} onChange={(e) => setQ(e.target.value)}
         className="max-w-sm mb-4" />
