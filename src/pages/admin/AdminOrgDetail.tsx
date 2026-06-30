@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-type Org = { id: string; name: string; plan: string; created_at: string; business_address: string | null };
+type Org = { id: string; name: string; plan: string; created_at: string; address: string | null };
 type Member = { user_id: string; role: string; profile: { full_name: string | null; email: string | null } | null };
 type Subscription = {
   id: string; status: string; price_id: string | null; current_period_end: string | null;
@@ -34,7 +34,7 @@ export default function AdminOrgDetail() {
   const load = async () => {
     if (!id) return;
     const { data: o } = await supabase.from("organizations")
-      .select("id, name, plan, created_at, business_address").eq("id", id).maybeSingle();
+      .select("id, name, plan, created_at, address").eq("id", id).maybeSingle();
     setOrg(o as Org | null);
 
     const { data: m } = await supabase.from("organization_members")
@@ -120,7 +120,7 @@ export default function AdminOrgDetail() {
       <Link to="/admin/organizations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
         <ArrowLeft className="h-3 w-3" /> All organizations
       </Link>
-      <PageHeader title={org.name} description={`Joined ${new Date(org.created_at).toLocaleDateString()} · ${org.business_address ?? "no address"}`} />
+      <PageHeader title={org.name} description={`Joined ${new Date(org.created_at).toLocaleDateString()} · ${org.address ?? "no address"}`} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4">
