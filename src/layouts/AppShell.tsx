@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-do
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone,
+  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck,
 } from "lucide-react";
 
 
@@ -46,7 +46,7 @@ const nav = [
 ];
 
 export default function AppShell() {
-  const { user, activeOrg, signOut, memberships, setActiveOrgId } = useAuth();
+  const { user, activeOrg, signOut, memberships, setActiveOrgId, isPlatformAdmin } = useAuth();
   const { branding } = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,6 +86,16 @@ export default function AppShell() {
           <Smartphone className="h-4 w-4" />
           Field App (Mobile)
         </NavLink>
+        {isPlatformAdmin && (
+          <NavLink
+            to="/admin"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Platform Admin
+          </NavLink>
+        )}
       </li>
     </ul>
   );
