@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
       (orgRow?.address as string | null) ?? null,
       (bp.service_area as string | null) ?? null,
     );
-    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}`;
+    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}\n\n${TRADE_KNOWLEDGE_PROMPT}`;
 
     const payload = {
       model: "google/gemini-2.5-flash",
