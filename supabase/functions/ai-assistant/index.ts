@@ -3,6 +3,7 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
+import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -286,7 +287,7 @@ Deno.serve(async (req) => {
       (orgRow?.address as string | null) ?? null,
       (bp.service_area as string | null) ?? null,
     );
-    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}`;
+    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}\n\n${TRADE_KNOWLEDGE_PROMPT}`;
 
     const payload = {
       model: "google/gemini-2.5-flash",
