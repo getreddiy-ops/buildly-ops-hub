@@ -163,6 +163,7 @@ const App = () => (
             <Route path="/admin" element={<RequireAuth><RequirePlatformAdmin><AdminShell /></RequirePlatformAdmin></RequireAuth>}>
               <Route index element={<AdminOverview />} />
               <Route path="organizations" element={<AdminOrgs />} />
+              <Route path="organizations/:id" element={<AdminOrgDetail />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="audit" element={<AdminAudit />} />
             </Route>
