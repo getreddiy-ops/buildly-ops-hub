@@ -7,7 +7,9 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 type Action =
   | { type: "send_password_reset"; email: string }
   | { type: "comp_trial"; subscription_id: string; days: number }
-  | { type: "cancel_subscription"; subscription_id: string; at_period_end?: boolean };
+  | { type: "cancel_subscription"; subscription_id: string; at_period_end?: boolean }
+  | { type: "create_organization"; name: string; owner_email: string; plan?: string }
+  | { type: "delete_organization"; organization_id: string };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
