@@ -46,7 +46,7 @@ const nav = [
 ];
 
 export default function AppShell() {
-  const { user, activeOrg, signOut, memberships, setActiveOrgId } = useAuth();
+  const { user, activeOrg, signOut, memberships, setActiveOrgId, isPlatformAdmin } = useAuth();
   const { branding } = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
