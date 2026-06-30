@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
 
       const { data: org, error: orgErr } = await admin
         .from("organizations")
-        .insert({ name, plan: body.plan ?? "base" })
+        .insert({ name, plan: body.plan ?? "base", owner_id: ownerId })
         .select("id")
         .single();
       if (orgErr) throw orgErr;
