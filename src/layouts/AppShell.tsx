@@ -86,6 +86,16 @@ export default function AppShell() {
           <Smartphone className="h-4 w-4" />
           Field App (Mobile)
         </NavLink>
+        {isPlatformAdmin && (
+          <NavLink
+            to="/admin"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Platform Admin
+          </NavLink>
+        )}
       </li>
     </ul>
   );
