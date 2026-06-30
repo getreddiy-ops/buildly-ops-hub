@@ -68,6 +68,7 @@ import AgentLeads from "./pages/agent/AgentLeads";
 import AgentPayouts from "./pages/agent/AgentPayouts";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminOrgs from "./pages/admin/AdminOrgs";
+import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
 import { Messages, SettingsPage, FieldProfile } from "./pages/stubs";
@@ -162,6 +163,7 @@ const App = () => (
             <Route path="/admin" element={<RequireAuth><RequirePlatformAdmin><AdminShell /></RequirePlatformAdmin></RequireAuth>}>
               <Route index element={<AdminOverview />} />
               <Route path="organizations" element={<AdminOrgs />} />
+              <Route path="organizations/:id" element={<AdminOrgDetail />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="audit" element={<AdminAudit />} />
             </Route>

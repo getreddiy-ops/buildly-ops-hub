@@ -1,0 +1,221 @@
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { ArrowLeft, Mail, Gift, XCircle, Pin, PinOff, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+type Org = { id: string; name: string; plan: string; created_at: string; address: string | null };
+type Member = { user_id: string; role: string; profile: { full_name: string | null; email: string | null } | null };
+type Subscription = {
+  id: string; status: string; price_id: string | null; current_period_end: string | null;
+  cancel_at_period_end: boolean; environment: string; user_id: string;
+};
+type Note = { id: string; body: string; pinned: boolean; created_at: string; author_id: string };
+
+export default function AdminOrgDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const [org, setOrg] = useState<Org | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteBody, setNoteBody] = useState("");
+  const [trialDays, setTrialDays] = useState(7);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    if (!id) return;
+    const { data: o } = await supabase.from("organizations")
+      .select("id, name, plan, created_at, address").eq("id", id).maybeSingle();
+    setOrg(o as Org | null);
+
+    const { data: m } = await supabase.from("organization_members")
+      .select("user_id, role").eq("organization_id", id);
+    const ids = (m ?? []).map((r: any) => r.user_id);
+    const { data: profs } = ids.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", ids)
+      : { data: [] as any[] };
+    const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    setMembers(((m ?? []) as any[]).map((r) => ({ ...r, profile: pmap.get(r.user_id) ?? null })));
+
+    const { data: s } = await supabase.from("subscriptions")
+      .select("id, status, price_id, current_period_end, cancel_at_period_end, environment, user_id")
+      .eq("organization_id", id).order("created_at", { ascending: false });
+    setSubs((s ?? []) as Subscription[]);
+
+    const { data: n } = await supabase.from("support_notes")
+      .select("id, body, pinned, created_at, author_id")
+      .eq("organization_id", id).order("pinned", { ascending: false }).order("created_at", { ascending: false });
+    setNotes((n ?? []) as Note[]);
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  const callAdmin = async (action: Record<string, unknown>) => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-support", { body: action });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as any;
+    } finally { setBusy(false); }
+  };
+
+  const sendReset = async (email: string | null) => {
+    if (!email) return toast.error("No email on profile");
+    try {
+      await callAdmin({ type: "send_password_reset", email });
+      toast.success(`Password reset email sent to ${email}`);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const compTrial = async (subscription_id: string) => {
+    try {
+      const r = await callAdmin({ type: "comp_trial", subscription_id, days: trialDays });
+      toast.success(`Trial extended to ${new Date(r.current_period_end).toLocaleDateString()}`);
+      load();
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const cancelSub = async (subscription_id: string, at_period_end: boolean) => {
+    if (!confirm(at_period_end ? "Cancel at period end?" : "Cancel immediately?")) return;
+    try {
+      await callAdmin({ type: "cancel_subscription", subscription_id, at_period_end });
+      toast.success("Subscription cancelled");
+      load();
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const addNote = async () => {
+    if (!noteBody.trim() || !id || !user) return;
+    const { error } = await supabase.from("support_notes")
+      .insert({ organization_id: id, author_id: user.id, body: noteBody.trim() });
+    if (error) return toast.error(error.message);
+    setNoteBody(""); load();
+  };
+
+  const togglePin = async (n: Note) => {
+    await supabase.from("support_notes").update({ pinned: !n.pinned }).eq("id", n.id);
+    load();
+  };
+
+  const deleteNote = async (n: Note) => {
+    if (!confirm("Delete note?")) return;
+    await supabase.from("support_notes").delete().eq("id", n.id);
+    load();
+  };
+
+  if (!org) return <div className="text-muted-foreground">Loading…</div>;
+
+  return (
+    <>
+      <Link to="/admin/organizations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
+        <ArrowLeft className="h-3 w-3" /> All organizations
+      </Link>
+      <PageHeader title={org.name} description={`Joined ${new Date(org.created_at).toLocaleDateString()} · ${org.address ?? "no address"}`} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Members ({members.length})</h3>
+          {members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No members.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {members.map((m) => (
+                <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{m.profile?.full_name || m.profile?.email || m.user_id}</div>
+                    <div className="text-xs text-muted-foreground truncate">{m.profile?.email}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline">{m.role}</Badge>
+                    <Button size="sm" variant="outline" disabled={busy || !m.profile?.email}
+                      onClick={() => sendReset(m.profile?.email ?? null)}>
+                      <Mail className="h-3 w-3 mr-1" /> Reset
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Subscriptions ({subs.length})</h3>
+          {subs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No subscription on file.</p>
+          ) : (
+            <ul className="space-y-4">
+              {subs.map((s) => (
+                <li key={s.id} className="border border-border rounded-md p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="font-medium">{s.price_id ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {s.environment} · {s.current_period_end ? `ends ${new Date(s.current_period_end).toLocaleDateString()}` : "no end"}
+                        {s.cancel_at_period_end && " · cancels at period end"}
+                      </div>
+                    </div>
+                    <Badge variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>{s.status}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input type="number" min={1} max={365} value={trialDays}
+                      onChange={(e) => setTrialDays(Number(e.target.value))} className="w-20" />
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => compTrial(s.id)}>
+                      <Gift className="h-3 w-3 mr-1" /> Comp days
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => cancelSub(s.id, true)}>
+                      Cancel at period end
+                    </Button>
+                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => cancelSub(s.id, false)}>
+                      <XCircle className="h-3 w-3 mr-1" /> Cancel now
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card className="p-4 mt-6">
+        <h3 className="font-semibold mb-3">Internal support notes</h3>
+        <div className="flex gap-2 mb-4">
+          <Textarea value={noteBody} onChange={(e) => setNoteBody(e.target.value)}
+            placeholder="Note about this customer (visible to platform admins only)…" rows={2} />
+          <Button onClick={addNote} disabled={!noteBody.trim()}>Add</Button>
+        </div>
+        {notes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No notes yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {notes.map((n) => (
+              <li key={n.id} className={`p-3 rounded-md border ${n.pinned ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm whitespace-pre-wrap flex-1">{n.body}</p>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => togglePin(n)} title={n.pinned ? "Unpin" : "Pin"}>
+                      {n.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => deleteNote(n)} title="Delete">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
+  );
+}
