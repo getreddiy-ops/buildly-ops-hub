@@ -50,7 +50,14 @@ Rules:
 - For any field you cannot confidently fill, return null.
 - Dates must be ISO 8601 (YYYY-MM-DD or full RFC3339).
 - Phone numbers may be left in the user's format.
-- Do not invent details, prices, or names that aren't given.`;
+- Do not invent details, prices, or names that aren't given.
+- When the form is an estimate, invoice, or line-item builder, apply the trade
+  knowledge below to derive realistic quantities (rebar lf, form boards, 2x4s,
+  sheets of drywall, bundles of shingles, gallons of paint, etc.) from the
+  dimensions and trade implied by the user. Itemize support materials, never
+  collapse them into a single "materials" line.
+
+${TRADE_KNOWLEDGE_PROMPT}`;
 
     const userMsg = `Form context: ${JSON.stringify(body.context ?? {})}
 User request: """${body.prompt}"""
