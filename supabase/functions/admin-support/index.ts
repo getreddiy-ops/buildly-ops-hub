@@ -98,6 +98,48 @@ Deno.serve(async (req) => {
       return ok({ canceled: true });
     }
 
+    if (body.type === "create_organization") {
+      const name = body.name?.trim();
+      const email = body.owner_email?.trim().toLowerCase();
+      if (!name || !email) throw new Error("name + owner_email required");
+
+      // Find existing user; if missing, invite them by email.
+      let ownerId: string | null = null;
+      const { data: prof } = await admin
+        .from("profiles").select("id").eq("email", email).maybeSingle();
+      if (prof?.id) ownerId = prof.id;
+
+      if (!ownerId) {
+        const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+          redirectTo: `${req.headers.get("origin") ?? ""}/login`,
+        });
+        if (inviteErr) throw inviteErr;
+        ownerId = invite.user?.id ?? null;
+      }
+      if (!ownerId) throw new Error("could not resolve owner user");
+
+      const { data: org, error: orgErr } = await admin
+        .from("organizations")
+        .insert({ name, plan: body.plan ?? "base" })
+        .select("id")
+        .single();
+      if (orgErr) throw orgErr;
+
+      const { error: memErr } = await admin.from("organization_members").insert({
+        organization_id: org.id, user_id: ownerId, role: "owner",
+      });
+      if (memErr) throw memErr;
+
+      return ok({ organization_id: org.id, owner_id: ownerId });
+    }
+
+    if (body.type === "delete_organization") {
+      if (!body.organization_id) throw new Error("organization_id required");
+      const { error } = await admin.from("organizations").delete().eq("id", body.organization_id);
+      if (error) throw error;
+      return ok({ deleted: true });
+    }
+
     return new Response(JSON.stringify({ error: "unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
