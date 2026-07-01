@@ -1058,6 +1058,47 @@ export type Database = {
         }
         Relationships: []
       }
+      pto_policies: {
+        Row: {
+          accrual_hours_per_hour_worked: number | null
+          annual_cap_hours: number | null
+          carryover_cap_hours: number | null
+          created_at: string
+          notes: string | null
+          organization_id: string
+          updated_at: string
+          waiting_period_days: number | null
+        }
+        Insert: {
+          accrual_hours_per_hour_worked?: number | null
+          annual_cap_hours?: number | null
+          carryover_cap_hours?: number | null
+          created_at?: string
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+          waiting_period_days?: number | null
+        }
+        Update: {
+          accrual_hours_per_hour_worked?: number | null
+          annual_cap_hours?: number | null
+          carryover_cap_hours?: number | null
+          created_at?: string
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+          waiting_period_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pto_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quickbooks_connections: {
         Row: {
           access_token: string
@@ -1345,6 +1386,65 @@ export type Database = {
           },
         ]
       }
+      time_off_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          hours: number
+          id: string
+          note: string | null
+          organization_id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          reviewer_note: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["time_off_status"]
+          type: Database["public"]["Enums"]["time_off_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          hours?: number
+          id?: string
+          note?: string | null
+          organization_id: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["time_off_status"]
+          type?: Database["public"]["Enums"]["time_off_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          hours?: number
+          id?: string
+          note?: string | null
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["time_off_status"]
+          type?: Database["public"]["Enums"]["time_off_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_off_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1496,6 +1596,8 @@ export type Database = {
         | "cancelled"
       lead_status: "new" | "contacted" | "qualified" | "won" | "lost"
       time_entry_status: "pending" | "approved" | "rejected"
+      time_off_status: "pending" | "approved" | "denied" | "cancelled"
+      time_off_type: "vacation" | "sick" | "personal" | "unpaid" | "holiday"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1635,6 +1737,8 @@ export const Constants = {
       ],
       lead_status: ["new", "contacted", "qualified", "won", "lost"],
       time_entry_status: ["pending", "approved", "rejected"],
+      time_off_status: ["pending", "approved", "denied", "cancelled"],
+      time_off_type: ["vacation", "sick", "personal", "unpaid", "holiday"],
     },
   },
 } as const
