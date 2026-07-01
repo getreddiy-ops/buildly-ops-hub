@@ -53,27 +53,27 @@ export default function AdminUsers() {
       {filtered.length === 0 ? (
         <EmptyState icon={Users} title="No users yet" />
       ) : (
-        <Card className="divide-y divide-border">
+        <Card className="divide-y divide-border overflow-hidden">
           {filtered.map((u) => {
             const userRoles = roles[u.id] ?? [];
             return (
-              <div key={u.id} className="p-4 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{u.full_name || u.email || u.id}</div>
-                  <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+              <div key={u.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium break-words">{u.full_name || u.email || u.id}</div>
+                  <div className="text-xs text-muted-foreground break-all">{u.email}</div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {userRoles.length === 0
                       ? <span className="text-xs text-muted-foreground">No platform roles</span>
                       : userRoles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant={userRoles.includes("agent") ? "default" : "outline"}
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant={userRoles.includes("agent") ? "default" : "outline"}
                     onClick={() => toggle(u.id, "agent")}>
                     {userRoles.includes("agent") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
                     Agent
                   </Button>
-                  <Button size="sm" variant={userRoles.includes("platform_admin") ? "default" : "outline"}
+                  <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant={userRoles.includes("platform_admin") ? "default" : "outline"}
                     onClick={() => toggle(u.id, "platform_admin")}>
                     {userRoles.includes("platform_admin") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
                     Admin
