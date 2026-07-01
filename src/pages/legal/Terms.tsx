@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Terms() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Terms of Service — Contractor OS" description="Terms governing your use of Contractor OS, operated by Morgan Marc Lynch with Paddle as merchant of record." path="/legal/terms" />
+      <SEO title="Terms of Service — FastTract" description="Terms governing your use of FastTract, operated by Morgan Marc Lynch with Paddle as merchant of record." path="/legal/terms" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -15,13 +15,13 @@ export default function Terms() {
         <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
 
         <h2 className="mt-8 text-2xl font-semibold">1. Who We Are</h2>
-        <p>Contractor OS is provided by Morgan Marc Lynch ("we", "us", "our"). By creating an account or using the service, you are entering into an agreement with Morgan Marc Lynch.</p>
+        <p>FastTract is provided by Morgan Marc Lynch ("we", "us", "our"). By creating an account or using the service, you are entering into an agreement with Morgan Marc Lynch.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">2. Acceptance</h2>
-        <p>By accessing or using Contractor OS, you agree to be bound by these Terms. If you do not agree, do not use the service. You confirm you are of legal age and, if signing up on behalf of an organization, that you have authority to bind it.</p>
+        <p>By accessing or using FastTract, you agree to be bound by these Terms. If you do not agree, do not use the service. You confirm you are of legal age and, if signing up on behalf of an organization, that you have authority to bind it.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">3. The Service</h2>
-        <p>Contractor OS is a business operating system for contractors providing CRM, estimates, jobs, time tracking, job costing, and optional AI assistant and phone answering features. Specific features depend on your subscription tier.</p>
+        <p>FastTract is a business operating system for contractors providing CRM, estimates, jobs, time tracking, job costing, and optional AI assistant and phone answering features. Specific features depend on your subscription tier.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">4. Acceptable Use</h2>
         <p>You must not misuse the service. Prohibited activity includes: unlawful use, fraud or spam, infringing intellectual property, distributing malware, probing or scraping the service, attempting to bypass security or technical limits, reselling or redistributing the service, or reverse engineering it.</p>
@@ -40,7 +40,7 @@ export default function Terms() {
         <p>Subscription fees, billing cycles, renewals, cancellations, taxes, and refunds are governed by Paddle's <a href="https://www.paddle.com/legal/checkout-buyer-terms" className="text-primary" target="_blank" rel="noreferrer">Buyer Terms</a>. Cancelling a subscription stops future renewals; you retain access until the end of the current paid period. Upgrades and downgrades take effect immediately.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">9. Service Levels</h2>
-        <p>We work to keep Contractor OS available but do not guarantee uninterrupted or error-free performance.</p>
+        <p>We work to keep FastTract available but do not guarantee uninterrupted or error-free performance.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">10. Suspension and Termination</h2>
         <p>We may suspend or terminate access for material breach, non-payment, security or fraud risk, or repeated or serious policy violations. On termination, your right to use the service ends; you may request a reasonable export of your data before deletion.</p>

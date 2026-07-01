@@ -26,7 +26,7 @@ const PLAN_FEATURES: Record<Tier, string[]> = {
     "Mobile field app",
   ],
   plus: [
-    "Everything in Contractor OS",
+    "Everything in FastTract",
     "AI admin assistant",
     "Voice dictation",
   ],
@@ -96,7 +96,7 @@ export default function Billing() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title="Billing" description="Manage your Contractor OS subscription" />
+      <PageHeader title="Billing" description="Manage your FastTract subscription" />
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground">

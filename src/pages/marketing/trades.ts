@@ -15,19 +15,19 @@ export type TradeConfig = {
 
 const baseFaq = (trade: string) => [
   {
-    q: `Is ContractorOS built for ${trade.toLowerCase()} companies?`,
-    a: `Yes. ContractorOS is built for ${trade.toLowerCase()} contractors and other trade-based construction businesses. The CRM, estimator, scheduler, and AI phone agent are tuned to how field-based crews actually work.`,
+    q: `Is FastTract built for ${trade.toLowerCase()} companies?`,
+    a: `Yes. FastTract is built for ${trade.toLowerCase()} contractors and other trade-based construction businesses. The CRM, estimator, scheduler, and AI phone agent are tuned to how field-based crews actually work.`,
   },
   {
     q: `Can ${trade} contractors create estimates from photos?`,
-    a: `Yes. Customers or your crew upload photos of the site. ContractorOS uses AI-assisted measurement and your unit pricing to produce a draft estimate you review and approve before sending.`,
+    a: `Yes. Customers or your crew upload photos of the site. FastTract uses AI-assisted measurement and your unit pricing to produce a draft estimate you review and approve before sending.`,
   },
   {
     q: "Does the AI replace site visits?",
     a: "No. AI-assisted estimates are drafts to speed up quoting. We recommend verifying measurements on site for final quotes. Contractors stay in full control.",
   },
   {
-    q: `Can ContractorOS answer the phone for my ${trade.toLowerCase()} business?`,
+    q: `Can FastTract answer the phone for my ${trade.toLowerCase()} business?`,
     a: `Yes. The AI Phone Agent answers missed calls 24/7, captures lead details, books appointments, and creates the customer record in your CRM automatically.`,
   },
   {
@@ -40,9 +40,9 @@ export const trades: TradeConfig[] = [
   {
     slug: "concrete-contractor-software",
     trade: "Concrete",
-    title: "Concrete Contractor Software | AI Estimating, CRM & Invoicing — ContractorOS",
+    title: "Concrete Contractor Software | AI Estimating, CRM & Invoicing — FastTract",
     description:
-      "ContractorOS is concrete contractor software with AI photo estimating, CRM, scheduling, crew time tracking, invoicing, and an AI phone agent that books pours and patios while you work.",
+      "FastTract is concrete contractor software with AI photo estimating, CRM, scheduling, crew time tracking, invoicing, and an AI phone agent that books pours and patios while you work.",
     h1: "Concrete Contractor Software With AI Estimating, CRM, and Invoicing",
     intro:
       "Built for driveway, patio, slab, foundation, and decorative concrete crews. Quote faster from photos, answer every call, schedule the pour, track the crew, and get paid — from one app.",
@@ -82,12 +82,12 @@ export const trades: TradeConfig[] = [
   {
     slug: "framing-contractor-software",
     trade: "Framing",
-    title: "Framing Contractor Software | Estimates, Crew & Invoicing — ContractorOS",
+    title: "Framing Contractor Software | Estimates, Crew & Invoicing — FastTract",
     description:
-      "ContractorOS is framing contractor software. AI-assisted estimating from plans and photos, CRM, crew scheduling, GPS time tracking, and invoicing in one app.",
+      "FastTract is framing contractor software. AI-assisted estimating from plans and photos, CRM, crew scheduling, GPS time tracking, and invoicing in one app.",
     h1: "Framing Contractor Software for Faster Bids and Tighter Crews",
     intro:
-      "From single-family to multi-unit framing, ContractorOS handles bids, crew scheduling, and invoicing so framers can spend more time swinging hammers and less time on paperwork.",
+      "From single-family to multi-unit framing, FastTract handles bids, crew scheduling, and invoicing so framers can spend more time swinging hammers and less time on paperwork.",
     painPoints: [
       "Bids dragging on for days while GCs go elsewhere",
       "Hand-counting studs, plates, and headers from plans",
@@ -120,12 +120,12 @@ export const trades: TradeConfig[] = [
   {
     slug: "fencing-contractor-software",
     trade: "Fencing",
-    title: "Fencing Contractor Software | AI Estimating & CRM — ContractorOS",
+    title: "Fencing Contractor Software | AI Estimating & CRM — FastTract",
     description:
-      "ContractorOS is fencing contractor software with AI photo estimating for linear footage, CRM, scheduling, AI phone answering, and invoicing.",
+      "FastTract is fencing contractor software with AI photo estimating for linear footage, CRM, scheduling, AI phone answering, and invoicing.",
     h1: "Fencing Contractor Software That Quotes Fences From Photos",
     intro:
-      "Wood, vinyl, chain link, aluminum — quote it all faster. ContractorOS gives fence companies AI-assisted linear-foot estimates, an AI receptionist, and a full CRM.",
+      "Wood, vinyl, chain link, aluminum — quote it all faster. FastTract gives fence companies AI-assisted linear-foot estimates, an AI receptionist, and a full CRM.",
     painPoints: [
       "Driving to every yard for a 100-ft fence quote",
       "Calculating posts, panels, and gates by hand",
@@ -158,12 +158,12 @@ export const trades: TradeConfig[] = [
   {
     slug: "landscaping-contractor-software",
     trade: "Landscaping",
-    title: "Landscaping Contractor Software | AI Estimates & Scheduling — ContractorOS",
+    title: "Landscaping Contractor Software | AI Estimates & Scheduling — FastTract",
     description:
-      "ContractorOS is landscaping contractor software with AI photo estimating, CRM, route scheduling, crew time tracking, invoicing, and an AI phone agent.",
+      "FastTract is landscaping contractor software with AI photo estimating, CRM, route scheduling, crew time tracking, invoicing, and an AI phone agent.",
     h1: "Landscaping Contractor Software for Designs, Installs, and Maintenance",
     intro:
-      "From design-build to weekly maintenance routes, ContractorOS keeps your crews on schedule, your estimates accurate, and your phone answered.",
+      "From design-build to weekly maintenance routes, FastTract keeps your crews on schedule, your estimates accurate, and your phone answered.",
     painPoints: [
       "Maintenance routes built in spreadsheets",
       "Quotes lost in voicemail",
@@ -195,9 +195,9 @@ export const trades: TradeConfig[] = [
   {
     slug: "roofing-contractor-software",
     trade: "Roofing",
-    title: "Roofing Contractor Software | AI Estimates, CRM & Invoicing — ContractorOS",
+    title: "Roofing Contractor Software | AI Estimates, CRM & Invoicing — FastTract",
     description:
-      "ContractorOS is roofing contractor software. AI-assisted estimates from drone or phone photos, CRM, crew scheduling, time tracking, and invoicing.",
+      "FastTract is roofing contractor software. AI-assisted estimates from drone or phone photos, CRM, crew scheduling, time tracking, and invoicing.",
     h1: "Roofing Contractor Software With AI Photo Estimating",
     intro:
       "Built for residential and light-commercial roofers. Quote from photos, schedule tear-offs and installs, track every crew hour, and bill the insurance company.",
@@ -233,12 +233,12 @@ export const trades: TradeConfig[] = [
   {
     slug: "siding-contractor-software",
     trade: "Siding",
-    title: "Siding Contractor Software | AI Estimates & CRM — ContractorOS",
+    title: "Siding Contractor Software | AI Estimates & CRM — FastTract",
     description:
-      "ContractorOS is siding contractor software with AI photo estimating for wall area, CRM, scheduling, and invoicing.",
+      "FastTract is siding contractor software with AI photo estimating for wall area, CRM, scheduling, and invoicing.",
     h1: "Siding Contractor Software for Faster Wall-Area Estimates",
     intro:
-      "Vinyl, fiber cement, wood, metal — ContractorOS helps siding contractors quote faster from photos and run the install end to end.",
+      "Vinyl, fiber cement, wood, metal — FastTract helps siding contractors quote faster from photos and run the install end to end.",
     painPoints: [
       "Measuring elevations the old way",
       "Quoting taking days instead of hours",
@@ -268,12 +268,12 @@ export const trades: TradeConfig[] = [
   {
     slug: "deck-builder-software",
     trade: "Deck Builder",
-    title: "Deck Builder Software | AI Estimates, CRM & Invoicing — ContractorOS",
+    title: "Deck Builder Software | AI Estimates, CRM & Invoicing — FastTract",
     description:
-      "ContractorOS is deck builder software. AI photo estimating for deck square footage, CRM, scheduling, crew time tracking, and invoicing.",
+      "FastTract is deck builder software. AI photo estimating for deck square footage, CRM, scheduling, crew time tracking, and invoicing.",
     h1: "Deck Builder Software With AI Estimating From Photos",
     intro:
-      "Composite, pressure-treated, cedar, or hardwood — ContractorOS helps deck builders quote faster, schedule cleaner, and collect sooner.",
+      "Composite, pressure-treated, cedar, or hardwood — FastTract helps deck builders quote faster, schedule cleaner, and collect sooner.",
     painPoints: [
       "Hand-drawn sketches that turn into wrong quotes",
       "Missing weekend leads",
@@ -301,9 +301,9 @@ export const trades: TradeConfig[] = [
   {
     slug: "general-contractor-software",
     trade: "General Contractor",
-    title: "General Contractor Software | CRM, Estimates & Job Management — ContractorOS",
+    title: "General Contractor Software | CRM, Estimates & Job Management — FastTract",
     description:
-      "ContractorOS is general contractor software with AI-assisted estimating, CRM, subs and crew scheduling, time tracking, invoicing, and an AI phone agent.",
+      "FastTract is general contractor software with AI-assisted estimating, CRM, subs and crew scheduling, time tracking, invoicing, and an AI phone agent.",
     h1: "General Contractor Software for Remodelers and Builders",
     intro:
       "Manage subs, crews, customers, estimates, and invoices in one place. Built for remodelers, custom home builders, and small GCs who want to scale without more admin.",

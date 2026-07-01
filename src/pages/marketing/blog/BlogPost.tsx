@@ -12,7 +12,7 @@ export default function BlogPost() {
   return (
     <MarketingShell>
       <SEO
-        title={`${post.title} | ContractorOS`}
+        title={`${post.title} | FastTract`}
         description={post.description}
         path={`/blog/${post.slug}`}
         jsonLd={{
@@ -20,7 +20,7 @@ export default function BlogPost() {
           "@type": "Article",
           headline: post.title,
           datePublished: post.date,
-          author: { "@type": "Organization", name: "ContractorOS" },
+          author: { "@type": "Organization", name: "FastTract" },
           publisher: { "@type": "Organization", name: "GetReddiy" },
         }}
       />

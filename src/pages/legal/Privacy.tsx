@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Privacy Policy — Contractor OS" description="How Contractor OS (Morgan Marc Lynch) collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
+      <SEO title="Privacy Policy — FastTract" description="How FastTract (Morgan Marc Lynch) collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -14,7 +14,7 @@ export default function Privacy() {
         <h1 className="text-4xl font-semibold mb-2">Privacy Notice</h1>
         <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
 
-        <p className="mt-6">This Privacy Notice explains how Morgan Marc Lynch ("we", "us", "our"), operating Contractor OS, collects and processes your personal data. We act as the data controller for personal data collected through Contractor OS.</p>
+        <p className="mt-6">This Privacy Notice explains how Morgan Marc Lynch ("we", "us", "our"), operating FastTract, collects and processes your personal data. We act as the data controller for personal data collected through FastTract.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">1. Data We Collect</h2>
         <ul className="list-disc pl-6">

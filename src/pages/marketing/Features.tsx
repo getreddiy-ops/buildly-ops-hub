@@ -18,8 +18,8 @@ export default function Features() {
   return (
     <MarketingShell>
       <SEO
-        title="Features | Contractor Software for Estimating, CRM, Jobs & Invoicing — ContractorOS"
-        description="See every feature in ContractorOS: AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, estimates, invoices, job scheduling, crew time tracking, and an AI command chat."
+        title="Features | Contractor Software for Estimating, CRM, Jobs & Invoicing — FastTract"
+        description="See every feature in FastTract: AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, estimates, invoices, job scheduling, crew time tracking, and an AI command chat."
         path="/features"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
@@ -27,7 +27,7 @@ export default function Features() {
           Every tool a contractor needs — in one app.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          ContractorOS is the AI-powered operating system for contractors. Answer calls, capture leads, estimate from photos and voice, schedule crews, track time, send invoices, and collect payments.
+          FastTract is the AI-powered operating system for contractors. Answer calls, capture leads, estimate from photos and voice, schedule crews, track time, send invoices, and collect payments.
         </p>
         <CTARow />
       </section>

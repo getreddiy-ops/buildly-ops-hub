@@ -31,10 +31,10 @@ const PLANS: PlanDef[] = [
   },
   {
     tier: "plus",
-    tagline: "Everything in Contractor OS, plus the AI admin assistant.",
+    tagline: "Everything in FastTract, plus the AI admin assistant.",
     highlight: true,
     features: [
-      "Everything in Contractor OS",
+      "Everything in FastTract",
       "AI admin assistant",
       "Voice-to-form: talk and it fills fields & estimates",
       "Draft estimates & schedule jobs by chat or voice",
@@ -81,14 +81,14 @@ export default function Pricing() {
   const productLd = Object.values(TIERS).map((t) => ({
     "@context": "https://schema.org",
     "@type": "Product",
-    name: `Contractor OS — ${t.name}`,
-    description: `Contractor OS ${t.name} plan at $${t.price}/month.`,
-    brand: { "@type": "Brand", name: "Contractor OS" },
+    name: `FastTract — ${t.name}`,
+    description: `FastTract ${t.name} plan at $${t.price}/month.`,
+    brand: { "@type": "Brand", name: "FastTract" },
     offers: {
       "@type": "Offer",
       price: String(t.price),
       priceCurrency: "USD",
-      url: "https://contractoros.online/pricing",
+      url: "https://fasttract.online/pricing",
       availability: "https://schema.org/InStock",
     },
   }));
@@ -96,7 +96,7 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Pricing — Contractor OS"
+        title="Pricing — FastTract"
         description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant with voice form filling), Premium $269 (adds AI phone answering). Cancel anytime."
         path="/pricing"
         jsonLd={productLd}

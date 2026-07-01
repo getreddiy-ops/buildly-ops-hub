@@ -32,28 +32,28 @@ const trades = [
 ];
 
 const faqItems = [
-  { q: "What is ContractorOS?", a: "ContractorOS is an AI-powered operating system for contractors. It combines a CRM, AI estimating from photos, AI phone answering, job scheduling, crew time tracking, invoices, and an AI command chat in one app." },
-  { q: "Does ContractorOS create estimates?", a: "Yes. ContractorOS drafts estimates using AI from photos and your unit pricing. You review and approve every estimate before it’s sent. AI-assisted estimates are drafts — contractors verify before final quote." },
-  { q: "Can ContractorOS answer phone calls for contractors?", a: "Yes. The AI Phone Agent answers every call 24/7, captures lead details, books appointments, and writes the conversation into your CRM." },
+  { q: "What is FastTract?", a: "FastTract is an AI-powered operating system for contractors. It combines a CRM, AI estimating from photos, AI phone answering, job scheduling, crew time tracking, invoices, and an AI command chat in one app." },
+  { q: "Does FastTract create estimates?", a: "Yes. FastTract drafts estimates using AI from photos and your unit pricing. You review and approve every estimate before it’s sent. AI-assisted estimates are drafts — contractors verify before final quote." },
+  { q: "Can FastTract answer phone calls for contractors?", a: "Yes. The AI Phone Agent answers every call 24/7, captures lead details, books appointments, and writes the conversation into your CRM." },
   { q: "Can customers upload photos for estimates?", a: "Yes. Send a customer a link by text or email and they upload photos. The AI Photo Estimator drafts an estimate from those photos." },
-  { q: "Does ContractorOS replace site visits?", a: "No. AI-assisted estimates are designed to speed up quoting. We recommend verifying measurements on site before sending a final quote." },
-  { q: "Can ContractorOS create invoices?", a: "Yes. Convert approved estimates into invoices, send by email or text, and collect payments online." },
-  { q: "Does ContractorOS track crew time?", a: "Yes. Crews clock in on-site with GPS verification. Managers approve hours before they flow to payroll and job costing." },
-  { q: "Is ContractorOS built for concrete contractors?", a: "Yes. ContractorOS is built for concrete contractors and other trade-based businesses. There’s a dedicated concrete page with use cases and an AI estimator tuned for driveways, patios, and slabs." },
-  { q: "Can I use ContractorOS for fencing, roofing, siding, decks, or landscaping?", a: "Yes. ContractorOS supports fencing, roofing, siding, deck builders, landscapers, framers, and general contractors. Each trade has a dedicated landing page and workflow." },
-  { q: "Does ContractorOS have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking. Tell it to create a lead, fill out a form, draft an estimate, schedule a job, or send an invoice — it does the work and asks you to confirm before writing anything." },
+  { q: "Does FastTract replace site visits?", a: "No. AI-assisted estimates are designed to speed up quoting. We recommend verifying measurements on site before sending a final quote." },
+  { q: "Can FastTract create invoices?", a: "Yes. Convert approved estimates into invoices, send by email or text, and collect payments online." },
+  { q: "Does FastTract track crew time?", a: "Yes. Crews clock in on-site with GPS verification. Managers approve hours before they flow to payroll and job costing." },
+  { q: "Is FastTract built for concrete contractors?", a: "Yes. FastTract is built for concrete contractors and other trade-based businesses. There’s a dedicated concrete page with use cases and an AI estimator tuned for driveways, patios, and slabs." },
+  { q: "Can I use FastTract for fencing, roofing, siding, decks, or landscaping?", a: "Yes. FastTract supports fencing, roofing, siding, deck builders, landscapers, framers, and general contractors. Each trade has a dedicated landing page and workflow." },
+  { q: "Does FastTract have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking. Tell it to create a lead, fill out a form, draft an estimate, schedule a job, or send an invoice — it does the work and asks you to confirm before writing anything." },
 ];
 
 const softwareSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "ContractorOS",
+  name: "FastTract",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android",
-  description: "ContractorOS is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
+  description: "FastTract is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "GetReddiy" },
-  url: "https://contractoros.online/",
+  url: "https://fasttract.online/",
 };
 
 export default function Landing() {
@@ -66,8 +66,8 @@ export default function Landing() {
   return (
     <MarketingShell>
       <SEO
-        title="ContractorOS | AI Contractor Estimating, CRM, Invoices & Job Management"
-        description="ContractorOS helps contractors answer calls, capture leads, create AI-assisted estimates from photos and voice, manage jobs, send invoices, track crew time, and run their business from one simple app."
+        title="FastTract | AI Contractor Estimating, CRM, Invoices & Job Management"
+        description="FastTract helps contractors answer calls, capture leads, create AI-assisted estimates from photos and voice, manage jobs, send invoices, track crew time, and run their business from one simple app."
         path="/"
         jsonLd={softwareSchema}
       />
@@ -76,14 +76,14 @@ export default function Landing() {
       <section className="mx-auto max-w-5xl px-4 pt-16 pb-16 text-center sm:px-6 lg:px-8 lg:pt-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          ContractorOS by GetReddiy
+          FastTract by GetReddiy
         </div>
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
           AI-Powered Contractor Software That Runs Your{" "}
           <span className="text-gradient-primary">Office, Estimates, Jobs, and Invoices</span>
         </h1>
         <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-muted-foreground">
-          ContractorOS combines AI phone answering, photo-based estimating, voice-driven AI form filling, customer management, job scheduling, invoicing, crew time tracking, and an AI command chat so contractors can run the whole business from one dashboard.
+          FastTract combines AI phone answering, photo-based estimating, voice-driven AI form filling, customer management, job scheduling, invoicing, crew time tracking, and an AI command chat so contractors can run the whole business from one dashboard.
         </p>
         <CTARow />
         <p className="mx-auto mt-6 max-w-2xl text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export default function Landing() {
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <h2 className="mb-3 text-center text-3xl font-semibold tracking-tight">Everything contractors need in one app</h2>
           <p className="mx-auto mb-12 max-w-2xl text-center text-muted-foreground">
-            ContractorOS replaces the CRM, the estimator, the scheduler, the time tracker, the invoicing tool, and the phone receptionist.
+            FastTract replaces the CRM, the estimator, the scheduler, the time tracker, the invoicing tool, and the phone receptionist.
           </p>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {sections.map((f) => (
@@ -149,7 +149,7 @@ export default function Landing() {
             Built for Concrete, Framing, Fencing, Roofing, Siding, Decks, and Landscaping
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-muted-foreground">
-            Pick your trade — see how ContractorOS fits your workflow.
+            Pick your trade — see how FastTract fits your workflow.
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {trades.map((t) => (

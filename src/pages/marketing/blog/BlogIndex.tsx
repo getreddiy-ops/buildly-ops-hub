@@ -7,12 +7,12 @@ export default function BlogIndex() {
   return (
     <MarketingShell>
       <SEO
-        title="ContractorOS Blog | Contractor Software, AI Estimating & Phone Answering"
+        title="FastTract Blog | Contractor Software, AI Estimating & Phone Answering"
         description="Articles for contractors on AI estimating, CRM, phone answering, job management, and running a profitable construction business."
         path="/blog"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 sm:px-6 lg:px-8 lg:pt-24">
-        <h1 className="text-4xl font-semibold tracking-tight">ContractorOS Blog</h1>
+        <h1 className="text-4xl font-semibold tracking-tight">FastTract Blog</h1>
         <p className="mt-4 text-lg text-muted-foreground">Practical guides for contractors on AI, estimating, and running the business.</p>
       </section>
       <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">

@@ -1,6 +1,6 @@
 {
-  "name": "Contractor OS",
-  "short_name": "Contractor OS",
+  "name": "FastTract",
+  "short_name": "FastTract",
   "description": "Run your contracting business from one app. Leads, estimates, jobs, GPS-verified hours, job costing, and AI admin assistant.",
   "start_url": "/",
   "display": "standalone",
