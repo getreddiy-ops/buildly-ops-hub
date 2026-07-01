@@ -68,11 +68,11 @@ export default function AdminOrgDetail() {
     setLoadError(null);
     try {
       const { data: o, error: oe } = await supabase.from("organizations")
-        .select("id, name, plan, created_at, address, phone, email, website, trade, state, city, zip, owner_id")
+        .select("id, name, plan, created_at, address, phone, email, website, legal_name, tax_id, brand_color, logo_url, owner_id")
         .eq("id", id).maybeSingle();
       if (oe) throw oe;
       setOrg(o as Org | null);
-      setOrgDraft(o ?? {});
+      setOrgDraft((o as Org | null) ?? {});
     } catch (e) {
       console.error(e); setLoadError((e as Error).message); return;
     }
