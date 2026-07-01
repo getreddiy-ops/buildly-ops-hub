@@ -10,6 +10,7 @@ import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
 import Landing from "./pages/Landing";
 import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
+import Demo from "./pages/Demo";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/demo" element={<Demo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
