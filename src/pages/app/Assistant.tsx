@@ -273,7 +273,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
         }
         if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
-        const { error } = await supabase.from("leads").update(patch).eq("id", lead.id);
+        const { error } = await supabase.from("leads").update(patch as any).eq("id", lead.id);
         if (error) throw error;
         resultLabel = `Lead "${p.args.lead_name}" updated`;
       } else if (p.name === "update_job") {
