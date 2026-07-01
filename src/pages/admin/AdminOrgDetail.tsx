@@ -135,6 +135,17 @@ export default function AdminOrgDetail() {
     load();
   };
 
+  if (loadError) return (
+    <div className="space-y-3">
+      <Link to="/admin/organizations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+        <ArrowLeft className="h-3 w-3" /> All organizations
+      </Link>
+      <Card className="p-4 border-destructive/40">
+        <div className="font-semibold text-destructive">Could not load organization</div>
+        <div className="text-sm text-muted-foreground mt-1">{loadError}</div>
+      </Card>
+    </div>
+  );
   if (!org) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
