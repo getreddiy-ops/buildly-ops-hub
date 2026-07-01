@@ -153,7 +153,7 @@ function PrimaryCTA({ label = "Start Free Trial" }: { label?: string }) {
     </Button>
   );
 }
-function SecondaryCTA({ label = "Watch Demo", to = "/contact" }: { label?: string; to?: string }) {
+function SecondaryCTA({ label = "Watch Demo", to = "/demo" }: { label?: string; to?: string }) {
   return (
     <Button size="lg" variant="outline" asChild>
       <Link to={to}>{label}</Link>
