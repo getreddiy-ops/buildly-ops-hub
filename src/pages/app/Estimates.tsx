@@ -319,6 +319,7 @@ export default function Estimates() {
                         <Button size="icon" variant="ghost" aria-label="Estimate actions"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSending(e)}><Send className="mr-2 h-4 w-4" /> Send</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(e)}>Edit</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(e.id)}>Delete</DropdownMenuItem>
@@ -331,6 +332,17 @@ export default function Estimates() {
           </Table>
         </div>
       )}
+
+      <SendDocumentDialog
+        open={!!sending}
+        onOpenChange={(o) => !o && setSending(null)}
+        docType="estimate"
+        docId={sending?.id ?? ""}
+        defaultEmail={sending?.customers?.email}
+        defaultPhone={sending?.customers?.phone}
+        customerName={sending?.customers?.name}
+        onSent={() => { setSending(null); load(); }}
+      />
     </div>
   );
 }
