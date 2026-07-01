@@ -69,7 +69,7 @@ export default function CalendarPage() {
   const [openNew, setOpenNew] = useState(false);
   const [hoursWorkedYtd, setHoursWorkedYtd] = useState(0);
 
-  const state = inferUsState(orgAddress ?? undefined).stateCode;
+  const state = inferStateCode(orgAddress);
   const rule = ruleForState(state);
 
   const load = async () => {
@@ -144,7 +144,6 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={CalendarDays}
         title="Team calendar & time off"
         description={isAdmin ? "Approve requests and see who's out." : "See who's out and request time off."}
         actions={
@@ -161,6 +160,7 @@ export default function CalendarPage() {
           </Dialog>
         }
       />
+      <div className="sr-only"><CalendarDays /></div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
