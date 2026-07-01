@@ -17,7 +17,10 @@ type ChatMsg = {
   tool_call_id?: string;
 };
 
-const WRITE_TOOLS = new Set(["create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer"]);
+const WRITE_TOOLS = new Set([
+  "create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer",
+  "update_lead", "update_job", "update_estimate",
+]);
 // generate_document is auto-executed client-side (produces a PDF, no DB write).
 
 const tools = [
@@ -106,6 +109,80 @@ const tools = [
           notes: { type: "string" },
         },
         required: ["customer_name", "title", "line_items"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_lead",
+      description: "Propose updating an existing lead (matched by name, fuzzy). Only include fields to change. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          lead_name: { type: "string", description: "Existing lead's current name to match" },
+          name: { type: "string" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          source: { type: "string" },
+          status: { type: "string", description: "new, contacted, qualified, won, lost" },
+          notes: { type: "string" },
+        },
+        required: ["lead_name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_job",
+      description: "Propose updating an existing job (matched by title, fuzzy). Only include fields to change. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          job_title: { type: "string", description: "Existing job title to match" },
+          title: { type: "string" },
+          description: { type: "string" },
+          status: { type: "string", description: "scheduled, in_progress, completed, cancelled" },
+          scheduled_start: { type: "string" },
+          scheduled_end: { type: "string" },
+          address: { type: "string" },
+        },
+        required: ["job_title"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_estimate",
+      description: "Propose updating an existing estimate (matched by title, fuzzy). Only include fields to change. Requires approval. Providing line_items replaces existing items and recomputes totals.",
+      parameters: {
+        type: "object",
+        properties: {
+          estimate_title: { type: "string", description: "Existing estimate title to match" },
+          title: { type: "string" },
+          status: { type: "string", description: "draft, sent, accepted, rejected" },
+          notes: { type: "string" },
+          tax_rate: { type: "number" },
+          line_items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                quantity: { type: "number" },
+                unit_price: { type: "number" },
+              },
+              required: ["description", "quantity", "unit_price"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["estimate_title"],
         additionalProperties: false,
       },
     },
@@ -245,9 +322,10 @@ When the user attaches a photo of a job site, surface, or object, look at it car
 - Ask for measurements when the photo doesn't give a clear reference.
 - Use the derived size + the business's typical pricing (from the business profile, if present) to draft estimate line items.
 
-When the user asks you to create, schedule, or persist data in the system,
-call create_lead / create_customer / schedule_job / draft_estimate_for_customer. The user
-MUST approve every proposed write before it is applied — never claim a record was created.
+When the user asks you to create, schedule, update, or persist data in the system,
+call the appropriate tool: create_lead / create_customer / schedule_job / draft_estimate_for_customer
+for new records, or update_lead / update_job / update_estimate to change existing ones. The user
+MUST approve every proposed write before it is applied — never claim a record was created or changed.
 generate_document does NOT need approval (it just produces a PDF for the user to download).`;
 
 Deno.serve(async (req) => {

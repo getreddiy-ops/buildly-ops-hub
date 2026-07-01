@@ -262,6 +262,79 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           if (liErr) throw liErr;
         }
         resultLabel = `Estimate "${p.args.title}" drafted ($${total.toFixed(2)})`;
+      } else if (p.name === "update_lead") {
+        const { data: lead, error: lErr } = await supabase
+          .from("leads").select("id").eq("organization_id", org_id)
+          .ilike("name", `%${p.args.lead_name}%`).limit(1).maybeSingle();
+        if (lErr) throw lErr;
+        if (!lead) throw new Error(`Lead "${p.args.lead_name}" not found.`);
+        const patch: Record<string, unknown> = {};
+        for (const k of ["name", "email", "phone", "source", "status", "notes"]) {
+          if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
+        }
+        if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
+        const { error } = await supabase.from("leads").update(patch as any).eq("id", lead.id);
+        if (error) throw error;
+        resultLabel = `Lead "${p.args.lead_name}" updated`;
+      } else if (p.name === "update_job") {
+        const { data: job, error: jErr } = await supabase
+          .from("jobs").select("id").eq("organization_id", org_id)
+          .ilike("title", `%${p.args.job_title}%`).limit(1).maybeSingle();
+        if (jErr) throw jErr;
+        if (!job) throw new Error(`Job "${p.args.job_title}" not found.`);
+        const patch: Record<string, unknown> = {};
+        for (const k of ["title", "description", "status", "scheduled_start", "scheduled_end", "address"]) {
+          if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
+        }
+        if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
+        const { error } = await supabase.from("jobs").update(patch as any).eq("id", job.id);
+        if (error) throw error;
+        resultLabel = `Job "${p.args.job_title}" updated`;
+      } else if (p.name === "update_estimate") {
+        const { data: est, error: eErr } = await supabase
+          .from("estimates").select("id, subtotal, tax, total")
+          .eq("organization_id", org_id)
+          .ilike("title", `%${p.args.estimate_title}%`).limit(1).maybeSingle();
+        if (eErr) throw eErr;
+        if (!est) throw new Error(`Estimate "${p.args.estimate_title}" not found.`);
+        const patch: Record<string, unknown> = {};
+        for (const k of ["title", "status", "notes"]) {
+          if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
+        }
+        const items = p.args.line_items as
+          | Array<{ description: string; quantity: number; unit_price: number }>
+          | undefined;
+        if (items && items.length) {
+          const subtotal = items.reduce(
+            (s, li) => s + (Number(li.quantity) || 0) * (Number(li.unit_price) || 0), 0,
+          );
+          const tax_rate = Number(p.args.tax_rate ?? 0);
+          const tax = subtotal * (tax_rate / 100);
+          patch.subtotal = subtotal;
+          patch.tax = tax;
+          patch.total = subtotal + tax;
+          const { error: delErr } = await supabase
+            .from("estimate_line_items").delete().eq("estimate_id", est.id);
+          if (delErr) throw delErr;
+          const rows = items.map((li) => ({
+            estimate_id: est.id,
+            description: li.description,
+            quantity: li.quantity,
+            unit_price: li.unit_price,
+            total: (Number(li.quantity) || 0) * (Number(li.unit_price) || 0),
+          }));
+          const { error: liErr } = await supabase.from("estimate_line_items").insert(rows);
+          if (liErr) throw liErr;
+        } else if (p.args.tax_rate !== undefined) {
+          const subtotal = Number(est.subtotal) || 0;
+          const tax = subtotal * (Number(p.args.tax_rate) / 100);
+          patch.tax = tax;
+          patch.total = subtotal + tax;
+        }
+        if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
+        const { error } = await supabase.from("estimates").update(patch as any).eq("id", est.id);
+        if (error) throw error;
+        resultLabel = `Estimate "${p.args.estimate_title}" updated${items?.length ? ` ($${(patch.total as number).toFixed(2)})` : ""}`;
       } else {
         throw new Error(`Unknown action: ${p.name}`);
       }
@@ -492,6 +565,9 @@ const TITLES: Record<string, string> = {
   create_customer: "Create customer",
   schedule_job: "Schedule job",
   draft_estimate_for_customer: "Draft estimate",
+  update_lead: "Update lead",
+  update_job: "Update job",
+  update_estimate: "Update estimate",
 };
 
 function ProposalCard({ proposal, onApprove, onReject }: { proposal: Proposal; onApprove: () => void; onReject: () => void }) {
