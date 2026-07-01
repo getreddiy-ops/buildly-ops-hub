@@ -15,8 +15,8 @@ import { toast } from "sonner";
 type Org = {
   id: string; name: string; plan: string; created_at: string;
   address: string | null; phone: string | null; email: string | null;
-  website: string | null; trade: string | null; state: string | null;
-  city: string | null; zip: string | null; owner_id: string | null;
+  website: string | null; legal_name: string | null; tax_id: string | null;
+  brand_color: string | null; logo_url: string | null; owner_id: string;
 };
 type Member = { user_id: string; role: string; profile: { full_name: string | null; email: string | null } | null };
 type Subscription = {
