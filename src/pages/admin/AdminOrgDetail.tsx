@@ -243,7 +243,7 @@ export default function AdminOrgDetail() {
       <Card className="p-4 mb-6">
         <h3 className="font-semibold mb-3">Company profile</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(["name","email","phone","website","trade","address","city","state","zip"] as const).map((k) => (
+          {(["name","legal_name","email","phone","website","address","tax_id","brand_color","logo_url"] as const).map((k) => (
             <div key={k}>
               <Label className="text-xs capitalize">{k}</Label>
               <Input value={(orgDraft as any)[k] ?? ""} onChange={(e) => setOrgDraft({ ...orgDraft, [k]: e.target.value })} />
