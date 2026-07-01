@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
   Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck, CalendarDays,
+  ChevronDown, Users2, Wrench, Cpu, SlidersHorizontal,
 } from "lucide-react";
 
 
@@ -14,36 +15,72 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useBranding } from "@/hooks/useBranding";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { cn } from "@/lib/utils";
 
+type NavItem = { to: string; label: string; icon: any; end?: boolean };
+type NavGroup = { id: string; label: string; icon: any; items: NavItem[] };
 
-const nav = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/app/leads", label: "Leads", icon: Users },
-  { to: "/app/customers", label: "Customers", icon: Users },
-  { to: "/app/estimates", label: "Estimates", icon: FileText },
-  { to: "/app/invoices", label: "Invoices", icon: Receipt },
-  { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+const dashboardItem: NavItem = { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true };
 
-  { to: "/app/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/app/crew", label: "Crew", icon: HardHat },
-  { to: "/app/vendors", label: "Vendors", icon: Truck },
-  { to: "/app/materials", label: "Materials", icon: Package },
-  { to: "/app/time", label: "Time Tracking", icon: Clock },
-  { to: "/app/calendar", label: "Calendar & PTO", icon: CalendarDays },
-  { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
-  { to: "/app/costing", label: "Job Costing", icon: DollarSign },
-  { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },
-  { to: "/app/branding", label: "Branding", icon: Palette },
-
-  { to: "/app/assistant", label: "AI Assistant", icon: Bot },
-  { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
-
-  { to: "/app/messages", label: "Messages", icon: MessageSquare },
-  { to: "/app/billing", label: "Billing", icon: CreditCard },
-  { to: "/app/developer", label: "Developer", icon: Code2 },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+const groups: NavGroup[] = [
+  {
+    id: "sales",
+    label: "Sales",
+    icon: FileText,
+    items: [
+      { to: "/app/leads", label: "Leads", icon: Users },
+      { to: "/app/customers", label: "Customers", icon: Users },
+      { to: "/app/estimates", label: "Estimates", icon: FileText },
+      { to: "/app/invoices", label: "Invoices", icon: Receipt },
+      { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    icon: Briefcase,
+    items: [
+      { to: "/app/jobs", label: "Jobs", icon: Briefcase },
+      { to: "/app/calendar", label: "Calendar & PTO", icon: CalendarDays },
+      { to: "/app/vendors", label: "Vendors", icon: Truck },
+      { to: "/app/materials", label: "Materials", icon: Package },
+      { to: "/app/costing", label: "Job Costing", icon: DollarSign },
+    ],
+  },
+  {
+    id: "team",
+    label: "Team",
+    icon: Users2,
+    items: [
+      { to: "/app/crew", label: "Crew", icon: HardHat },
+      { to: "/app/time", label: "Time Tracking", icon: Clock },
+      { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
+    ],
+  },
+  {
+    id: "ai",
+    label: "AI Tools",
+    icon: Cpu,
+    items: [
+      { to: "/app/assistant", label: "AI Assistant", icon: Bot },
+      { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
+      { to: "/app/business-profile", label: "Business Profile", icon: Sparkles },
+      { to: "/app/messages", label: "Messages", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: SlidersHorizontal,
+    items: [
+      { to: "/app/branding", label: "Branding", icon: Palette },
+      { to: "/app/billing", label: "Billing", icon: CreditCard },
+      { to: "/app/developer", label: "Developer", icon: Code2 },
+      { to: "/app/settings", label: "Preferences", icon: Settings },
+    ],
+  },
 ];
 
 export default function AppShell() {
