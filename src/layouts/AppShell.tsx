@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
   Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck, CalendarDays,
+  ChevronDown, Users2, Wrench, Cpu, SlidersHorizontal,
 } from "lucide-react";
 
 
@@ -14,36 +15,72 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
 import { useBranding } from "@/hooks/useBranding";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { cn } from "@/lib/utils";
 
+type NavItem = { to: string; label: string; icon: any; end?: boolean };
+type NavGroup = { id: string; label: string; icon: any; items: NavItem[] };
 
-const nav = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/app/leads", label: "Leads", icon: Users },
-  { to: "/app/customers", label: "Customers", icon: Users },
-  { to: "/app/estimates", label: "Estimates", icon: FileText },
-  { to: "/app/invoices", label: "Invoices", icon: Receipt },
-  { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+const dashboardItem: NavItem = { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true };
 
-  { to: "/app/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/app/crew", label: "Crew", icon: HardHat },
-  { to: "/app/vendors", label: "Vendors", icon: Truck },
-  { to: "/app/materials", label: "Materials", icon: Package },
-  { to: "/app/time", label: "Time Tracking", icon: Clock },
-  { to: "/app/calendar", label: "Calendar & PTO", icon: CalendarDays },
-  { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
-  { to: "/app/costing", label: "Job Costing", icon: DollarSign },
-  { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },
-  { to: "/app/branding", label: "Branding", icon: Palette },
-
-  { to: "/app/assistant", label: "AI Assistant", icon: Bot },
-  { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
-
-  { to: "/app/messages", label: "Messages", icon: MessageSquare },
-  { to: "/app/billing", label: "Billing", icon: CreditCard },
-  { to: "/app/developer", label: "Developer", icon: Code2 },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+const groups: NavGroup[] = [
+  {
+    id: "sales",
+    label: "Sales",
+    icon: FileText,
+    items: [
+      { to: "/app/leads", label: "Leads", icon: Users },
+      { to: "/app/customers", label: "Customers", icon: Users },
+      { to: "/app/estimates", label: "Estimates", icon: FileText },
+      { to: "/app/invoices", label: "Invoices", icon: Receipt },
+      { to: "/app/contracts", label: "Contracts", icon: FileSignature },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    icon: Briefcase,
+    items: [
+      { to: "/app/jobs", label: "Jobs", icon: Briefcase },
+      { to: "/app/calendar", label: "Calendar & PTO", icon: CalendarDays },
+      { to: "/app/vendors", label: "Vendors", icon: Truck },
+      { to: "/app/materials", label: "Materials", icon: Package },
+      { to: "/app/costing", label: "Job Costing", icon: DollarSign },
+    ],
+  },
+  {
+    id: "team",
+    label: "Team",
+    icon: Users2,
+    items: [
+      { to: "/app/crew", label: "Crew", icon: HardHat },
+      { to: "/app/time", label: "Time Tracking", icon: Clock },
+      { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
+    ],
+  },
+  {
+    id: "ai",
+    label: "AI Tools",
+    icon: Cpu,
+    items: [
+      { to: "/app/assistant", label: "AI Assistant", icon: Bot },
+      { to: "/app/phone-assistant", label: "Phone Assistant", icon: Phone },
+      { to: "/app/business-profile", label: "Business Profile", icon: Sparkles },
+      { to: "/app/messages", label: "Messages", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: SlidersHorizontal,
+    items: [
+      { to: "/app/branding", label: "Branding", icon: Palette },
+      { to: "/app/billing", label: "Billing", icon: CreditCard },
+      { to: "/app/developer", label: "Developer", icon: Code2 },
+      { to: "/app/settings", label: "Preferences", icon: Settings },
+    ],
+  },
 ];
 
 export default function AppShell() {
@@ -56,50 +93,93 @@ export default function AppShell() {
   // Close drawer on route change
   const currentPath = location.pathname;
 
-  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <ul className="space-y-0.5">
-      {nav.map((item) => (
-        <li key={item.to}>
-          <NavLink
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              )
-            }
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+  const itemClass = (isActive: boolean, indent = false) =>
+    cn(
+      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+      indent && "pl-9",
+      isActive
+        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    );
+
+  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => {
+    const [open, setOpen] = useState<Record<string, boolean>>(() => {
+      const initial: Record<string, boolean> = {};
+      for (const g of groups) {
+        initial[g.id] = g.items.some((i) => currentPath.startsWith(i.to));
+      }
+      return initial;
+    });
+
+    return (
+      <ul className="space-y-0.5">
+        <li>
+          <NavLink to={dashboardItem.to} end onClick={onNavigate} className={({ isActive }) => itemClass(isActive)}>
+            <dashboardItem.icon className="h-4 w-4" />
+            {dashboardItem.label}
           </NavLink>
         </li>
-      ))}
-      <li className="pt-2 mt-2 border-t border-sidebar-border">
-        <NavLink
-          to="/field"
-          onClick={onNavigate}
-          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <Smartphone className="h-4 w-4" />
-          Field App (Mobile)
-        </NavLink>
-        {isPlatformAdmin && (
+        {groups.map((g) => {
+          const isOpen = open[g.id] ?? false;
+          const hasActive = g.items.some((i) => currentPath === i.to || currentPath.startsWith(i.to + "/"));
+          return (
+            <li key={g.id}>
+              <Collapsible open={isOpen} onOpenChange={(v) => setOpen((s) => ({ ...s, [g.id]: v }))}>
+                <CollapsibleTrigger
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
+                    hasActive
+                      ? "text-sidebar-foreground"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <span className="flex items-center gap-3">
+                    <g.icon className="h-4 w-4" />
+                    {g.label}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-0.5 space-y-0.5">
+                  {g.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onNavigate}
+                      className={({ isActive }) => itemClass(isActive, true)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            </li>
+          );
+        })}
+        <li className="pt-2 mt-2 border-t border-sidebar-border">
           <NavLink
-            to="/admin"
+            to="/field"
             onClick={onNavigate}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            <ShieldCheck className="h-4 w-4" />
-            Platform Admin
+            <Smartphone className="h-4 w-4" />
+            Field App (Mobile)
           </NavLink>
-        )}
-      </li>
-    </ul>
-  );
+          {isPlatformAdmin && (
+            <NavLink
+              to="/admin"
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Platform Admin
+            </NavLink>
+          )}
+        </li>
+      </ul>
+    );
+  };
+
 
   const BrandHeader = () =>
     branding?.logo_signed_url ? (
