@@ -22,8 +22,9 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer } from "lucide-react";
+import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
 import { toast } from "sonner";
+import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -39,6 +40,7 @@ export default function Invoices() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [previewing, setPreviewing] = useState<any | null>(null);
+  const [sending, setSendingDoc] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -63,7 +65,7 @@ export default function Invoices() {
     if (!activeOrg) return;
     setLoading(true);
     const [{ data: invs, error }, { data: custs }] = await Promise.all([
-      supabase.from("invoices").select("*, customers(name,address)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
+      supabase.from("invoices").select("*, customers(name,address,email,phone)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from("customers").select("id,name,address").eq("organization_id", activeOrg.organization_id).order("name"),
     ]);
     if (error) toast.error(error.message);
@@ -209,6 +211,7 @@ export default function Invoices() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openPreview(inv)}><Eye className="mr-2 h-4 w-4" /> Preview</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSendingDoc(inv)}><Send className="mr-2 h-4 w-4" /> Send</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(inv)}>Edit</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(inv.id)}>Delete</DropdownMenuItem>
@@ -341,6 +344,17 @@ export default function Invoices() {
           )}
         </DialogContent>
       </Dialog>
+
+      <SendDocumentDialog
+        open={!!sending}
+        onOpenChange={(o) => !o && setSendingDoc(null)}
+        docType="invoice"
+        docId={sending?.id ?? ""}
+        defaultEmail={sending?.customers?.email}
+        defaultPhone={sending?.customers?.phone}
+        customerName={sending?.customers?.name}
+        onSent={() => { setSendingDoc(null); load(); }}
+      />
     </div>
   );
 }

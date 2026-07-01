@@ -74,6 +74,7 @@ import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
 import { Messages, SettingsPage, FieldProfile } from "./pages/stubs";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
