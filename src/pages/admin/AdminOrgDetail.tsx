@@ -271,10 +271,10 @@ export default function AdminOrgDetail() {
 
       <Card className="p-4 mt-6">
         <h3 className="font-semibold mb-3">Internal support notes</h3>
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <Textarea value={noteBody} onChange={(e) => setNoteBody(e.target.value)}
-            placeholder="Note about this customer (visible to platform admins only)…" rows={2} />
-          <Button onClick={addNote} disabled={!noteBody.trim()}>Add</Button>
+            placeholder="Note about this customer (visible to platform admins only)…" rows={2} className="flex-1" />
+          <Button onClick={addNote} disabled={!noteBody.trim()} className="h-10 sm:h-auto sm:self-stretch">Add</Button>
         </div>
         {notes.length === 0 ? (
           <p className="text-sm text-muted-foreground">No notes yet.</p>
