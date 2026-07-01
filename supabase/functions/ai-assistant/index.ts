@@ -322,9 +322,10 @@ When the user attaches a photo of a job site, surface, or object, look at it car
 - Ask for measurements when the photo doesn't give a clear reference.
 - Use the derived size + the business's typical pricing (from the business profile, if present) to draft estimate line items.
 
-When the user asks you to create, schedule, or persist data in the system,
-call create_lead / create_customer / schedule_job / draft_estimate_for_customer. The user
-MUST approve every proposed write before it is applied — never claim a record was created.
+When the user asks you to create, schedule, update, or persist data in the system,
+call the appropriate tool: create_lead / create_customer / schedule_job / draft_estimate_for_customer
+for new records, or update_lead / update_job / update_estimate to change existing ones. The user
+MUST approve every proposed write before it is applied — never claim a record was created or changed.
 generate_document does NOT need approval (it just produces a PDF for the user to download).`;
 
 Deno.serve(async (req) => {
