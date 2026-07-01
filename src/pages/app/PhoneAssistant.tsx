@@ -496,7 +496,7 @@ function StatCards({ calls }: { calls: CallRow[] }) {
   const avg = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
   const vm = recent.filter((c) => (c.outcome ?? "").toLowerCase().includes("voicemail")).length;
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
       <StatCard icon={PhoneIncoming} label="Calls answered (7d)" value={String(answered)} />
       <StatCard icon={Sparkles} label="Estimates mentioned" value={String(booked)} />
       <StatCard icon={Clock} label="Avg handle time" value={fmtDuration(avg)} />
