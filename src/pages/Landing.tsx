@@ -3,45 +3,93 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { SEO } from "@/components/SEO";
-import { MarketingShell, CTARow } from "@/components/marketing/MarketingShell";
+import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { FAQ } from "@/components/marketing/FAQ";
 import {
-  ArrowRight, Phone, Camera, Users, FileText, Receipt, Calendar, Clock, Bot,
+  ArrowRight, Phone, FileText, FileSignature, Package, Users2, Wrench,
+  Receipt, LayoutDashboard, PhoneMissed, Timer, FolderKanban, Bot,
+  ClipboardList, Calendar, Truck, DollarSign, CheckCircle2, MapPin,
+  Zap, Building2,
 } from "lucide-react";
 
-const sections = [
-  { icon: Phone, title: "AI Phone Answering for Contractors", to: "/ai-phone-agent", desc: "Never miss another lead. AI answers every call, books appointments, and writes to your CRM 24/7." },
-  { icon: Camera, title: "AI Photo Estimating", to: "/ai-photo-estimator", desc: "Customers send photos. AI drafts a rough estimate using your unit pricing. You approve before sending." },
-  { icon: Users, title: "Contractor CRM", to: "/contractor-crm", desc: "Every lead, customer, call, and job history in one record." },
-  { icon: FileText, title: "Estimates and Proposals", to: "/estimate-software", desc: "Branded proposals with e-signature. Convert signed estimates into jobs in one click." },
-  { icon: Receipt, title: "Invoices and Payments", to: "/invoice-software", desc: "Deposit, progress, and final invoices. Online payment links by email or text." },
-  { icon: Calendar, title: "Job Scheduling", to: "/features", desc: "Schedule crews and subs across every active job. Everyone knows where to be." },
-  { icon: Clock, title: "Crew Time Tracking", to: "/features", desc: "GPS clock-in, boss-approved hours, and payroll-ready exports." },
-  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business by typing or talking — AI fills out forms, drafts estimates, and creates jobs while you’re between sites." },
+const painPoints = [
+  { icon: PhoneMissed, title: "Missed Calls Cost Money", desc: "When a customer calls and nobody answers, they usually call the next contractor. FastTract can help capture the lead before it disappears." },
+  { icon: Timer, title: "Estimates Take Too Long", desc: "Create cleaner estimates with labor, materials, markup, misc. supplies, taxes, and trade-specific line items already organized." },
+  { icon: FolderKanban, title: "Jobs Get Messy Fast", desc: "Keep customers, job notes, invoices, contracts, photos, schedules, and follow-ups tied to the right project." },
+];
+
+const features = [
+  { icon: Phone, title: "AI Phone Assistant", desc: "Answer calls 24/7, collect customer details, qualify the job, and book the next step." },
+  { icon: FileText, title: "AI Estimating", desc: "Build trade-specific estimates using dimensions, scope, materials, labor, markup, tax, and regional adjustments." },
+  { icon: FileSignature, title: "Customer-Facing Contracts", desc: "Turn approved estimates into professional contracts with clear scope, exclusions, payment terms, and state-by-state language placeholders." },
+  { icon: Package, title: "Material Lists", desc: "Generate contractor material lists for ordering, pickup, delivery, and crew prep." },
+  { icon: Users2, title: "Labor Projections", desc: "Estimate crew size, hours, production rate, and job duration before the work starts." },
+  { icon: Receipt, title: "Invoices & Payments", desc: "Send clean invoices, track balances, and keep every payment connected to the job." },
+  { icon: Wrench, title: "CRM & Follow-Up", desc: "Track leads, customers, bids, callbacks, appointments, and won/lost jobs." },
+  { icon: LayoutDashboard, title: "Job Dashboard", desc: "See every job by status: new lead, estimate sent, approved, scheduled, in progress, invoiced, and paid." },
+];
+
+const aiExamples = [
+  "Create an estimate for a 20x30 concrete slab.",
+  "Add a new customer named John Smith.",
+  "Turn this estimate into a customer-facing contract.",
+  "Make a material list for this job.",
+  "Send a follow-up text for the estimate I sent yesterday.",
+  "Create an invoice for the completed driveway job.",
+];
+
+const steps = [
+  { icon: Phone, title: "Capture the Lead", desc: "AI phone assistant or manual entry collects customer details and job information." },
+  { icon: FileText, title: "Build the Estimate", desc: "FastTract helps calculate materials, labor, markup, supplies, and scope." },
+  { icon: FileSignature, title: "Send the Proposal", desc: "Send a professional customer-facing estimate or contract." },
+  { icon: ClipboardList, title: "Manage the Job", desc: "Track schedule, notes, materials, crew time, photos, and changes." },
+  { icon: DollarSign, title: "Invoice and Get Paid", desc: "Generate the final invoice and keep the customer record organized." },
 ];
 
 const trades = [
-  { label: "Concrete", to: "/concrete-contractor-software" },
-  { label: "Framing", to: "/framing-contractor-software" },
-  { label: "Fencing", to: "/fencing-contractor-software" },
-  { label: "Roofing", to: "/roofing-contractor-software" },
-  { label: "Siding", to: "/siding-contractor-software" },
-  { label: "Decks", to: "/deck-builder-software" },
-  { label: "Landscaping", to: "/landscaping-contractor-software" },
-  { label: "General Contractor", to: "/general-contractor-software" },
+  "Concrete", "Framing", "Roofing", "Remodeling", "Excavation", "Landscaping",
+  "Painting", "Electrical", "Plumbing", "HVAC", "Handyman", "General Contractors",
+];
+
+const estimateLines = [
+  { label: "Excavation & Prep", value: "$1,850" },
+  { label: "Base Rock", value: "$620" },
+  { label: "Forms & Layout", value: "$980" },
+  { label: "Rebar / Reinforcement", value: "$540" },
+  { label: "Concrete Placement", value: "$3,420" },
+  { label: "Finish Work", value: "$1,260" },
+  { label: "Saw Cuts / Control Joints", value: "$240" },
+  { label: "Cleanup", value: "$180" },
+  { label: "Formwork, Consumables & Misc. Job Supplies", value: "$730" },
+  { label: "Taxes / Regional Adjustments", value: "$612" },
+];
+
+const whyBullets = [
+  "Answer more calls",
+  "Send estimates faster",
+  "Look more professional",
+  "Reduce forgotten materials",
+  "Track labor better",
+  "Create cleaner contracts",
+  "Invoice quicker",
+  "Keep every job organized",
+  "Build repeatable systems",
+  "Operate like bigger companies",
+];
+
+const pricingTiers = [
+  { name: "Starter", tagline: "For solo contractors getting organized", price: "Starting at $__/mo", cta: "Start Free Trial", to: "/signup", variant: "default" as const },
+  { name: "Pro", tagline: "For contractors managing multiple jobs", price: "Starting at $__/mo", cta: "Choose Pro", to: "/pricing", variant: "default" as const, featured: true },
+  { name: "Agency / Multi-Company", tagline: "For teams, resellers, and operators managing multiple contractor accounts", price: "Custom pricing", cta: "Book Demo", to: "/contact", variant: "outline" as const },
 ];
 
 const faqItems = [
-  { q: "What is FastTract?", a: "FastTract is an AI-powered operating system for contractors. It combines a CRM, AI estimating from photos, AI phone answering, job scheduling, crew time tracking, invoices, and an AI command chat in one app." },
-  { q: "Does FastTract create estimates?", a: "Yes. FastTract drafts estimates using AI from photos and your unit pricing. You review and approve every estimate before it’s sent. AI-assisted estimates are drafts — contractors verify before final quote." },
-  { q: "Can FastTract answer phone calls for contractors?", a: "Yes. The AI Phone Agent answers every call 24/7, captures lead details, books appointments, and writes the conversation into your CRM." },
-  { q: "Can customers upload photos for estimates?", a: "Yes. Send a customer a link by text or email and they upload photos. The AI Photo Estimator drafts an estimate from those photos." },
-  { q: "Does FastTract replace site visits?", a: "No. AI-assisted estimates are designed to speed up quoting. We recommend verifying measurements on site before sending a final quote." },
-  { q: "Can FastTract create invoices?", a: "Yes. Convert approved estimates into invoices, send by email or text, and collect payments online." },
-  { q: "Does FastTract track crew time?", a: "Yes. Crews clock in on-site with GPS verification. Managers approve hours before they flow to payroll and job costing." },
-  { q: "Is FastTract built for concrete contractors?", a: "Yes. FastTract is built for concrete contractors and other trade-based businesses. There’s a dedicated concrete page with use cases and an AI estimator tuned for driveways, patios, and slabs." },
-  { q: "Can I use FastTract for fencing, roofing, siding, decks, or landscaping?", a: "Yes. FastTract supports fencing, roofing, siding, deck builders, landscapers, framers, and general contractors. Each trade has a dedicated landing page and workflow." },
-  { q: "Does FastTract have an AI assistant inside the app?", a: "Yes. The AI Command Chat lets you run the business by typing or talking. Tell it to create a lead, fill out a form, draft an estimate, schedule a job, or send an invoice — it does the work and asks you to confirm before writing anything." },
+  { q: "What is FastTract?", a: "FastTract is an AI-powered operating system for contractors. It handles lead intake, AI phone answering, CRM, estimates, contracts, material lists, labor projections, scheduling, invoices, and payments — all in one contractor dashboard." },
+  { q: "Which trades is FastTract built for?", a: "Concrete, framing, roofing, remodeling, excavation, landscaping, painting, electrical, plumbing, HVAC, handyman, and general contractors. Each trade has its own estimating rules and templates." },
+  { q: "Does the AI phone assistant really answer calls?", a: "Yes. It answers 24/7, qualifies the job, captures customer details, and books the next step — so you stop losing leads to voicemail." },
+  { q: "Can FastTract build estimates and contracts?", a: "Yes. AI drafts trade-specific estimates with materials, labor, markup, supplies, and tax. Approved estimates convert to customer-facing contracts in one click." },
+  { q: "Do I need an office manager to use it?", a: "No. FastTract is designed so a solo contractor can run their business without hiring admin help." },
+  { q: "Is there a free trial?", a: "Yes. Start a free trial, no long commitment. Upgrade when you're ready." },
 ];
 
 const softwareSchema = {
@@ -50,11 +98,68 @@ const softwareSchema = {
   name: "FastTract",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android",
-  description: "FastTract is the AI-powered operating system for contractors. AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, job scheduling, crew time tracking, invoices, and an AI command chat.",
+  description: "FastTract is the AI-powered contractor operating system — AI phone answering, CRM, AI estimating, contracts, material lists, labor projections, scheduling, invoices, and payments in one contractor dashboard.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "GetReddiy" },
-  url: "https://fasttract.online/",
+  url: "https://fasttract.org/",
 };
+
+function DashboardMockup() {
+  const cards = [
+    { icon: Zap, tag: "New Lead", title: "Driveway replacement — Portland, OR", tone: "text-primary" },
+    { icon: FileText, tag: "AI Estimate", title: "Ready for review", tone: "text-primary" },
+    { icon: FileSignature, tag: "Contract", title: "Generated & sent", tone: "text-primary" },
+    { icon: Package, tag: "Material List", title: "Created for pickup", tone: "text-primary" },
+    { icon: Receipt, tag: "Invoice", title: "Pending — $8,432", tone: "text-primary" },
+    { icon: Calendar, tag: "Job Status", title: "Scheduled — Thu 8:00 AM", tone: "text-primary" },
+  ];
+  return (
+    <div className="relative rounded-2xl border border-border bg-card/80 p-4 shadow-2xl backdrop-blur">
+      <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div className="text-xs font-semibold tracking-wide text-foreground">FastTract Dashboard</div>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <MapPin className="h-3 w-3" /> Portland, OR
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map((c) => (
+          <div key={c.tag} className="rounded-lg border border-border bg-background/60 p-3">
+            <div className="mb-2 flex items-center gap-1.5">
+              <c.icon className={`h-3.5 w-3.5 ${c.tone}`} />
+              <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{c.tag}</div>
+            </div>
+            <div className="text-sm font-semibold leading-snug text-foreground">{c.title}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
+        <div className="flex items-center gap-2 text-foreground">
+          <Bot className="h-4 w-4 text-primary" />
+          <span>AI Assistant ready</span>
+        </div>
+        <span className="text-muted-foreground">“Create an invoice for the Smith job”</span>
+      </div>
+    </div>
+  );
+}
+
+function PrimaryCTA({ label = "Start Free Trial" }: { label?: string }) {
+  return (
+    <Button size="lg" asChild>
+      <Link to="/signup">{label}</Link>
+    </Button>
+  );
+}
+function SecondaryCTA({ label = "Watch Demo", to = "/contact" }: { label?: string; to?: string }) {
+  return (
+    <Button size="lg" variant="outline" asChild>
+      <Link to={to}>{label}</Link>
+    </Button>
+  );
+}
 
 export default function Landing() {
   const { user, loading } = useAuth();
@@ -66,120 +171,271 @@ export default function Landing() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract | AI Contractor Estimating, CRM, Invoices & Job Management"
-        description="FastTract helps contractors answer calls, capture leads, create AI-assisted estimates from photos and voice, manage jobs, send invoices, track crew time, and run their business from one simple app."
+        title="FastTract | Contractor Estimating, CRM, Invoices & AI Phone Answering"
+        description="Run your contracting business from first call to final invoice. FastTract uses AI to answer calls, capture leads, build estimates, create contracts, generate material lists, track jobs, and send invoices — all from one contractor dashboard."
         path="/"
         jsonLd={softwareSchema}
       />
 
-      {/* Hero */}
-      <section className="mx-auto max-w-5xl px-4 pt-16 pb-16 text-center sm:px-6 lg:px-8 lg:pt-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          FastTract by GetReddiy
+      {/* HERO */}
+      <section className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8 lg:pt-20">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          <div>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              Built by people who understand the jobsite
+            </div>
+            <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+              Run Your Contracting Business From{" "}
+              <span className="text-gradient-primary">First Call to Final Invoice</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+              FastTract uses AI to answer calls, capture leads, build estimates, create contracts, generate material lists, track jobs, and send invoices — all from one clean contractor dashboard.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <PrimaryCTA />
+              <SecondaryCTA />
+            </div>
+            <p className="mt-5 max-w-xl text-sm text-muted-foreground">
+              Built for concrete, remodeling, roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction trades.
+            </p>
+          </div>
+          <div className="lg:pl-6"><DashboardMockup /></div>
         </div>
-        <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-          AI-Powered Contractor Software That Runs Your{" "}
-          <span className="text-gradient-primary">Office, Estimates, Jobs, and Invoices</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-3xl text-balance text-lg text-muted-foreground">
-          FastTract combines AI phone answering, photo-based estimating, voice-driven AI form filling, customer management, job scheduling, invoicing, crew time tracking, and an AI command chat so contractors can run the whole business from one dashboard.
-        </p>
-        <CTARow />
-        <p className="mx-auto mt-6 max-w-2xl text-sm text-muted-foreground">
-          Stop missing calls. Stop typing estimates from scratch. Stop chasing notes across texts, photos, and paper. Just talk to the AI — it fills out forms, drafts estimates, and builds jobs while you drive between sites.
-        </p>
       </section>
 
-      {/* Workflow */}
+      {/* PAIN POINTS */}
       <section className="border-t border-border bg-background/40">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-          <h2 className="mb-3 text-center text-3xl font-semibold tracking-tight">From missed call to paid invoice</h2>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-muted-foreground">
-            One workflow. One app. No more lost leads between five different tools.
-          </p>
-          <ol className="grid gap-4 text-sm md:grid-cols-4 lg:grid-cols-8">
-            {[
-              "Customer calls",
-              "AI answers",
-              "Lead created",
-              "Photos uploaded",
-              "AI drafts estimate",
-              "You approve & send",
-              "Job scheduled, crew logs time",
-              "Invoice sent & paid",
-            ].map((step, i) => (
-              <li key={step} className="rounded-xl border border-border bg-card/60 p-4">
-                <div className="text-xs text-primary">Step {i + 1}</div>
-                <div className="mt-1 font-medium">{step}</div>
-              </li>
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-4xl">
+            Stop Losing Jobs to Missed Calls, Slow Estimates, and Messy Paperwork
+          </h2>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {painPoints.map((p) => (
+              <div key={p.title} className="rounded-xl border border-border bg-card p-6">
+                <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-primary/15 text-primary">
+                  <p.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold">{p.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 
-      {/* Features grid */}
+      {/* FEATURES */}
       <section className="border-t border-border">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <h2 className="mb-3 text-center text-3xl font-semibold tracking-tight">Everything contractors need in one app</h2>
-          <p className="mx-auto mb-12 max-w-2xl text-center text-muted-foreground">
-            FastTract replaces the CRM, the estimator, the scheduler, the time tracker, the invoicing tool, and the phone receptionist.
-          </p>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {sections.map((f) => (
-              <Link key={f.title} to={f.to} className="group rounded-xl border border-border bg-card p-6 transition hover:border-primary">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything Contractors Need to Go From Lead to Paid
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              A contractor command center — not just estimating software. Look professional, respond faster, bid cleaner, and stay organized without hiring an office manager.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {features.map((f) => (
+              <div key={f.title} className="rounded-xl border border-border bg-card p-5">
                 <div className="mb-4 grid h-10 w-10 place-items-center rounded-md bg-accent text-accent-foreground">
                   <f.icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold group-hover:text-primary">{f.title}</h3>
+                <h3 className="text-base font-semibold">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
-                <div className="mt-4 inline-flex items-center gap-1 text-xs text-primary">
-                  Learn more <ArrowRight className="h-3 w-3" />
-                </div>
-              </Link>
+              </div>
             ))}
+          </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <PrimaryCTA />
+            <SecondaryCTA />
           </div>
         </div>
       </section>
 
-      {/* Trades */}
+      {/* AI ASSISTANT */}
       <section className="border-t border-border bg-background/40">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-          <h2 className="mb-3 text-center text-3xl font-semibold tracking-tight">
-            Built for Concrete, Framing, Fencing, Roofing, Siding, Decks, and Landscaping
-          </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-muted-foreground">
-            Pick your trade — see how FastTract fits your workflow.
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {trades.map((t) => (
-              <Link key={t.to} to={t.to} className="rounded-lg border border-border bg-card/60 px-4 py-3 text-center text-sm font-medium transition hover:border-primary">
-                {t.label}
-              </Link>
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
+                <Bot className="h-3.5 w-3.5" /> AI Assistant
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Tell FastTract What You Need. It Builds It.
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Use plain language to create customers, estimates, invoices, contracts, job notes, schedules, and follow-ups. Instead of clicking through ten screens, type or say what happened — FastTract organizes the business side.
+              </p>
+              <div className="mt-8">
+                <Button size="lg" asChild><Link to="/signup">Try the AI Assistant</Link></Button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {aiExamples.map((ex, i) => (
+                <div
+                  key={ex}
+                  className={`max-w-md rounded-2xl border border-border px-4 py-3 text-sm shadow-sm ${
+                    i % 2 === 0 ? "bg-primary/10 border-primary/30 text-foreground" : "ml-auto bg-card text-muted-foreground"
+                  }`}
+                >
+                  “{ex}”
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              From Phone Call to Paid Invoice in One Flow
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+            {steps.map((s, i) => (
+              <div key={s.title} className="relative rounded-xl border border-border bg-card p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/15 text-primary">
+                    <s.icon className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs font-semibold text-muted-foreground">STEP {i + 1}</span>
+                </div>
+                <h3 className="text-base font-semibold">{s.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Trust */}
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <p className="text-sm text-muted-foreground">
-            AI-assisted estimates are designed to speed up quoting and help contractors prepare professional drafts. Contractors stay in control and approve estimates before sending. Verify measurements on site before final quotes.
-          </p>
+      {/* INDUSTRIES */}
+      <section className="border-t border-border bg-background/40">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Built for Every Trade</h2>
+            <p className="mt-4 text-muted-foreground">
+              Each trade can have its own estimating rules, production rates, labor rates, material templates, tax settings, and customer-facing language.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {trades.map((t) => (
+              <div key={t} className="rounded-lg border border-border bg-card px-4 py-3 text-center text-sm font-semibold">
+                {t}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
+      {/* CONCRETE EXAMPLE */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-semibold tracking-tight">Run your contracting business from one app.</h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-            Start free. Add the AI Phone Agent when you’re ready.
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Example: Concrete Estimate Built the Right Way
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              A clean, itemized proposal your customer can actually read. Costs are distributed naturally — no vague “project management” line item.
+            </p>
+          </div>
+          <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+            <div className="flex items-center justify-between border-b border-border bg-background/40 px-6 py-4">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Estimate #ES-1042</div>
+                <div className="text-sm font-semibold">Driveway Replacement — 20' x 40' Slab</div>
+              </div>
+              <div className="text-xs text-muted-foreground">Portland, OR</div>
+            </div>
+            <ul className="divide-y divide-border">
+              {estimateLines.map((l) => (
+                <li key={l.label} className="flex items-center justify-between px-6 py-3 text-sm">
+                  <span className="text-foreground">{l.label}</span>
+                  <span className="font-mono text-muted-foreground">{l.value}</span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between bg-primary/10 px-6 py-4">
+                <span className="text-base font-bold">Total</span>
+                <span className="font-mono text-lg font-bold text-primary">$10,432</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* WHY FASTTRACT */}
+      <section className="border-t border-border bg-background/40">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Made for Contractors Who Want to Look Bigger, Move Faster, and Stay Profitable
+            </h2>
+          </div>
+          <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+            {whyBullets.map((b) => (
+              <li key={b} className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                <span className="text-sm font-medium">{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Simple Pricing for Growing Contractors
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {pricingTiers.map((t) => (
+              <div
+                key={t.name}
+                className={`rounded-2xl border p-6 ${
+                  t.featured ? "border-primary bg-primary/5 shadow-xl" : "border-border bg-card"
+                }`}
+              >
+                {t.featured && (
+                  <div className="mb-3 inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
+                    Most Popular
+                  </div>
+                )}
+                <h3 className="text-xl font-bold">{t.name}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t.tagline}</p>
+                <div className="mt-6 text-lg font-semibold text-foreground">{t.price}</div>
+                <Button className="mt-6 w-full" size="lg" variant={t.variant} asChild>
+                  <Link to={t.to}>{t.cta}</Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link to="/pricing" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              See full pricing details <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
+          <Building2 className="mx-auto mb-6 h-10 w-10 text-primary" />
+          <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+            Your Next Job Shouldn't Be Buried in Missed Calls and Paperwork
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            FastTract helps contractors capture the lead, build the estimate, manage the job, and send the invoice — without losing control of the business.
           </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Button size="lg" asChild><Link to="/signup">Start Free</Link></Button>
-            <Button size="lg" variant="outline" asChild><Link to="/contact">Book a Demo</Link></Button>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <PrimaryCTA />
+            <SecondaryCTA label="Book a Demo" />
           </div>
         </div>
       </section>
