@@ -21,9 +21,10 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { FileText, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { FileText, MoreHorizontal, Plus, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
+import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
@@ -54,6 +55,7 @@ export default function Estimates() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState<any | null>(null);
   const [editing, setEditing] = useState<Estimate | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -75,7 +77,7 @@ export default function Estimates() {
     if (!activeOrg) return;
     setLoading(true);
     const [{ data: ests, error }, { data: custs }] = await Promise.all([
-      supabase.from("estimates").select("*, customers(name)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
+      supabase.from("estimates").select("*, customers(name,email,phone)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from("customers").select("*").eq("organization_id", activeOrg.organization_id).order("name"),
     ]);
     if (error) toast.error(error.message);
