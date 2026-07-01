@@ -287,7 +287,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
         }
         if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
-        const { error } = await supabase.from("jobs").update(patch).eq("id", job.id);
+        const { error } = await supabase.from("jobs").update(patch as any).eq("id", job.id);
         if (error) throw error;
         resultLabel = `Job "${p.args.job_title}" updated`;
       } else if (p.name === "update_estimate") {
