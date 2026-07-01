@@ -292,7 +292,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         resultLabel = `Job "${p.args.job_title}" updated`;
       } else if (p.name === "update_estimate") {
         const { data: est, error: eErr } = await supabase
-          .from("estimates").select("id, subtotal, tax, total, tax_rate")
+          .from("estimates").select("id, subtotal, tax, total")
           .eq("organization_id", org_id)
           .ilike("title", `%${p.args.estimate_title}%`).limit(1).maybeSingle();
         if (eErr) throw eErr;
