@@ -208,17 +208,17 @@ function PhoneAssistant() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <Phone className="h-7 w-7 text-primary" />
-            Phone Assistant
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            <Phone className="h-6 w-6 shrink-0 text-primary sm:h-7 sm:w-7" />
+            <span className="truncate">Phone Assistant</span>
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             24/7 AI receptionist powered by ElevenLabs. Answers calls, books estimates, and logs every conversation.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
           {hasNumber && canEdit && (
             <Button variant="outline" onClick={release} disabled={releasing}>
               {releasing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -496,7 +496,7 @@ function StatCards({ calls }: { calls: CallRow[] }) {
   const avg = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
   const vm = recent.filter((c) => (c.outcome ?? "").toLowerCase().includes("voicemail")).length;
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
       <StatCard icon={PhoneIncoming} label="Calls answered (7d)" value={String(answered)} />
       <StatCard icon={Sparkles} label="Estimates mentioned" value={String(booked)} />
       <StatCard icon={Clock} label="Avg handle time" value={fmtDuration(avg)} />
