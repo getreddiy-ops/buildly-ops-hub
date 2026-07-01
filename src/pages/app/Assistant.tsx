@@ -492,6 +492,9 @@ const TITLES: Record<string, string> = {
   create_customer: "Create customer",
   schedule_job: "Schedule job",
   draft_estimate_for_customer: "Draft estimate",
+  update_lead: "Update lead",
+  update_job: "Update job",
+  update_estimate: "Update estimate",
 };
 
 function ProposalCard({ proposal, onApprove, onReject }: { proposal: Proposal; onApprove: () => void; onReject: () => void }) {
