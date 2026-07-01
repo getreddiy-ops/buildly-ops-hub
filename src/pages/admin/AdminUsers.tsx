@@ -57,10 +57,81 @@ export default function AdminUsers() {
     (u.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
   );
 
+  const createUser = async () => {
+    if (!newEmail.trim() || newPassword.length < 8) {
+      toast.error("Email and password (min 8 chars) required");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-support", {
+        body: { type: "create_user", email: newEmail.trim(), password: newPassword, full_name: newName.trim() || undefined },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("User created");
+      setOpenCreate(false); setNewEmail(""); setNewName(""); setNewPassword(""); load();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const savePassword = async () => {
+    if (!pwUser || pwValue.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-support", {
+        body: { type: "set_user_password", user_id: pwUser.id, password: pwValue },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Password updated");
+      setPwUser(null); setPwValue("");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
   return (
     <>
-      <PageHeader title="Users" description="Every user on the platform, with global role management." />
+      <PageHeader title="Users" description="Every user on the platform, with global role management." actions={
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-1" /> New user</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Create user</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Full name (optional)</Label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jane Doe" /></div>
+              <div><Label>Email</Label>
+                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" /></div>
+              <div><Label>Password</Label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" /></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenCreate(false)}>Cancel</Button>
+              <Button onClick={createUser} disabled={busy || !newEmail.trim() || newPassword.length < 8}>
+                {busy ? "Creating…" : "Create user"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      } />
       <Input placeholder="Search users…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm mb-4" />
+
+      <Dialog open={!!pwUser} onOpenChange={(o) => { if (!o) { setPwUser(null); setPwValue(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Set password for {pwUser?.email}</DialogTitle></DialogHeader>
+          <div><Label>New password</Label>
+            <Input type="password" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" /></div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPwUser(null); setPwValue(""); }}>Cancel</Button>
+            <Button onClick={savePassword} disabled={busy || pwValue.length < 8}>Save password</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {filtered.length === 0 ? (
         <EmptyState icon={Users} title="No users yet" />
       ) : (
