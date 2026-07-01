@@ -22,6 +22,8 @@ export default function AdminOrgs() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerFullName, setOwnerFullName] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -38,15 +40,25 @@ export default function AdminOrgs() {
 
   const createOrg = async () => {
     if (!name.trim() || !ownerEmail.trim()) return;
+    if (ownerPassword && ownerPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-support", {
-        body: { type: "create_organization", name: name.trim(), owner_email: ownerEmail.trim() },
+        body: {
+          type: "create_organization",
+          name: name.trim(),
+          owner_email: ownerEmail.trim(),
+          owner_full_name: ownerFullName.trim() || undefined,
+          owner_password: ownerPassword || undefined,
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success("Organization created. Owner will receive a login link if new.");
-      setOpen(false); setName(""); setOwnerEmail(""); load();
+      toast.success(ownerPassword ? "Organization created with owner login." : "Organization created. Owner will receive an invite email.");
+      setOpen(false); setName(""); setOwnerEmail(""); setOwnerFullName(""); setOwnerPassword(""); load();
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setBusy(false); }
