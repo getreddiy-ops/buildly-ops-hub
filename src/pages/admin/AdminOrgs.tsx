@@ -92,11 +92,20 @@ export default function AdminOrgs() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Concrete" />
               </div>
               <div>
+                <Label>Owner full name (optional)</Label>
+                <Input value={ownerFullName} onChange={(e) => setOwnerFullName(e.target.value)} placeholder="Jane Doe" />
+              </div>
+              <div>
                 <Label>Owner email</Label>
                 <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)}
                   placeholder="owner@example.com" />
+              </div>
+              <div>
+                <Label>Owner password (optional)</Label>
+                <Input type="password" value={ownerPassword} onChange={(e) => setOwnerPassword(e.target.value)}
+                  placeholder="Leave blank to send invite email" autoComplete="new-password" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  If this user doesn't exist yet, they'll receive an invite email.
+                  Set a password (min 8 chars) to create the owner immediately with login credentials. Leave blank to send a magic-link invite instead.
                 </p>
               </div>
             </div>
