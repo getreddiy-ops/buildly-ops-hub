@@ -34,30 +34,49 @@ export default function AdminOrgDetail() {
   const [compEnv, setCompEnv] = useState<"live" | "sandbox">("live");
   const [busy, setBusy] = useState(false);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const load = async () => {
     if (!id) return;
-    const { data: o } = await supabase.from("organizations")
-      .select("id, name, plan, created_at, address").eq("id", id).maybeSingle();
-    setOrg(o as Org | null);
+    setLoadError(null);
+    try {
+      const { data: o, error: oe } = await supabase.from("organizations")
+        .select("id, name, plan, created_at, address").eq("id", id).maybeSingle();
+      if (oe) throw oe;
+      setOrg(o as Org | null);
+    } catch (e) {
+      console.error("[AdminOrgDetail] org load failed", e);
+      setLoadError((e as Error).message || "Failed to load organization");
+      return;
+    }
 
-    const { data: m } = await supabase.from("organization_members")
-      .select("user_id, role").eq("organization_id", id);
-    const ids = (m ?? []).map((r: any) => r.user_id);
-    const { data: profs } = ids.length
-      ? await supabase.from("profiles").select("id, full_name, email").in("id", ids)
-      : { data: [] as any[] };
-    const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
-    setMembers(((m ?? []) as any[]).map((r) => ({ ...r, profile: pmap.get(r.user_id) ?? null })));
+    try {
+      const { data: m, error: me } = await supabase.from("organization_members")
+        .select("user_id, role").eq("organization_id", id);
+      if (me) throw me;
+      const ids = (m ?? []).map((r: any) => r.user_id);
+      const { data: profs } = ids.length
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", ids)
+        : { data: [] as any[] };
+      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      setMembers(((m ?? []) as any[]).map((r) => ({ ...r, profile: pmap.get(r.user_id) ?? null })));
+    } catch (e) { console.error("[AdminOrgDetail] members load failed", e); }
 
-    const { data: s } = await supabase.from("subscriptions")
-      .select("id, status, price_id, current_period_end, cancel_at_period_end, environment, user_id")
-      .eq("organization_id", id).order("created_at", { ascending: false });
-    setSubs((s ?? []) as Subscription[]);
+    try {
+      const { data: s, error: se } = await supabase.from("subscriptions")
+        .select("id, status, price_id, current_period_end, cancel_at_period_end, environment, user_id")
+        .eq("organization_id", id).order("created_at", { ascending: false });
+      if (se) throw se;
+      setSubs((s ?? []) as Subscription[]);
+    } catch (e) { console.error("[AdminOrgDetail] subs load failed", e); }
 
-    const { data: n } = await supabase.from("support_notes")
-      .select("id, body, pinned, created_at, author_id")
-      .eq("organization_id", id).order("pinned", { ascending: false }).order("created_at", { ascending: false });
-    setNotes((n ?? []) as Note[]);
+    try {
+      const { data: n, error: ne } = await supabase.from("support_notes")
+        .select("id, body, pinned, created_at, author_id")
+        .eq("organization_id", id).order("pinned", { ascending: false }).order("created_at", { ascending: false });
+      if (ne) throw ne;
+      setNotes((n ?? []) as Note[]);
+    } catch (e) { console.error("[AdminOrgDetail] notes load failed", e); }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -116,6 +135,17 @@ export default function AdminOrgDetail() {
     load();
   };
 
+  if (loadError) return (
+    <div className="space-y-3">
+      <Link to="/admin/organizations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+        <ArrowLeft className="h-3 w-3" /> All organizations
+      </Link>
+      <Card className="p-4 border-destructive/40">
+        <div className="font-semibold text-destructive">Could not load organization</div>
+        <div className="text-sm text-muted-foreground mt-1">{loadError}</div>
+      </Card>
+    </div>
+  );
   if (!org) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
