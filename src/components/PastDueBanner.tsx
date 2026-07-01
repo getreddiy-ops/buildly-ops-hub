@@ -12,7 +12,7 @@ export function PastDueBanner() {
       <Link to="/app/billing" className="font-medium underline">
         Update your payment method
       </Link>{" "}
-      to keep Contractor OS Pro.
+      to keep FastTract Pro.
     </div>
   );
 }

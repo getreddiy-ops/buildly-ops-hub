@@ -10,7 +10,7 @@ import { SEO } from "@/components/SEO";
 export default function Contact() {
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Contact — Contractor OS" description="Talk to the Contractor OS team about leads, estimates, jobs, GPS time tracking, and our AI assistant." path="/contact" />
+      <SEO title="Contact — FastTract" description="Talk to the FastTract team about leads, estimates, jobs, GPS time tracking, and our AI assistant." path="/contact" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Button variant="ghost" asChild><Link to="/">Back</Link></Button>

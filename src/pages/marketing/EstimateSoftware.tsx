@@ -8,8 +8,8 @@ export default function EstimateSoftware() {
   return (
     <MarketingShell>
       <SEO
-        title="Construction Estimate Software | AI Voice & Photo Estimating — ContractorOS"
-        description="ContractorOS is AI contractor estimating software. Draft construction estimates from photos or by talking, apply your unit pricing, send branded proposals, and convert to jobs."
+        title="Construction Estimate Software | AI Voice & Photo Estimating — FastTract"
+        description="FastTract is AI contractor estimating software. Draft construction estimates from photos or by talking, apply your unit pricing, send branded proposals, and convert to jobs."
         path="/estimate-software"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
@@ -17,7 +17,7 @@ export default function EstimateSoftware() {
           Construction Estimate Software With AI Voice & Photo Estimating
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          ContractorOS drafts estimates from photos, voice, or your unit pricing. You approve, send a branded proposal, capture an e-signature, and convert it to a scheduled job — all in one app.
+          FastTract drafts estimates from photos, voice, or your unit pricing. You approve, send a branded proposal, capture an e-signature, and convert it to a scheduled job — all in one app.
         </p>
         <CTARow />
       </section>

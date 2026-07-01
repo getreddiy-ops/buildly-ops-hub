@@ -28,7 +28,7 @@ export default function AdminOverview() {
 
   return (
     <>
-      <PageHeader title="Platform Overview" description="A bird's-eye view of every organization on Contractor OS." />
+      <PageHeader title="Platform Overview" description="A bird's-eye view of every organization on FastTract." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <Card key={c.label} className="p-5">

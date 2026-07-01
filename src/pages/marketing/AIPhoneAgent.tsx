@@ -8,8 +8,8 @@ export default function AIPhoneAgent() {
   return (
     <MarketingShell>
       <SEO
-        title="AI Phone Answering for Contractors | 24/7 Receptionist — ContractorOS"
-        description="ContractorOS answers contractor calls 24/7, captures lead details, books appointments, fills out CRM forms by voice, and writes everything back to your CRM. Stop missing leads while you’re on the job."
+        title="AI Phone Answering for Contractors | 24/7 Receptionist — FastTract"
+        description="FastTract answers contractor calls 24/7, captures lead details, books appointments, fills out CRM forms by voice, and writes everything back to your CRM. Stop missing leads while you’re on the job."
         path="/ai-phone-agent"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
@@ -44,10 +44,10 @@ export default function AIPhoneAgent() {
 
       <FAQ
         items={[
-          { q: "Do I get a real phone number?", a: "Yes. ContractorOS provisions a local or toll-free number for your business. You can also forward your existing line." },
+          { q: "Do I get a real phone number?", a: "Yes. FastTract provisions a local or toll-free number for your business. You can also forward your existing line." },
           { q: "Will it sound robotic?", a: "No. It uses a natural-sounding voice and is trained on your business — services, pricing range, and tone." },
           { q: "What if it can’t answer something?", a: "It captures the question, creates the lead, and sends you a summary so you can follow up." },
-          { q: "Does it work with my CRM?", a: "It writes calls and leads directly into the ContractorOS CRM. Every call is on the customer record." },
+          { q: "Does it work with my CRM?", a: "It writes calls and leads directly into the FastTract CRM. Every call is on the customer record." },
         ]}
       />
     </MarketingShell>

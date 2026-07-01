@@ -221,7 +221,7 @@ Unless told otherwise, every estimate includes: Labor, Materials, Equipment, Dis
 
 const SYSTEM = `${ESTIMATOR_PROMPT}
 
-You are the Contractor OS AI Assistant for a contracting business.
+You are the FastTract AI Assistant for a contracting business.
 You help the office manage leads, customers, estimates, jobs, and crew.
 
 OUTPUT RULES — read carefully:

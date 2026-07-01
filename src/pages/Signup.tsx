@@ -49,11 +49,11 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-dark">
-      <SEO title="Create an account — Contractor OS" description="Start a free Contractor OS account and set up your contracting business in minutes." path="/signup" noindex />
+      <SEO title="Create an account — FastTract" description="Start a free FastTract account and set up your contracting business in minutes." path="/signup" noindex />
       <header className="mx-auto max-w-7xl px-4 py-5"><Logo /></header>
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
-          <h1 className="text-2xl font-semibold">Join Contractor OS</h1>
+          <h1 className="text-2xl font-semibold">Join FastTract</h1>
           <p className="mt-1 text-sm text-muted-foreground">Free while in beta. No credit card.</p>
           <Button variant="outline" className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google

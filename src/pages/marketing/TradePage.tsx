@@ -32,7 +32,7 @@ export default function TradePage() {
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
-          name: `ContractorOS for ${cfg.trade} Contractors`,
+          name: `FastTract for ${cfg.trade} Contractors`,
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web, iOS, Android",
           offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
@@ -42,7 +42,7 @@ export default function TradePage() {
 
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-12 text-center sm:px-6 lg:px-8 lg:pt-24">
         <div className="mb-4 inline-flex rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-          ContractorOS for {cfg.trade}
+          FastTract for {cfg.trade}
         </div>
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
           {cfg.h1}
@@ -62,7 +62,7 @@ export default function TradePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="mb-8 text-center text-3xl font-semibold tracking-tight">
-          How ContractorOS helps {cfg.trade.toLowerCase()} contractors
+          How FastTract helps {cfg.trade.toLowerCase()} contractors
         </h2>
         <div className="grid gap-6 md:grid-cols-2">
           <Section title="AI estimating use cases" items={cfg.estimating} />

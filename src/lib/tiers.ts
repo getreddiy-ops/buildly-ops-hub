@@ -1,23 +1,23 @@
-// Single source of truth for Contractor OS subscription tiers.
+// Single source of truth for FastTract subscription tiers.
 // price_id values come from Paddle (created via create_product).
 
 export type Tier = "base" | "plus" | "premium";
 
 export const TIERS: Record<Tier, { name: string; price: number; priceId: string; productId: string }> = {
   base: {
-    name: "Contractor OS",
+    name: "FastTract",
     price: 69,
     priceId: "contractor_os_pro_monthly",
     productId: "contractor_os_pro",
   },
   plus: {
-    name: "Contractor OS Plus",
+    name: "FastTract Plus",
     price: 169,
     priceId: "contractor_os_plus_monthly",
     productId: "contractor_os_plus",
   },
   premium: {
-    name: "Contractor OS Premium",
+    name: "FastTract Premium",
     price: 269,
     priceId: "contractor_os_premium_monthly",
     productId: "contractor_os_premium",

@@ -8,8 +8,8 @@ export default function InvoiceSoftware() {
   return (
     <MarketingShell>
       <SEO
-        title="Contractor Invoice Software | Send Invoices & Collect Payment — ContractorOS"
-        description="ContractorOS is contractor invoice software. Convert estimates to invoices, send by email or text, and collect online payments. Tied to every job, customer, and crew hour."
+        title="Contractor Invoice Software | Send Invoices & Collect Payment — FastTract"
+        description="FastTract is contractor invoice software. Convert estimates to invoices, send by email or text, and collect online payments. Tied to every job, customer, and crew hour."
         path="/invoice-software"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">

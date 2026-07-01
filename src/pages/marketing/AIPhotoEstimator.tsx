@@ -8,8 +8,8 @@ export default function AIPhotoEstimator() {
   return (
     <MarketingShell>
       <SEO
-        title="AI Photo & Voice Estimator for Contractors | Quote From Photos — ContractorOS"
-        description="ContractorOS turns customer photos and voice descriptions into draft contractor estimates in minutes. AI-assisted measurements, your unit pricing, and your final approval before sending."
+        title="AI Photo & Voice Estimator for Contractors | Quote From Photos — FastTract"
+        description="FastTract turns customer photos and voice descriptions into draft contractor estimates in minutes. AI-assisted measurements, your unit pricing, and your final approval before sending."
         path="/ai-photo-estimator"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
@@ -17,7 +17,7 @@ export default function AIPhotoEstimator() {
           AI Photo & Voice Estimator for Contractors
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Customers send photos or describe the job by voice. ContractorOS drafts a rough estimate using AI-assisted measurements and your unit pricing. You review, adjust, and send — no all-day driveway visits.
+          Customers send photos or describe the job by voice. FastTract drafts a rough estimate using AI-assisted measurements and your unit pricing. You review, adjust, and send — no all-day driveway visits.
         </p>
         <CTARow />
       </section>

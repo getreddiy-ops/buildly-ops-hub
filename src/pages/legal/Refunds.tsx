@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Refunds() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Refund Policy — Contractor OS" description="Contractor OS offers a 30-day money-back guarantee. Learn how to request a refund through Paddle." path="/legal/refunds" />
+      <SEO title="Refund Policy — FastTract" description="FastTract offers a 30-day money-back guarantee. Learn how to request a refund through Paddle." path="/legal/refunds" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -14,7 +14,7 @@ export default function Refunds() {
         <h1 className="text-4xl font-semibold mb-2">Refund Policy</h1>
         <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
 
-        <p className="mt-6">Contractor OS is provided by Morgan Marc Lynch. We want you to be satisfied with your subscription.</p>
+        <p className="mt-6">FastTract is provided by Morgan Marc Lynch. We want you to be satisfied with your subscription.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">30-Day Money-Back Guarantee</h2>
         <p>If you are not satisfied with your purchase, you may request a full refund within <strong>30 days</strong> of the order date.</p>

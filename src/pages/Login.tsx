@@ -38,12 +38,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-dark">
-      <SEO title="Sign in — Contractor OS" description="Sign in to your Contractor OS account to manage leads, jobs, crew, and time tracking." path="/login" noindex />
+      <SEO title="Sign in — FastTract" description="Sign in to your FastTract account to manage leads, jobs, crew, and time tracking." path="/login" noindex />
       <header className="mx-auto max-w-7xl px-4 py-5"><Logo /></header>
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
-          <h1 className="text-2xl font-semibold">Sign in to Contractor OS</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your Contractor OS account.</p>
+          <h1 className="text-2xl font-semibold">Sign in to FastTract</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your FastTract account.</p>
           <Button variant="outline" className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google
           </Button>

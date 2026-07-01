@@ -17,7 +17,7 @@ export default function ContractorCRM() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
       <SEO
-        title="CRM for Contractors — Contractor OS"
+        title="CRM for Contractors — FastTract"
         description="A CRM built for contractors: lead pipelines, customer communication, estimates, job history, and AI phone answering — all in one app."
         path="/features/contractor-crm"
       />
@@ -35,7 +35,7 @@ export default function ContractorCRM() {
           The CRM built for <span className="text-gradient-primary">contractors</span>.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Stop juggling spreadsheets, sticky notes, and three different inboxes. Contractor OS centralizes every lead,
+          Stop juggling spreadsheets, sticky notes, and three different inboxes. FastTract centralizes every lead,
           customer, estimate, and job — so nothing slips through the cracks.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
@@ -60,9 +60,9 @@ export default function ContractorCRM() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-semibold tracking-tight">Why contractors choose Contractor OS over a generic CRM</h2>
+        <h2 className="text-3xl font-semibold tracking-tight">Why contractors choose FastTract over a generic CRM</h2>
         <p className="mt-4 text-muted-foreground">
-          Generic CRMs are built for inside sales teams. Contractor OS is built around field work: GPS-verified
+          Generic CRMs are built for inside sales teams. FastTract is built around field work: GPS-verified
           clock-ins, boss-approved hours, job costing, and an AI assistant that drafts estimates and answers your
           phone — all tied to the same customer record.
         </p>
