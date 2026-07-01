@@ -4,12 +4,22 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
+type Tier = "base" | "plus" | "premium";
+
 type Action =
   | { type: "send_password_reset"; email: string }
   | { type: "comp_trial"; subscription_id: string; days: number }
   | { type: "cancel_subscription"; subscription_id: string; at_period_end?: boolean }
   | { type: "create_organization"; name: string; owner_email: string; plan?: string }
-  | { type: "delete_organization"; organization_id: string };
+  | { type: "delete_organization"; organization_id: string }
+  | { type: "set_plan"; organization_id: string; tier: Tier; days?: number | null; environment?: "sandbox" | "live" }
+  | { type: "remove_comp"; organization_id: string; environment?: "sandbox" | "live" };
+
+const TIER_PRICE: Record<Tier, { price_id: string; product_id: string }> = {
+  base:    { price_id: "contractor_os_pro_monthly",     product_id: "contractor_os_pro" },
+  plus:    { price_id: "contractor_os_plus_monthly",    product_id: "contractor_os_plus" },
+  premium: { price_id: "contractor_os_premium_monthly", product_id: "contractor_os_premium" },
+};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
