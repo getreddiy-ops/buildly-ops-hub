@@ -213,14 +213,14 @@ export default function AdminOrgDetail() {
           ) : (
             <ul className="divide-y divide-border">
               {members.map((m) => (
-                <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{m.profile?.full_name || m.profile?.email || m.user_id}</div>
-                    <div className="text-xs text-muted-foreground truncate">{m.profile?.email}</div>
+                <li key={m.user_id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium break-words">{m.profile?.full_name || m.profile?.email || m.user_id}</div>
+                    <div className="text-xs text-muted-foreground break-all">{m.profile?.email}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="outline">{m.role}</Badge>
-                    <Button size="sm" variant="outline" disabled={busy || !m.profile?.email}
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy || !m.profile?.email}
                       onClick={() => sendReset(m.profile?.email ?? null)}>
                       <Mail className="h-3 w-3 mr-1" /> Reset
                     </Button>
