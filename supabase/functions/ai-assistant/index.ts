@@ -116,6 +116,79 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "update_lead",
+      description: "Propose updating an existing lead (matched by name, fuzzy). Only include fields to change. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          lead_name: { type: "string", description: "Existing lead's current name to match" },
+          name: { type: "string" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          source: { type: "string" },
+          status: { type: "string", description: "new, contacted, qualified, won, lost" },
+          notes: { type: "string" },
+        },
+        required: ["lead_name"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_job",
+      description: "Propose updating an existing job (matched by title, fuzzy). Only include fields to change. Requires approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          job_title: { type: "string", description: "Existing job title to match" },
+          title: { type: "string" },
+          description: { type: "string" },
+          status: { type: "string", description: "scheduled, in_progress, completed, cancelled" },
+          scheduled_start: { type: "string" },
+          scheduled_end: { type: "string" },
+          address: { type: "string" },
+        },
+        required: ["job_title"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_estimate",
+      description: "Propose updating an existing estimate (matched by title, fuzzy). Only include fields to change. Requires approval. Providing line_items replaces existing items and recomputes totals.",
+      parameters: {
+        type: "object",
+        properties: {
+          estimate_title: { type: "string", description: "Existing estimate title to match" },
+          title: { type: "string" },
+          status: { type: "string", description: "draft, sent, accepted, rejected" },
+          notes: { type: "string" },
+          tax_rate: { type: "number" },
+          line_items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                quantity: { type: "number" },
+                unit_price: { type: "number" },
+              },
+              required: ["description", "quantity", "unit_price"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["estimate_title"],
+        additionalProperties: false,
+      },
+    },
+  },
+    type: "function",
+    function: {
       name: "generate_document",
       description:
         "Produce a real, downloadable business document (PDF) for the user. ALWAYS use this whenever the user asks for an estimate, invoice, quote, proposal, contract, agreement, scope of work, change order, letter, memo, receipt, or any other written document. NEVER paste the document content as markdown or a code block — call this tool instead. The user will see a downloadable PDF attachment in the chat.",
