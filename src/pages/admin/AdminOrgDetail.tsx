@@ -239,26 +239,26 @@ export default function AdminOrgDetail() {
             <ul className="space-y-4">
               {subs.map((s) => (
                 <li key={s.id} className="border border-border rounded-md p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <div className="font-medium">{s.price_id ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">
+                  <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium break-all">{s.price_id ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground break-words">
                         {s.environment} · {s.current_period_end ? `ends ${new Date(s.current_period_end).toLocaleDateString()}` : "no end"}
                         {s.cancel_at_period_end && " · cancels at period end"}
                       </div>
                     </div>
-                    <Badge variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>{s.status}</Badge>
+                    <Badge className="shrink-0" variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>{s.status}</Badge>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Input type="number" min={1} max={365} value={trialDays}
-                      onChange={(e) => setTrialDays(Number(e.target.value))} className="w-20" />
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => compTrial(s.id)}>
+                      onChange={(e) => setTrialDays(Number(e.target.value))} className="w-20 h-10" />
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy} onClick={() => compTrial(s.id)}>
                       <Gift className="h-3 w-3 mr-1" /> Comp days
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => cancelSub(s.id, true)}>
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy} onClick={() => cancelSub(s.id, true)}>
                       Cancel at period end
                     </Button>
-                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => cancelSub(s.id, false)}>
+                    <Button size="sm" variant="destructive" className="h-10" disabled={busy} onClick={() => cancelSub(s.id, false)}>
                       <XCircle className="h-3 w-3 mr-1" /> Cancel now
                     </Button>
                   </div>
