@@ -443,16 +443,17 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
             recording ? "Listening…"
             : transcribing ? "Transcribing…"
             : pendingImages.length ? "Describe what to estimate (or leave blank)…"
-            : "Ask the assistant, or attach a photo to estimate from…"
+            : "Ask the assistant, or attach a photo…"
           }
           rows={2}
-          className="resize-none"
+          className="resize-none flex-1 min-w-0"
           disabled={loading || recording || transcribing}
         />
         <Button
           type="button"
-          size="lg"
+          size="icon"
           variant="outline"
+          className="shrink-0 h-10 w-10"
           onClick={() => fileInputRef.current?.click()}
           disabled={loading || recording || transcribing || pendingImages.length >= MAX_IMAGES}
           title="Attach photo for AI to estimate"
@@ -461,8 +462,9 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         </Button>
         <Button
           type="button"
-          size="lg"
+          size="icon"
           variant={recording ? "destructive" : "outline"}
+          className="shrink-0 h-10 w-10"
           onClick={() => (recording ? stopRec() : startRec())}
           disabled={loading || transcribing}
           title={recording ? "Stop recording" : "Voice input"}
@@ -472,11 +474,13 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         <Button
           type="submit"
           disabled={loading || (!input.trim() && pendingImages.length === 0) || recording || transcribing}
-          size="lg"
+          size="icon"
+          className="shrink-0 h-10 w-10"
         >
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
 
 
     </div>

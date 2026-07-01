@@ -158,7 +158,7 @@ export default function AppShell() {
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col overflow-y-auto">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen} key={currentPath}>
