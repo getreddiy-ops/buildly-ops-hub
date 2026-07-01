@@ -20,6 +20,13 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [roles, setRoles] = useState<Record<string, AppRole[]>>({});
   const [q, setQ] = useState("");
+  const [openCreate, setOpenCreate] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pwUser, setPwUser] = useState<Profile | null>(null);
+  const [pwValue, setPwValue] = useState("");
 
   const load = async () => {
     const { data: ps } = await supabase.from("profiles").select("id, full_name, email, created_at").order("created_at", { ascending: false });
