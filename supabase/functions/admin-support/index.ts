@@ -150,6 +150,52 @@ Deno.serve(async (req) => {
       return ok({ deleted: true });
     }
 
+    if (body.type === "set_plan") {
+      if (!body.organization_id || !body.tier) throw new Error("organization_id + tier required");
+      const t = TIER_PRICE[body.tier];
+      if (!t) throw new Error("invalid tier");
+      const env = body.environment ?? "live";
+
+      // Owner of the org acts as the user_id anchor.
+      const { data: owner } = await admin.from("organization_members")
+        .select("user_id").eq("organization_id", body.organization_id).eq("role", "owner").maybeSingle();
+      if (!owner?.user_id) throw new Error("org has no owner");
+
+      const compId = `comp_${body.organization_id}_${env}`;
+      const now = new Date();
+      const endIso = body.days == null
+        ? new Date(now.getTime() + 100 * 365 * 86400_000).toISOString()  // ~forever = free
+        : new Date(now.getTime() + Number(body.days) * 86400_000).toISOString();
+
+      // Upsert by paddle_subscription_id so re-comping the same org overwrites.
+      const { error } = await admin.from("subscriptions").upsert({
+        paddle_subscription_id: compId,
+        paddle_customer_id: `comp_customer_${body.organization_id}`,
+        user_id: owner.user_id,
+        organization_id: body.organization_id,
+        product_id: t.product_id,
+        price_id: t.price_id,
+        status: "active",
+        current_period_start: now.toISOString(),
+        current_period_end: endIso,
+        cancel_at_period_end: false,
+        environment: env,
+      }, { onConflict: "paddle_subscription_id" });
+      if (error) throw error;
+
+      await admin.from("organizations").update({ plan: body.tier }).eq("id", body.organization_id);
+      return ok({ tier: body.tier, current_period_end: endIso, environment: env });
+    }
+
+    if (body.type === "remove_comp") {
+      if (!body.organization_id) throw new Error("organization_id required");
+      const env = body.environment ?? "live";
+      const compId = `comp_${body.organization_id}_${env}`;
+      const { error } = await admin.from("subscriptions").delete().eq("paddle_subscription_id", compId);
+      if (error) throw error;
+      return ok({ removed: true });
+    }
+
     return new Response(JSON.stringify({ error: "unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
