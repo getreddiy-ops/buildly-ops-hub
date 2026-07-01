@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Users, ShieldCheck, ShieldOff } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Plus, KeyRound } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +20,13 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [roles, setRoles] = useState<Record<string, AppRole[]>>({});
   const [q, setQ] = useState("");
+  const [openCreate, setOpenCreate] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pwUser, setPwUser] = useState<Profile | null>(null);
+  const [pwValue, setPwValue] = useState("");
 
   const load = async () => {
     const { data: ps } = await supabase.from("profiles").select("id, full_name, email, created_at").order("created_at", { ascending: false });
@@ -46,10 +57,81 @@ export default function AdminUsers() {
     (u.full_name ?? "").toLowerCase().includes(q.toLowerCase()),
   );
 
+  const createUser = async () => {
+    if (!newEmail.trim() || newPassword.length < 8) {
+      toast.error("Email and password (min 8 chars) required");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-support", {
+        body: { type: "create_user", email: newEmail.trim(), password: newPassword, full_name: newName.trim() || undefined },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("User created");
+      setOpenCreate(false); setNewEmail(""); setNewName(""); setNewPassword(""); load();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const savePassword = async () => {
+    if (!pwUser || pwValue.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-support", {
+        body: { type: "set_user_password", user_id: pwUser.id, password: pwValue },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Password updated");
+      setPwUser(null); setPwValue("");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
   return (
     <>
-      <PageHeader title="Users" description="Every user on the platform, with global role management." />
+      <PageHeader title="Users" description="Every user on the platform, with global role management." actions={
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-1" /> New user</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Create user</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Full name (optional)</Label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jane Doe" /></div>
+              <div><Label>Email</Label>
+                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" /></div>
+              <div><Label>Password</Label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" /></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenCreate(false)}>Cancel</Button>
+              <Button onClick={createUser} disabled={busy || !newEmail.trim() || newPassword.length < 8}>
+                {busy ? "Creating…" : "Create user"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      } />
       <Input placeholder="Search users…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm mb-4" />
+
+      <Dialog open={!!pwUser} onOpenChange={(o) => { if (!o) { setPwUser(null); setPwValue(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Set password for {pwUser?.email}</DialogTitle></DialogHeader>
+          <div><Label>New password</Label>
+            <Input type="password" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" /></div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPwUser(null); setPwValue(""); }}>Cancel</Button>
+            <Button onClick={savePassword} disabled={busy || pwValue.length < 8}>Save password</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {filtered.length === 0 ? (
         <EmptyState icon={Users} title="No users yet" />
       ) : (
@@ -68,6 +150,10 @@ export default function AdminUsers() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant="outline"
+                    onClick={() => { setPwUser(u); setPwValue(""); }}>
+                    <KeyRound className="h-3 w-3 mr-1" /> Password
+                  </Button>
                   <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant={userRoles.includes("agent") ? "default" : "outline"}
                     onClick={() => toggle(u.id, "agent")}>
                     {userRoles.includes("agent") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}

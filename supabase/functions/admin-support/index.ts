@@ -10,7 +10,9 @@ type Action =
   | { type: "send_password_reset"; email: string }
   | { type: "comp_trial"; subscription_id: string; days: number }
   | { type: "cancel_subscription"; subscription_id: string; at_period_end?: boolean }
-  | { type: "create_organization"; name: string; owner_email: string; plan?: string }
+  | { type: "create_organization"; name: string; owner_email: string; owner_password?: string; owner_full_name?: string; plan?: string }
+  | { type: "create_user"; email: string; password: string; full_name?: string }
+  | { type: "set_user_password"; user_id?: string; email?: string; password: string }
   | { type: "delete_organization"; organization_id: string }
   | { type: "set_plan"; organization_id: string; tier: Tier; days?: number | null; environment?: "sandbox" | "live" }
   | { type: "remove_comp"; organization_id: string; environment?: "sandbox" | "live" };
@@ -108,23 +110,65 @@ Deno.serve(async (req) => {
       return ok({ canceled: true });
     }
 
+    if (body.type === "create_user") {
+      const email = body.email?.trim().toLowerCase();
+      const password = body.password;
+      if (!email || !password) throw new Error("email + password required");
+      if (password.length < 8) throw new Error("password must be at least 8 characters");
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: body.full_name ? { full_name: body.full_name } : undefined,
+      });
+      if (error) throw error;
+      return ok({ user_id: data.user?.id });
+    }
+
+    if (body.type === "set_user_password") {
+      if (!body.password || body.password.length < 8) throw new Error("password must be at least 8 characters");
+      let userId = body.user_id ?? null;
+      if (!userId && body.email) {
+        const { data: prof } = await admin.from("profiles").select("id").eq("email", body.email.trim().toLowerCase()).maybeSingle();
+        userId = prof?.id ?? null;
+      }
+      if (!userId) throw new Error("user not found");
+      const { error } = await admin.auth.admin.updateUserById(userId, { password: body.password });
+      if (error) throw error;
+      return ok({ updated: true });
+    }
+
     if (body.type === "create_organization") {
       const name = body.name?.trim();
       const email = body.owner_email?.trim().toLowerCase();
       if (!name || !email) throw new Error("name + owner_email required");
 
-      // Find existing user; if missing, invite them by email.
+      // Find existing user; if missing, either create with password or invite by email.
       let ownerId: string | null = null;
       const { data: prof } = await admin
         .from("profiles").select("id").eq("email", email).maybeSingle();
       if (prof?.id) ownerId = prof.id;
 
       if (!ownerId) {
-        const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${req.headers.get("origin") ?? ""}/login`,
-        });
-        if (inviteErr) throw inviteErr;
-        ownerId = invite.user?.id ?? null;
+        if (body.owner_password && body.owner_password.length >= 8) {
+          const { data: created, error: cErr } = await admin.auth.admin.createUser({
+            email,
+            password: body.owner_password,
+            email_confirm: true,
+            user_metadata: body.owner_full_name ? { full_name: body.owner_full_name } : undefined,
+          });
+          if (cErr) throw cErr;
+          ownerId = created.user?.id ?? null;
+        } else {
+          const { data: invite, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+            redirectTo: `${req.headers.get("origin") ?? ""}/login`,
+          });
+          if (inviteErr) throw inviteErr;
+          ownerId = invite.user?.id ?? null;
+        }
+      } else if (body.owner_password && body.owner_password.length >= 8) {
+        // Existing user: update password if provided
+        await admin.auth.admin.updateUserById(ownerId, { password: body.owner_password });
       }
       if (!ownerId) throw new Error("could not resolve owner user");
 
