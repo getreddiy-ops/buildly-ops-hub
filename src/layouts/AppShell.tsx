@@ -93,50 +93,93 @@ export default function AppShell() {
   // Close drawer on route change
   const currentPath = location.pathname;
 
-  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <ul className="space-y-0.5">
-      {nav.map((item) => (
-        <li key={item.to}>
-          <NavLink
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              )
-            }
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+  const itemClass = (isActive: boolean, indent = false) =>
+    cn(
+      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+      indent && "pl-9",
+      isActive
+        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    );
+
+  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => {
+    const [open, setOpen] = useState<Record<string, boolean>>(() => {
+      const initial: Record<string, boolean> = {};
+      for (const g of groups) {
+        initial[g.id] = g.items.some((i) => currentPath.startsWith(i.to));
+      }
+      return initial;
+    });
+
+    return (
+      <ul className="space-y-0.5">
+        <li>
+          <NavLink to={dashboardItem.to} end onClick={onNavigate} className={({ isActive }) => itemClass(isActive)}>
+            <dashboardItem.icon className="h-4 w-4" />
+            {dashboardItem.label}
           </NavLink>
         </li>
-      ))}
-      <li className="pt-2 mt-2 border-t border-sidebar-border">
-        <NavLink
-          to="/field"
-          onClick={onNavigate}
-          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <Smartphone className="h-4 w-4" />
-          Field App (Mobile)
-        </NavLink>
-        {isPlatformAdmin && (
+        {groups.map((g) => {
+          const isOpen = open[g.id] ?? false;
+          const hasActive = g.items.some((i) => currentPath === i.to || currentPath.startsWith(i.to + "/"));
+          return (
+            <li key={g.id}>
+              <Collapsible open={isOpen} onOpenChange={(v) => setOpen((s) => ({ ...s, [g.id]: v }))}>
+                <CollapsibleTrigger
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
+                    hasActive
+                      ? "text-sidebar-foreground"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <span className="flex items-center gap-3">
+                    <g.icon className="h-4 w-4" />
+                    {g.label}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-0.5 space-y-0.5">
+                  {g.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onNavigate}
+                      className={({ isActive }) => itemClass(isActive, true)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            </li>
+          );
+        })}
+        <li className="pt-2 mt-2 border-t border-sidebar-border">
           <NavLink
-            to="/admin"
+            to="/field"
             onClick={onNavigate}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            <ShieldCheck className="h-4 w-4" />
-            Platform Admin
+            <Smartphone className="h-4 w-4" />
+            Field App (Mobile)
           </NavLink>
-        )}
-      </li>
-    </ul>
-  );
+          {isPlatformAdmin && (
+            <NavLink
+              to="/admin"
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Platform Admin
+            </NavLink>
+          )}
+        </li>
+      </ul>
+    );
+  };
+
 
   const BrandHeader = () =>
     branding?.logo_signed_url ? (
