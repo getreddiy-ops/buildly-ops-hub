@@ -160,45 +160,47 @@ export default function AdminOrgDetail() {
         <p className="text-xs text-muted-foreground mb-3">
           Grants this org an internal subscription that bypasses Paddle. Leave "Days" blank to make it free indefinitely.
         </p>
-        <div className="flex flex-wrap items-end gap-2">
-          <div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+          <div className="min-w-0">
             <Label className="text-xs">Tier</Label>
             <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
-              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              className="block w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
               <option value="base">Base — $69</option>
               <option value="plus">Plus — $169 (AI Assistant)</option>
               <option value="premium">Premium — $269 (Phone Assistant)</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <Label className="text-xs">Days (blank = free forever)</Label>
             <Input type="number" min={1} max={3650} value={compDays}
-              onChange={(e) => setCompDays(e.target.value)} className="w-32" placeholder="∞" />
+              onChange={(e) => setCompDays(e.target.value)} className="w-full sm:w-32 h-10" placeholder="∞" />
           </div>
-          <div>
+          <div className="min-w-0">
             <Label className="text-xs">Environment</Label>
             <select value={compEnv} onChange={(e) => setCompEnv(e.target.value as any)}
-              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              className="block w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
               <option value="live">live</option>
               <option value="sandbox">test</option>
             </select>
           </div>
-          <Button disabled={busy} onClick={async () => {
-            try {
-              const days = compDays.trim() === "" ? null : Number(compDays);
-              await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
-              toast.success(`Set to ${compTier} (${days ?? "forever"} days) in ${compEnv}`);
-              load();
-            } catch (e) { toast.error((e as Error).message); }
-          }}>Assign plan</Button>
-          <Button variant="outline" disabled={busy} onClick={async () => {
-            if (!confirm("Remove the comped subscription for this org?")) return;
-            try {
-              await callAdmin({ type: "remove_comp", organization_id: id, environment: compEnv });
-              toast.success("Comp removed");
-              load();
-            } catch (e) { toast.error((e as Error).message); }
-          }}>Remove comp</Button>
+          <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+            <Button className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
+              try {
+                const days = compDays.trim() === "" ? null : Number(compDays);
+                await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
+                toast.success(`Set to ${compTier} (${days ?? "forever"} days) in ${compEnv}`);
+                load();
+              } catch (e) { toast.error((e as Error).message); }
+            }}>Assign plan</Button>
+            <Button variant="outline" className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
+              if (!confirm("Remove the comped subscription for this org?")) return;
+              try {
+                await callAdmin({ type: "remove_comp", organization_id: id, environment: compEnv });
+                toast.success("Comp removed");
+                load();
+              } catch (e) { toast.error((e as Error).message); }
+            }}>Remove comp</Button>
+          </div>
         </div>
       </Card>
 
