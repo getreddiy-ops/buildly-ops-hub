@@ -150,6 +150,10 @@ export default function AdminUsers() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant="outline"
+                    onClick={() => { setPwUser(u); setPwValue(""); }}>
+                    <KeyRound className="h-3 w-3 mr-1" /> Password
+                  </Button>
                   <Button size="sm" className="h-10 flex-1 sm:flex-initial" variant={userRoles.includes("agent") ? "default" : "outline"}
                     onClick={() => toggle(u.id, "agent")}>
                     {userRoles.includes("agent") ? <ShieldOff className="h-3 w-3 mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
