@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-do
 import {
   LayoutDashboard, Users, FileText, Briefcase, HardHat, Clock,
   CheckSquare, DollarSign, Bot, MessageSquare, Settings, LogOut, CreditCard, Phone, Sparkles,
-  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck,
+  Receipt, FileSignature, Palette, Code2, Truck, Package, Menu, Smartphone, ShieldCheck, CalendarDays,
 } from "lucide-react";
 
 
@@ -31,6 +31,7 @@ const nav = [
   { to: "/app/vendors", label: "Vendors", icon: Truck },
   { to: "/app/materials", label: "Materials", icon: Package },
   { to: "/app/time", label: "Time Tracking", icon: Clock },
+  { to: "/app/calendar", label: "Calendar & PTO", icon: CalendarDays },
   { to: "/app/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/app/costing", label: "Job Costing", icon: DollarSign },
   { to: "/app/business-profile", label: "AI Business Profile", icon: Sparkles },

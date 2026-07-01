@@ -58,6 +58,7 @@ import Invoices from "./pages/app/Invoices";
 import Contracts from "./pages/app/Contracts";
 import Vendors from "./pages/app/Vendors";
 import Materials from "./pages/app/Materials";
+import Calendar from "./pages/app/Calendar";
 import { BrandingProvider } from "./components/BrandingProvider";
 
 
@@ -127,6 +128,7 @@ const App = () => (
               <Route path="vendors" element={<Vendors />} />
               <Route path="materials" element={<Materials />} />
               <Route path="time" element={<TimeTracking />} />
+              <Route path="calendar" element={<Calendar />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
               <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
@@ -146,6 +148,7 @@ const App = () => (
               <Route index element={<FieldClock />} />
               <Route path="jobs" element={<FieldJobs />} />
               <Route path="crew" element={<FieldCrew />} />
+              <Route path="calendar" element={<Calendar />} />
               <Route path="assistant" element={<PaywallGate feature="AI Assistant"><FieldAssistant /></PaywallGate>} />
               <Route path="map" element={<FieldMap />} />
               <Route path="profile" element={<FieldProfile />} />
