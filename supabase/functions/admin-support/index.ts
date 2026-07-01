@@ -3,6 +3,7 @@
 // before using the service-role key for privileged operations.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { getPaddleClient, gatewayFetch, type PaddleEnv } from "../_shared/paddle.ts";
 
 type Tier = "base" | "plus" | "premium";
 
@@ -15,7 +16,16 @@ type Action =
   | { type: "set_user_password"; user_id?: string; email?: string; password: string }
   | { type: "delete_organization"; organization_id: string }
   | { type: "set_plan"; organization_id: string; tier: Tier; days?: number | null; environment?: "sandbox" | "live" }
-  | { type: "remove_comp"; organization_id: string; environment?: "sandbox" | "live" };
+  | { type: "remove_comp"; organization_id: string; environment?: "sandbox" | "live" }
+  | { type: "update_organization"; organization_id: string; patch: Record<string, unknown> }
+  | { type: "change_member_role"; organization_id: string; user_id: string; role: "owner" | "admin" | "manager" | "worker" | "agent" }
+  | { type: "remove_member"; organization_id: string; user_id: string }
+  | { type: "transfer_ownership"; organization_id: string; new_owner_user_id: string }
+  | { type: "org_snapshot"; organization_id: string }
+  | { type: "list_transactions"; organization_id: string; environment?: PaddleEnv; per_page?: number }
+  | { type: "refund_transaction"; transaction_id: string; environment?: PaddleEnv; reason?: string; type_action?: "full" | "partial"; amount?: string; currency_code?: string }
+  | { type: "mark_invoice_paid"; invoice_id: string }
+  | { type: "void_invoice"; invoice_id: string };
 
 const TIER_PRICE: Record<Tier, { price_id: string; product_id: string }> = {
   base:    { price_id: "contractor_os_pro_monthly",     product_id: "contractor_os_pro" },
@@ -38,7 +48,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Validate the caller and check role using their JWT
   const userClient = createClient(SUPABASE_URL, ANON, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
@@ -143,7 +152,6 @@ Deno.serve(async (req) => {
       const email = body.owner_email?.trim().toLowerCase();
       if (!name || !email) throw new Error("name + owner_email required");
 
-      // Find existing user; if missing, either create with password or invite by email.
       let ownerId: string | null = null;
       const { data: prof } = await admin
         .from("profiles").select("id").eq("email", email).maybeSingle();
@@ -167,7 +175,6 @@ Deno.serve(async (req) => {
           ownerId = invite.user?.id ?? null;
         }
       } else if (body.owner_password && body.owner_password.length >= 8) {
-        // Existing user: update password if provided
         await admin.auth.admin.updateUserById(ownerId, { password: body.owner_password });
       }
       if (!ownerId) throw new Error("could not resolve owner user");
@@ -200,7 +207,6 @@ Deno.serve(async (req) => {
       if (!t) throw new Error("invalid tier");
       const env = body.environment ?? "live";
 
-      // Owner of the org acts as the user_id anchor.
       const { data: owner } = await admin.from("organization_members")
         .select("user_id").eq("organization_id", body.organization_id).eq("role", "owner").maybeSingle();
       if (!owner?.user_id) throw new Error("org has no owner");
@@ -208,10 +214,9 @@ Deno.serve(async (req) => {
       const compId = `comp_${body.organization_id}_${env}`;
       const now = new Date();
       const endIso = body.days == null
-        ? new Date(now.getTime() + 100 * 365 * 86400_000).toISOString()  // ~forever = free
+        ? new Date(now.getTime() + 100 * 365 * 86400_000).toISOString()
         : new Date(now.getTime() + Number(body.days) * 86400_000).toISOString();
 
-      // Upsert by paddle_subscription_id so re-comping the same org overwrites.
       const { error } = await admin.from("subscriptions").upsert({
         paddle_subscription_id: compId,
         paddle_customer_id: `comp_customer_${body.organization_id}`,
@@ -238,6 +243,140 @@ Deno.serve(async (req) => {
       const { error } = await admin.from("subscriptions").delete().eq("paddle_subscription_id", compId);
       if (error) throw error;
       return ok({ removed: true });
+    }
+
+    if (body.type === "update_organization") {
+      if (!body.organization_id || !body.patch) throw new Error("organization_id + patch required");
+      // Whitelist editable columns
+      const allowed = ["name", "address", "phone", "email", "website", "tax_id", "plan", "trade", "state", "city", "zip", "logo_url", "brand_color"];
+      const patch: Record<string, unknown> = {};
+      for (const k of allowed) if (k in body.patch) patch[k] = (body.patch as any)[k];
+      if (Object.keys(patch).length === 0) throw new Error("no editable fields provided");
+      const { error } = await admin.from("organizations").update(patch).eq("id", body.organization_id);
+      if (error) throw error;
+      return ok({ updated: true });
+    }
+
+    if (body.type === "change_member_role") {
+      if (!body.organization_id || !body.user_id || !body.role) throw new Error("organization_id + user_id + role required");
+      const { error } = await admin.from("organization_members")
+        .update({ role: body.role })
+        .eq("organization_id", body.organization_id).eq("user_id", body.user_id);
+      if (error) throw error;
+      return ok({ updated: true });
+    }
+
+    if (body.type === "remove_member") {
+      if (!body.organization_id || !body.user_id) throw new Error("organization_id + user_id required");
+      const { data: org } = await admin.from("organizations").select("owner_id").eq("id", body.organization_id).maybeSingle();
+      if (org?.owner_id === body.user_id) throw new Error("cannot remove owner — transfer ownership first");
+      const { error } = await admin.from("organization_members")
+        .delete().eq("organization_id", body.organization_id).eq("user_id", body.user_id);
+      if (error) throw error;
+      return ok({ removed: true });
+    }
+
+    if (body.type === "transfer_ownership") {
+      if (!body.organization_id || !body.new_owner_user_id) throw new Error("organization_id + new_owner_user_id required");
+      // Ensure new owner is a member; add if missing
+      const { data: existing } = await admin.from("organization_members")
+        .select("user_id").eq("organization_id", body.organization_id).eq("user_id", body.new_owner_user_id).maybeSingle();
+      if (!existing) {
+        await admin.from("organization_members").insert({
+          organization_id: body.organization_id, user_id: body.new_owner_user_id, role: "owner",
+        });
+      } else {
+        await admin.from("organization_members").update({ role: "owner" })
+          .eq("organization_id", body.organization_id).eq("user_id", body.new_owner_user_id);
+      }
+      // Demote previous owner rows to admin
+      const { data: org } = await admin.from("organizations").select("owner_id").eq("id", body.organization_id).maybeSingle();
+      if (org?.owner_id && org.owner_id !== body.new_owner_user_id) {
+        await admin.from("organization_members").update({ role: "admin" })
+          .eq("organization_id", body.organization_id).eq("user_id", org.owner_id);
+      }
+      await admin.from("organizations").update({ owner_id: body.new_owner_user_id }).eq("id", body.organization_id);
+      return ok({ transferred: true });
+    }
+
+    if (body.type === "org_snapshot") {
+      const org_id = body.organization_id;
+      if (!org_id) throw new Error("organization_id required");
+      const q = (t: string) => admin.from(t).select("*", { count: "exact", head: true }).eq("organization_id", org_id);
+      const [cust, leads, jobs, est, inv, mats, vend, calls] = await Promise.all([
+        q("customers"), q("leads"), q("jobs"), q("estimates"),
+        q("invoices"), q("materials"), q("vendors"), q("phone_calls"),
+      ]);
+      const { data: invoices } = await admin.from("invoices")
+        .select("id, invoice_number, total, status, paid_at, created_at, customer_id")
+        .eq("organization_id", org_id).order("created_at", { ascending: false }).limit(25);
+      const revenue = (invoices ?? [])
+        .filter((i: any) => i.status === "paid")
+        .reduce((s: number, i: any) => s + Number(i.total || 0), 0);
+      return ok({
+        counts: {
+          customers: cust.count ?? 0, leads: leads.count ?? 0, jobs: jobs.count ?? 0,
+          estimates: est.count ?? 0, invoices: inv.count ?? 0, materials: mats.count ?? 0,
+          vendors: vend.count ?? 0, phone_calls: calls.count ?? 0,
+        },
+        recent_invoices: invoices ?? [],
+        revenue_paid_recent: revenue,
+      });
+    }
+
+    if (body.type === "list_transactions") {
+      const env = body.environment ?? "live";
+      // Get org owner's paddle_customer_id from subscriptions
+      const { data: subs } = await admin.from("subscriptions")
+        .select("paddle_customer_id").eq("organization_id", body.organization_id).eq("environment", env);
+      const customerIds = [...new Set((subs ?? []).map((s: any) => s.paddle_customer_id).filter((c: string) => c && !c.startsWith("comp_")))];
+      if (customerIds.length === 0) return ok({ transactions: [] });
+      const per = body.per_page ?? 25;
+      const res = await gatewayFetch(env, `/transactions?customer_id=${customerIds.join(",")}&per_page=${per}&order_by=created_at[DESC]`);
+      const data = await res.json();
+      return ok({ transactions: data.data ?? [] });
+    }
+
+    if (body.type === "refund_transaction") {
+      const env = body.environment ?? "live";
+      if (!body.transaction_id) throw new Error("transaction_id required");
+      const paddle = getPaddleClient(env);
+      // Fetch transaction to find line items
+      const txRes = await gatewayFetch(env, `/transactions/${body.transaction_id}`);
+      const tx = (await txRes.json()).data;
+      const items = (tx?.details?.line_items ?? tx?.items ?? []).map((li: any) => ({
+        item_id: li.id,
+        type: body.type_action === "partial" && body.amount ? "partial" : "full",
+        ...(body.type_action === "partial" && body.amount ? { amount: body.amount } : {}),
+      }));
+      const adjRes = await gatewayFetch(env, `/adjustments`, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "refund",
+          transaction_id: body.transaction_id,
+          reason: body.reason ?? "Admin refund",
+          items,
+        }),
+      });
+      const adj = await adjRes.json();
+      if (adj.error) throw new Error(adj.error.detail ?? adj.error.code ?? "refund failed");
+      return ok({ adjustment: adj.data });
+    }
+
+    if (body.type === "mark_invoice_paid") {
+      if (!body.invoice_id) throw new Error("invoice_id required");
+      const { error } = await admin.from("invoices").update({
+        status: "paid", paid_at: new Date().toISOString(),
+      }).eq("id", body.invoice_id);
+      if (error) throw error;
+      return ok({ updated: true });
+    }
+
+    if (body.type === "void_invoice") {
+      if (!body.invoice_id) throw new Error("invoice_id required");
+      const { error } = await admin.from("invoices").update({ status: "void" }).eq("id", body.invoice_id);
+      if (error) throw error;
+      return ok({ updated: true });
     }
 
     return new Response(JSON.stringify({ error: "unknown action" }), {
