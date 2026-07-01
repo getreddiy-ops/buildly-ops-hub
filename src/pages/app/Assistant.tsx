@@ -332,7 +332,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           patch.total = subtotal + tax;
         }
         if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
-        const { error } = await supabase.from("estimates").update(patch).eq("id", est.id);
+        const { error } = await supabase.from("estimates").update(patch as any).eq("id", est.id);
         if (error) throw error;
         resultLabel = `Estimate "${p.args.estimate_title}" updated${items?.length ? ` ($${(patch.total as number).toFixed(2)})` : ""}`;
       } else {
