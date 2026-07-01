@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
     if (body.type === "update_organization") {
       if (!body.organization_id || !body.patch) throw new Error("organization_id + patch required");
       // Whitelist editable columns
-      const allowed = ["name", "address", "phone", "email", "website", "tax_id", "plan", "trade", "state", "city", "zip", "logo_url", "brand_color"];
+      const allowed = ["name", "legal_name", "address", "phone", "email", "website", "tax_id", "plan", "logo_url", "brand_color", "brand_color_secondary", "slug"];
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (k in body.patch) patch[k] = (body.patch as any)[k];
       if (Object.keys(patch).length === 0) throw new Error("no editable fields provided");
