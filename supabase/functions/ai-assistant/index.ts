@@ -187,6 +187,7 @@ const tools = [
       },
     },
   },
+  {
     type: "function",
     function: {
       name: "generate_document",
