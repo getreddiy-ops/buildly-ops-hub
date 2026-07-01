@@ -14,9 +14,18 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { CalendarDays, ChevronLeft, ChevronRight, Check, X, Loader2, Plus, Info } from "lucide-react";
 import { toast } from "sonner";
-import { ruleForState, computeBalance, STATE_RULES } from "@/lib/pto-accrual";
-import { inferUsState } from "@/lib/utils"; // will add below
+import { ruleForState, computeBalance } from "@/lib/pto-accrual";
 import { cn } from "@/lib/utils";
+
+// Best-effort infer US state from a free-form address (client-side mirror of server helper).
+function inferStateCode(address?: string | null): string | null {
+  if (!address) return null;
+  const zip = address.match(/\b([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/);
+  if (zip) return zip[1];
+  const c = address.match(/,\s*([A-Z]{2})(?:[\s,]|$)/);
+  if (c) return c[1];
+  return null;
+}
 
 type Req = {
   id: string;
