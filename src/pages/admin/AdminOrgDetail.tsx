@@ -123,7 +123,55 @@ export default function AdminOrgDetail() {
       <Link to="/admin/organizations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
         <ArrowLeft className="h-3 w-3" /> All organizations
       </Link>
-      <PageHeader title={org.name} description={`Joined ${new Date(org.created_at).toLocaleDateString()} · ${org.address ?? "no address"}`} />
+      <PageHeader title={org.name} description={`Joined ${new Date(org.created_at).toLocaleDateString()} · ${org.address ?? "no address"} · plan: ${org.plan}`} />
+
+      <Card className="p-4 mb-6 border-primary/30">
+        <h3 className="font-semibold mb-1">Plan assignment (comp / free)</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Grants this org an internal subscription that bypasses Paddle. Leave "Days" blank to make it free indefinitely.
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <Label className="text-xs">Tier</Label>
+            <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
+              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              <option value="base">Base — $69</option>
+              <option value="plus">Plus — $169 (AI Assistant)</option>
+              <option value="premium">Premium — $269 (Phone Assistant)</option>
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Days (blank = free forever)</Label>
+            <Input type="number" min={1} max={3650} value={compDays}
+              onChange={(e) => setCompDays(e.target.value)} className="w-32" placeholder="∞" />
+          </div>
+          <div>
+            <Label className="text-xs">Environment</Label>
+            <select value={compEnv} onChange={(e) => setCompEnv(e.target.value as any)}
+              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              <option value="live">live</option>
+              <option value="sandbox">test</option>
+            </select>
+          </div>
+          <Button disabled={busy} onClick={async () => {
+            try {
+              const days = compDays.trim() === "" ? null : Number(compDays);
+              await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
+              toast.success(`Set to ${compTier} (${days ?? "forever"} days) in ${compEnv}`);
+              load();
+            } catch (e) { toast.error((e as Error).message); }
+          }}>Assign plan</Button>
+          <Button variant="outline" disabled={busy} onClick={async () => {
+            if (!confirm("Remove the comped subscription for this org?")) return;
+            try {
+              await callAdmin({ type: "remove_comp", organization_id: id, environment: compEnv });
+              toast.success("Comp removed");
+              load();
+            } catch (e) { toast.error((e as Error).message); }
+          }}>Remove comp</Button>
+        </div>
+      </Card>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4">
