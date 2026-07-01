@@ -160,45 +160,47 @@ export default function AdminOrgDetail() {
         <p className="text-xs text-muted-foreground mb-3">
           Grants this org an internal subscription that bypasses Paddle. Leave "Days" blank to make it free indefinitely.
         </p>
-        <div className="flex flex-wrap items-end gap-2">
-          <div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+          <div className="min-w-0">
             <Label className="text-xs">Tier</Label>
             <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
-              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              className="block w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
               <option value="base">Base — $69</option>
               <option value="plus">Plus — $169 (AI Assistant)</option>
               <option value="premium">Premium — $269 (Phone Assistant)</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <Label className="text-xs">Days (blank = free forever)</Label>
             <Input type="number" min={1} max={3650} value={compDays}
-              onChange={(e) => setCompDays(e.target.value)} className="w-32" placeholder="∞" />
+              onChange={(e) => setCompDays(e.target.value)} className="w-full sm:w-32 h-10" placeholder="∞" />
           </div>
-          <div>
+          <div className="min-w-0">
             <Label className="text-xs">Environment</Label>
             <select value={compEnv} onChange={(e) => setCompEnv(e.target.value as any)}
-              className="block h-9 rounded-md border border-input bg-background px-2 text-sm">
+              className="block w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
               <option value="live">live</option>
               <option value="sandbox">test</option>
             </select>
           </div>
-          <Button disabled={busy} onClick={async () => {
-            try {
-              const days = compDays.trim() === "" ? null : Number(compDays);
-              await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
-              toast.success(`Set to ${compTier} (${days ?? "forever"} days) in ${compEnv}`);
-              load();
-            } catch (e) { toast.error((e as Error).message); }
-          }}>Assign plan</Button>
-          <Button variant="outline" disabled={busy} onClick={async () => {
-            if (!confirm("Remove the comped subscription for this org?")) return;
-            try {
-              await callAdmin({ type: "remove_comp", organization_id: id, environment: compEnv });
-              toast.success("Comp removed");
-              load();
-            } catch (e) { toast.error((e as Error).message); }
-          }}>Remove comp</Button>
+          <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+            <Button className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
+              try {
+                const days = compDays.trim() === "" ? null : Number(compDays);
+                await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
+                toast.success(`Set to ${compTier} (${days ?? "forever"} days) in ${compEnv}`);
+                load();
+              } catch (e) { toast.error((e as Error).message); }
+            }}>Assign plan</Button>
+            <Button variant="outline" className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
+              if (!confirm("Remove the comped subscription for this org?")) return;
+              try {
+                await callAdmin({ type: "remove_comp", organization_id: id, environment: compEnv });
+                toast.success("Comp removed");
+                load();
+              } catch (e) { toast.error((e as Error).message); }
+            }}>Remove comp</Button>
+          </div>
         </div>
       </Card>
 
@@ -211,14 +213,14 @@ export default function AdminOrgDetail() {
           ) : (
             <ul className="divide-y divide-border">
               {members.map((m) => (
-                <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{m.profile?.full_name || m.profile?.email || m.user_id}</div>
-                    <div className="text-xs text-muted-foreground truncate">{m.profile?.email}</div>
+                <li key={m.user_id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium break-words">{m.profile?.full_name || m.profile?.email || m.user_id}</div>
+                    <div className="text-xs text-muted-foreground break-all">{m.profile?.email}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="outline">{m.role}</Badge>
-                    <Button size="sm" variant="outline" disabled={busy || !m.profile?.email}
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy || !m.profile?.email}
                       onClick={() => sendReset(m.profile?.email ?? null)}>
                       <Mail className="h-3 w-3 mr-1" /> Reset
                     </Button>
@@ -237,26 +239,26 @@ export default function AdminOrgDetail() {
             <ul className="space-y-4">
               {subs.map((s) => (
                 <li key={s.id} className="border border-border rounded-md p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <div className="font-medium">{s.price_id ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">
+                  <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium break-all">{s.price_id ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground break-words">
                         {s.environment} · {s.current_period_end ? `ends ${new Date(s.current_period_end).toLocaleDateString()}` : "no end"}
                         {s.cancel_at_period_end && " · cancels at period end"}
                       </div>
                     </div>
-                    <Badge variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>{s.status}</Badge>
+                    <Badge className="shrink-0" variant={s.status === "active" || s.status === "trialing" ? "default" : "secondary"}>{s.status}</Badge>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Input type="number" min={1} max={365} value={trialDays}
-                      onChange={(e) => setTrialDays(Number(e.target.value))} className="w-20" />
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => compTrial(s.id)}>
+                      onChange={(e) => setTrialDays(Number(e.target.value))} className="w-20 h-10" />
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy} onClick={() => compTrial(s.id)}>
                       <Gift className="h-3 w-3 mr-1" /> Comp days
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => cancelSub(s.id, true)}>
+                    <Button size="sm" variant="outline" className="h-10" disabled={busy} onClick={() => cancelSub(s.id, true)}>
                       Cancel at period end
                     </Button>
-                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => cancelSub(s.id, false)}>
+                    <Button size="sm" variant="destructive" className="h-10" disabled={busy} onClick={() => cancelSub(s.id, false)}>
                       <XCircle className="h-3 w-3 mr-1" /> Cancel now
                     </Button>
                   </div>
@@ -269,10 +271,10 @@ export default function AdminOrgDetail() {
 
       <Card className="p-4 mt-6">
         <h3 className="font-semibold mb-3">Internal support notes</h3>
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <Textarea value={noteBody} onChange={(e) => setNoteBody(e.target.value)}
-            placeholder="Note about this customer (visible to platform admins only)…" rows={2} />
-          <Button onClick={addNote} disabled={!noteBody.trim()}>Add</Button>
+            placeholder="Note about this customer (visible to platform admins only)…" rows={2} className="flex-1" />
+          <Button onClick={addNote} disabled={!noteBody.trim()} className="h-10 sm:h-auto sm:self-stretch">Add</Button>
         </div>
         {notes.length === 0 ? (
           <p className="text-sm text-muted-foreground">No notes yet.</p>

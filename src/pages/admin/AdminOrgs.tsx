@@ -105,20 +105,22 @@ export default function AdminOrgs() {
       {filtered.length === 0 ? (
         <EmptyState icon={Building2} title="No organizations" />
       ) : (
-        <Card className="divide-y divide-border">
+        <Card className="divide-y divide-border overflow-hidden">
           {filtered.map((o) => (
-            <div key={o.id} className="p-4 flex items-center justify-between gap-3">
-              <Link to={`/admin/organizations/${o.id}`} className="flex-1 min-w-0 hover:opacity-80">
-                <div className="font-medium truncate">{o.name}</div>
-                <div className="text-xs text-muted-foreground">
+            <div key={o.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <Link to={`/admin/organizations/${o.id}`} className="flex-1 min-w-0 hover:opacity-80 py-1">
+                <div className="font-medium break-words">{o.name}</div>
+                <div className="text-xs text-muted-foreground break-words">
                   Joined {new Date(o.created_at).toLocaleDateString()}
                   {o.agent_id && " · has agent"}
                 </div>
               </Link>
-              <Badge variant="outline">{o.plan}</Badge>
-              <Button variant="ghost" size="icon" onClick={() => deleteOrg(o)} title="Delete organization">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                <Badge variant="outline">{o.plan}</Badge>
+                <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => deleteOrg(o)} title="Delete organization">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </div>
           ))}
         </Card>

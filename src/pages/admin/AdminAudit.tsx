@@ -32,20 +32,20 @@ export default function AdminAudit() {
       {items.length === 0 ? (
         <EmptyState icon={ShieldAlert} title="No events yet" description="AI Assistant proposals and approvals will show here." />
       ) : (
-        <Card className="divide-y divide-border">
+        <Card className="divide-y divide-border overflow-hidden">
           {items.map((a) => (
-            <div key={a.id} className="p-4 flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
+            <div key={a.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+              <div className="min-w-0 flex-1 order-2 sm:order-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{a.action_type}</span>
+                  <span className="font-medium text-sm break-words">{a.action_type}</span>
                   <span className="text-xs text-muted-foreground">· {a.organizations?.name ?? "—"}</span>
                   <span className="text-xs text-muted-foreground">· {new Date(a.created_at).toLocaleString()}</span>
                 </div>
-                <pre className="text-xs text-muted-foreground mt-1 truncate">
+                <pre className="text-xs text-muted-foreground mt-1 overflow-x-auto whitespace-pre-wrap break-all max-w-full">
                   {JSON.stringify(a.payload)}
                 </pre>
               </div>
-              <Badge variant={a.status === "executed" ? "default" : a.status === "rejected" ? "secondary" : "outline"}>
+              <Badge className="self-start order-1 sm:order-2 shrink-0" variant={a.status === "executed" ? "default" : a.status === "rejected" ? "secondary" : "outline"}>
                 {a.status}
               </Badge>
             </div>
