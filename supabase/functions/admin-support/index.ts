@@ -10,7 +10,9 @@ type Action =
   | { type: "send_password_reset"; email: string }
   | { type: "comp_trial"; subscription_id: string; days: number }
   | { type: "cancel_subscription"; subscription_id: string; at_period_end?: boolean }
-  | { type: "create_organization"; name: string; owner_email: string; plan?: string }
+  | { type: "create_organization"; name: string; owner_email: string; owner_password?: string; owner_full_name?: string; plan?: string }
+  | { type: "create_user"; email: string; password: string; full_name?: string }
+  | { type: "set_user_password"; user_id?: string; email?: string; password: string }
   | { type: "delete_organization"; organization_id: string }
   | { type: "set_plan"; organization_id: string; tier: Tier; days?: number | null; environment?: "sandbox" | "live" }
   | { type: "remove_comp"; organization_id: string; environment?: "sandbox" | "live" };
