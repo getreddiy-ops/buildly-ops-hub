@@ -29,6 +29,9 @@ export default function AdminOrgDetail() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteBody, setNoteBody] = useState("");
   const [trialDays, setTrialDays] = useState(7);
+  const [compTier, setCompTier] = useState<"base" | "plus" | "premium">("premium");
+  const [compDays, setCompDays] = useState<string>(""); // blank = forever/free
+  const [compEnv, setCompEnv] = useState<"live" | "sandbox">("live");
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
