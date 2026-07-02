@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, memberships, loading, refresh, setActiveOrgId } = useAuth();
+  const { user, memberships, loading, refresh, setActiveOrgId, signOut } = useAuth();
   const [companyName, setCompanyName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
