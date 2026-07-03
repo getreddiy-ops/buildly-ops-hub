@@ -11,10 +11,15 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 export function RequireOrg({ children }: { children: ReactNode }) {
-  const { user, loading, memberships } = useAuth();
+  const { user, loading, memberships, isPlatformAdmin, isAgent } = useAuth();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
-  if (memberships.length === 0) return <Navigate to="/onboarding" replace />;
+  // Platform admins and agents have their own portals and don't require an org membership.
+  if (memberships.length === 0) {
+    if (isPlatformAdmin) return <Navigate to="/admin" replace />;
+    if (isAgent) return <Navigate to="/agent" replace />;
+    return <Navigate to="/onboarding" replace />;
+  }
   return <>{children}</>;
 }
 
