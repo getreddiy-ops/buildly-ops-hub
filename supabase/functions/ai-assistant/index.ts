@@ -1,11 +1,13 @@
 // AI Assistant edge function - confirm-before-write workflow
-// Uses Lovable AI Gateway (OpenAI-compatible).
+// Uses OpenAI directly when OPENAI_API_KEY is set; otherwise falls back to Lovable AI Gateway.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const USE_OPENAI = !!OPENAI_API_KEY;
 
 type ContentPart =
   | { type: "text"; text: string }
