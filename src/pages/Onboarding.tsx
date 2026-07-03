@@ -10,14 +10,24 @@ import { toast } from "@/hooks/use-toast";
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, memberships, loading, refresh, setActiveOrgId, signOut } = useAuth();
+  const { user, memberships, loading, refresh, setActiveOrgId, signOut, isPlatformAdmin, isAgent } = useAuth();
   const [companyName, setCompanyName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) navigate("/login");
-    if (!loading && memberships.length > 0) navigate("/app");
-  }, [user, loading, memberships, navigate]);
+    if (loading) return;
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    if (memberships.length > 0) {
+      navigate("/app", { replace: true });
+      return;
+    }
+    // Users without an org but with a platform role belong in their own portal.
+    if (isPlatformAdmin) navigate("/admin", { replace: true });
+    else if (isAgent) navigate("/agent", { replace: true });
+  }, [user, loading, memberships, isPlatformAdmin, isAgent, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

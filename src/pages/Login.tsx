@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -8,12 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { user, loading: authLoading, memberships, isPlatformAdmin, isAgent } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // If a signed-in user lands on /login, send them to the right home instead of trapping them here.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    if (memberships.length > 0) navigate("/app", { replace: true });
+    else if (isPlatformAdmin) navigate("/admin", { replace: true });
+    else if (isAgent) navigate("/agent", { replace: true });
+    else navigate("/onboarding", { replace: true });
+  }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
