@@ -1,11 +1,13 @@
 // AI Assistant edge function - confirm-before-write workflow
-// Uses Lovable AI Gateway (OpenAI-compatible).
+// Uses OpenAI directly when OPENAI_API_KEY is set; otherwise falls back to Lovable AI Gateway.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const USE_OPENAI = !!OPENAI_API_KEY;
 
 type ContentPart =
   | { type: "text"; text: string }
@@ -413,26 +415,29 @@ Deno.serve(async (req) => {
     const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}\n\n${TRADE_KNOWLEDGE_PROMPT}`;
 
     const payload = {
-      model: "google/gemini-2.5-flash",
+      model: USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
       messages: [{ role: "system", content: sys }, ...messages],
       tools,
       tool_choice: "auto",
     };
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const url = USE_OPENAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const authHeaders: Record<string, string> = USE_OPENAI
+      ? { Authorization: `Bearer ${OPENAI_API_KEY}` }
+      : { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-      },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const text = await res.text();
       const status = res.status === 429 || res.status === 402 ? res.status : 500;
-      return new Response(JSON.stringify({ error: `AI gateway error: ${text}` }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: `AI provider error: ${text}` }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await res.json();
