@@ -4,6 +4,7 @@ import { Bot, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import Assistant from "@/pages/app/Assistant";
+import { PaywallGate } from "@/components/PaywallGate";
 
 // Route shortcuts the assistant can navigate to via "go to X" / "open X"
 const ROUTES: { keywords: string[]; path: string; label: string }[] = [
@@ -116,7 +117,9 @@ export function FloatingAssistant() {
               </Button>
             </SheetHeader>
             <div className="flex-1 overflow-hidden px-4 py-3">
-              <Assistant compact />
+              <PaywallGate feature="AI Assistant">
+                <Assistant compact />
+              </PaywallGate>
             </div>
           </div>
         </SheetContent>

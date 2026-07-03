@@ -3,6 +3,7 @@ import { Briefcase, Users, FileText, Clock, DollarSign, Sparkles, ArrowRight } f
 import Assistant from "./Assistant";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { PaywallGate } from "@/components/PaywallGate";
 
 const stats = [
   { label: "Open Leads", value: "—", icon: Users, to: "/app/leads" },
@@ -37,7 +38,9 @@ export default function Dashboard() {
       {/* The Assistant is the main surface */}
       <Card className="p-0 overflow-hidden">
         <div className="h-[calc(100vh-22rem)] min-h-[440px] p-4 sm:p-6">
-          <Assistant compact />
+          <PaywallGate feature="AI Assistant">
+            <Assistant compact />
+          </PaywallGate>
         </div>
       </Card>
 

@@ -120,7 +120,23 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           environment: getPaddleEnvironment(),
         },
       });
-      if (error) throw error;
+      if (error) {
+        let message = error.message ?? "Assistant failed";
+        let code: string | undefined;
+        const context = (error as any).context;
+        if (context instanceof Response) {
+          try {
+            const body = await context.clone().json();
+            message = body?.error ?? message;
+            code = body?.code;
+          } catch {
+            // Keep the SDK-provided message when the response is not JSON.
+          }
+        }
+        const wrapped = new Error(message) as Error & { code?: string };
+        wrapped.code = code;
+        throw wrapped;
+      }
       if (data?.error) throw new Error(data.error);
       const allTools = (data.tool_calls ?? []) as ToolCall[];
       const proposals: Proposal[] = allTools
@@ -166,8 +182,19 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents }]);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
-      toast.error(e?.message ?? "Assistant failed");
-      setMessages((m) => [...m, { role: "assistant", content: "Sorry — I ran into an error reaching the AI gateway." }]);
+      const message = e?.code === "subscription_required"
+        ? "AI Assistant requires FastTract Plus or Premium."
+        : e?.message ?? "Assistant failed";
+      toast.error(message);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: e?.code === "subscription_required"
+            ? "AI Assistant requires FastTract Plus or Premium. Open Billing to start or assign a plan."
+            : "Sorry — I ran into an error reaching the AI gateway.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
