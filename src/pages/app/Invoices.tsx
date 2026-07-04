@@ -25,6 +25,7 @@ import {
 import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
