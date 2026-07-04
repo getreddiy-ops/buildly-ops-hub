@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileSignature, MoreHorizontal, Plus, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 
 const STATUSES = ["draft", "sent", "signed", "void"] as const;
 type ContractStatus = (typeof STATUSES)[number];
