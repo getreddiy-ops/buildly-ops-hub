@@ -24,6 +24,7 @@ import {
 import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
