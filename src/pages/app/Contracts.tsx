@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileSignature, MoreHorizontal, Plus, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 
 const STATUSES = ["draft", "sent", "signed", "void"] as const;
 type ContractStatus = (typeof STATUSES)[number];
@@ -189,14 +190,20 @@ export default function Contracts() {
             <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Customer">
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>
-                    {customers.length === 0
-                      ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
-                      : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={customerId} onValueChange={setCustomerId}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>
+                      {customers.length === 0
+                        ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
+                        : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <QuickCreateCustomerButton
+                    label="New"
+                    onCreated={async (c) => { await load(); setCustomerId(c.id); }}
+                  />
+                </div>
               </Field>
               <Field label="Status">
                 <Select value={status} onValueChange={(v) => setStatus(v as ContractStatus)}>

@@ -24,6 +24,7 @@ import {
 import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
@@ -212,14 +213,20 @@ export default function Jobs() {
                 <Field label="Title"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Customer">
-                    <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                      <SelectContent>
-                        {customers.length === 0
-                          ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
-                          : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
+                        <SelectTrigger className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                        <SelectContent>
+                          {customers.length === 0
+                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
+                            : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <QuickCreateCustomerButton
+                        label="New"
+                        onCreated={async (c) => { await load(); setForm((f) => ({ ...f, customer_id: c.id })); }}
+                      />
+                    </div>
                   </Field>
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as JobStatus })}>

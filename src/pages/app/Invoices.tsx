@@ -25,6 +25,7 @@ import {
 import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -233,14 +234,20 @@ export default function Invoices() {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Invoice number"><Input value={number} onChange={(e) => setNumber(e.target.value)} /></Field>
               <Field label="Customer">
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>
-                    {customers.length === 0
-                      ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
-                      : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={customerId} onValueChange={setCustomerId}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>
+                      {customers.length === 0
+                        ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
+                        : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <QuickCreateCustomerButton
+                    label="New"
+                    onCreated={async (c) => { await load(); setCustomerId(c.id); }}
+                  />
+                </div>
               </Field>
             </div>
             <div className="grid grid-cols-3 gap-3">
