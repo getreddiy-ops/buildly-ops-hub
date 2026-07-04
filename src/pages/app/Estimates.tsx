@@ -25,6 +25,7 @@ import { FileText, MoreHorizontal, Plus, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
+import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import type { Database } from "@/integrations/supabase/types";
 
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
