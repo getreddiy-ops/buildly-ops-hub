@@ -66,7 +66,7 @@ export default function OAuthConsent() {
   if (error)
     return (
       <div className="min-h-screen bg-gradient-dark p-6 text-foreground">
-        <SEO title="Authorization error — FastTract" path="/.lovable/oauth/consent" noindex />
+        <SEO title="Authorization error — FastTract" description="OAuth authorization request could not be loaded." path="/.lovable/oauth/consent" noindex />
         <div className="mx-auto mt-16 max-w-md rounded-xl border border-border bg-card p-8">
           <Logo />
           <h1 className="mt-6 text-xl font-semibold">Could not load this authorization request</h1>
@@ -84,7 +84,7 @@ export default function OAuthConsent() {
   const clientName = details.client?.name ?? "an app";
   return (
     <div className="min-h-screen bg-gradient-dark p-6 text-foreground">
-      <SEO title="Approve access — FastTract" path="/.lovable/oauth/consent" noindex />
+      <SEO title="Approve access — FastTract" description="Approve or deny an external application requesting access to your FastTract account." path="/.lovable/oauth/consent" noindex />
       <div className="mx-auto mt-16 max-w-md rounded-xl border border-border bg-card p-8">
         <Logo />
         <h1 className="mt-6 text-xl font-semibold">Connect {clientName} to your account</h1>
