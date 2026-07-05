@@ -25,9 +25,9 @@ export default defineTool({
     const client = sb(ctx);
     // Resolve active org for the user
     const { data: memberships, error: mErr } = await client
-      .from("organization_members").select("org_id").eq("user_id", ctx.getUserId()).limit(1);
+      .from("organization_members").select("organization_id").eq("user_id", ctx.getUserId()).limit(1);
     if (mErr) return { content: [{ type: "text", text: mErr.message }], isError: true };
-    const orgId = memberships?.[0]?.org_id;
+    const orgId = memberships?.[0]?.organization_id;
     if (!orgId) return { content: [{ type: "text", text: "No organization found for this user." }], isError: true };
     const { data, error } = await client.from("customers").insert({ ...input, organization_id: orgId }).select().single();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
