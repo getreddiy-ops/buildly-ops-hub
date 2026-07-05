@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/Logo";
@@ -12,6 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rawNext = params.get("next");
+  const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
   const { user, loading: authLoading, memberships, isPlatformAdmin, isAgent } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,11 +23,12 @@ export default function Login() {
   // If a signed-in user lands on /login, send them to the right home instead of trapping them here.
   useEffect(() => {
     if (authLoading || !user) return;
+    if (nextPath) { window.location.href = nextPath; return; }
     if (memberships.length > 0) navigate("/app", { replace: true });
     else if (isPlatformAdmin) navigate("/admin", { replace: true });
     else if (isAgent) navigate("/agent", { replace: true });
     else navigate("/onboarding", { replace: true });
-  }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate]);
+  }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,18 +36,23 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+    if (nextPath) { window.location.href = nextPath; return; }
     navigate("/app");
   };
 
   const handleGoogle = async () => {
+    const redirectTarget = nextPath
+      ? window.location.origin + "/login?next=" + encodeURIComponent(nextPath)
+      : window.location.origin;
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectTarget,
     });
     if (result.error) {
       toast({ title: "Google sign-in failed", description: result.error.message, variant: "destructive" });
       return;
     }
     if (result.redirected) return;
+    if (nextPath) { window.location.href = nextPath; return; }
     navigate("/app");
   };
 
