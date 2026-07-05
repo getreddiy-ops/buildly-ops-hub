@@ -19,7 +19,7 @@ type JobRow = {
   budget: number | null;
   customers: { name: string | null } | null;
 };
-type LeadRow = { id: string; name: string | null; status: string | null; value: number | null };
+type LeadRow = { id: string; name: string | null; status: string | null; source: string | null };
 
 const STAT_META: Record<StatKey, { label: string; icon: any; accent: string; to: string }> = {
   won_leads: {
@@ -94,7 +94,7 @@ export default function Dashboard() {
           .limit(5),
         supabase
           .from("leads")
-          .select("id,name,status,value")
+          .select("id,name,status,source")
           .eq("organization_id", orgId)
           .neq("status", "lost")
           .neq("status", "won")
@@ -235,8 +235,8 @@ export default function Dashboard() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{l.name || "Unnamed lead"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {l.value != null ? currency(Number(l.value)) : "No value set"}
+                    <div className="truncate text-xs text-muted-foreground">
+                      {l.source ? `via ${l.source}` : "New opportunity"}
                     </div>
                   </div>
                   <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ring-1", statusTone(l.status))}>
