@@ -155,18 +155,315 @@ var list_estimates_default = defineTool5({
   }
 });
 
+// src/lib/mcp/tools/create-estimate.ts
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z6 } from "npm:zod@^3.25.76";
+
+// src/lib/mcp/tools/_helpers.ts
+import { createClient as createClient6 } from "npm:@supabase/supabase-js@^2.108.2";
+function sb6(ctx) {
+  return createClient6(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+async function resolveOrgId(client, userId) {
+  const { data, error } = await client.from("organization_members").select("organization_id").eq("user_id", userId).limit(1);
+  if (error) return { error: error.message };
+  const orgId = data?.[0]?.organization_id;
+  if (!orgId) return { error: "No organization found for this user." };
+  return { orgId };
+}
+function err(text) {
+  return { content: [{ type: "text", text }], isError: true };
+}
+function ok(text, structured) {
+  return { content: [{ type: "text", text }], structuredContent: structured };
+}
+
+// src/lib/mcp/tools/create-estimate.ts
+var create_estimate_default = defineTool6({
+  name: "create_estimate",
+  title: "Create estimate",
+  description: "Create a new estimate for the signed-in user's organization, with optional line items.",
+  inputSchema: {
+    title: z6.string().min(1),
+    customer_id: z6.string().uuid().optional(),
+    lead_id: z6.string().uuid().optional(),
+    status: z6.enum(["draft", "sent", "accepted", "declined"]).default("draft"),
+    tax: z6.number().nonnegative().default(0),
+    notes: z6.string().optional(),
+    line_items: z6.array(
+      z6.object({
+        description: z6.string().min(1),
+        quantity: z6.number().positive(),
+        unit_price: z6.number().nonnegative()
+      })
+    ).optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb6(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
+    const items = input.line_items ?? [];
+    const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const total = subtotal + (input.tax ?? 0);
+    const { data: est, error } = await client.from("estimates").insert({
+      organization_id: org.orgId,
+      title: input.title,
+      customer_id: input.customer_id ?? null,
+      lead_id: input.lead_id ?? null,
+      status: input.status,
+      subtotal,
+      tax: input.tax,
+      total,
+      notes: input.notes ?? null,
+      created_by: ctx.getUserId()
+    }).select().single();
+    if (error) return err(error.message);
+    if (items.length) {
+      const rows = items.map((i, idx) => ({
+        estimate_id: est.id,
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        total: i.quantity * i.unit_price,
+        position: idx
+      }));
+      const { error: liErr } = await client.from("estimate_line_items").insert(rows);
+      if (liErr) return err(`Estimate created but line items failed: ${liErr.message}`);
+    }
+    return ok(`Created estimate ${est.id}`, { estimate: est });
+  }
+});
+
+// src/lib/mcp/tools/update-estimate.ts
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z7 } from "npm:zod@^3.25.76";
+var update_estimate_default = defineTool7({
+  name: "update_estimate",
+  title: "Update estimate",
+  description: "Update fields on an existing estimate. Only provided fields are changed.",
+  inputSchema: {
+    id: z7.string().uuid(),
+    title: z7.string().min(1).optional(),
+    customer_id: z7.string().uuid().nullable().optional(),
+    status: z7.enum(["draft", "sent", "accepted", "declined"]).optional(),
+    subtotal: z7.number().nonnegative().optional(),
+    tax: z7.number().nonnegative().optional(),
+    total: z7.number().nonnegative().optional(),
+    notes: z7.string().nullable().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async ({ id, ...patch }, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
+    if (!Object.keys(clean).length) return err("No fields to update.");
+    const { data, error } = await sb6(ctx).from("estimates").update(clean).eq("id", id).select().single();
+    if (error) return err(error.message);
+    return ok(`Updated estimate ${id}`, { estimate: data });
+  }
+});
+
+// src/lib/mcp/tools/create-invoice.ts
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z8 } from "npm:zod@^3.25.76";
+var create_invoice_default = defineTool8({
+  name: "create_invoice",
+  title: "Create invoice",
+  description: "Create a new invoice for the signed-in user's organization, with optional line items.",
+  inputSchema: {
+    customer_id: z8.string().uuid().optional(),
+    job_id: z8.string().uuid().optional(),
+    estimate_id: z8.string().uuid().optional(),
+    number: z8.string().optional(),
+    status: z8.string().default("draft"),
+    issue_date: z8.string().describe("ISO date (YYYY-MM-DD)."),
+    due_date: z8.string().optional(),
+    tax_rate: z8.number().nonnegative().default(0),
+    notes: z8.string().optional(),
+    terms: z8.string().optional(),
+    line_items: z8.array(
+      z8.object({
+        description: z8.string().min(1),
+        quantity: z8.number().positive(),
+        unit_price: z8.number().nonnegative()
+      })
+    ).optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb6(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
+    const items = input.line_items ?? [];
+    const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const tax_amount = subtotal * (input.tax_rate ?? 0);
+    const total = subtotal + tax_amount;
+    const { data: inv, error } = await client.from("invoices").insert({
+      organization_id: org.orgId,
+      customer_id: input.customer_id ?? null,
+      job_id: input.job_id ?? null,
+      estimate_id: input.estimate_id ?? null,
+      number: input.number ?? null,
+      status: input.status,
+      issue_date: input.issue_date,
+      due_date: input.due_date ?? null,
+      subtotal,
+      tax_rate: input.tax_rate,
+      tax_amount,
+      total,
+      amount_paid: 0,
+      notes: input.notes ?? null,
+      terms: input.terms ?? null,
+      created_by: ctx.getUserId()
+    }).select().single();
+    if (error) return err(error.message);
+    if (items.length) {
+      const rows = items.map((i, idx) => ({
+        invoice_id: inv.id,
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        total: i.quantity * i.unit_price,
+        position: idx
+      }));
+      const { error: liErr } = await client.from("invoice_line_items").insert(rows);
+      if (liErr) return err(`Invoice created but line items failed: ${liErr.message}`);
+    }
+    return ok(`Created invoice ${inv.id}`, { invoice: inv });
+  }
+});
+
+// src/lib/mcp/tools/update-invoice.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z9 } from "npm:zod@^3.25.76";
+var update_invoice_default = defineTool9({
+  name: "update_invoice",
+  title: "Update invoice",
+  description: "Update fields on an existing invoice. Only provided fields are changed.",
+  inputSchema: {
+    id: z9.string().uuid(),
+    status: z9.string().optional(),
+    number: z9.string().nullable().optional(),
+    issue_date: z9.string().optional(),
+    due_date: z9.string().nullable().optional(),
+    subtotal: z9.number().nonnegative().optional(),
+    tax_rate: z9.number().nonnegative().optional(),
+    tax_amount: z9.number().nonnegative().optional(),
+    total: z9.number().nonnegative().optional(),
+    amount_paid: z9.number().nonnegative().optional(),
+    notes: z9.string().nullable().optional(),
+    terms: z9.string().nullable().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async ({ id, ...patch }, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
+    if (!Object.keys(clean).length) return err("No fields to update.");
+    const { data, error } = await sb6(ctx).from("invoices").update(clean).eq("id", id).select().single();
+    if (error) return err(error.message);
+    return ok(`Updated invoice ${id}`, { invoice: data });
+  }
+});
+
+// src/lib/mcp/tools/create-job.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z10 } from "npm:zod@^3.25.76";
+var create_job_default = defineTool10({
+  name: "create_job",
+  title: "Create job",
+  description: "Create a new job for the signed-in user's organization.",
+  inputSchema: {
+    title: z10.string().min(1),
+    customer_id: z10.string().uuid().optional(),
+    estimate_id: z10.string().uuid().optional(),
+    description: z10.string().optional(),
+    status: z10.string().default("scheduled"),
+    address: z10.string().optional(),
+    scheduled_start: z10.string().optional().describe("ISO timestamp"),
+    scheduled_end: z10.string().optional().describe("ISO timestamp"),
+    budget: z10.number().nonnegative().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb6(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
+    const { data, error } = await client.from("jobs").insert({
+      organization_id: org.orgId,
+      title: input.title,
+      customer_id: input.customer_id ?? null,
+      estimate_id: input.estimate_id ?? null,
+      description: input.description ?? null,
+      status: input.status,
+      address: input.address ?? null,
+      scheduled_start: input.scheduled_start ?? null,
+      scheduled_end: input.scheduled_end ?? null,
+      budget: input.budget ?? null
+    }).select().single();
+    if (error) return err(error.message);
+    return ok(`Created job ${data.id}`, { job: data });
+  }
+});
+
+// src/lib/mcp/tools/update-job.ts
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z11 } from "npm:zod@^3.25.76";
+var update_job_default = defineTool11({
+  name: "update_job",
+  title: "Update job",
+  description: "Update fields on an existing job. Only provided fields are changed.",
+  inputSchema: {
+    id: z11.string().uuid(),
+    title: z11.string().min(1).optional(),
+    description: z11.string().nullable().optional(),
+    status: z11.string().optional(),
+    address: z11.string().nullable().optional(),
+    scheduled_start: z11.string().nullable().optional(),
+    scheduled_end: z11.string().nullable().optional(),
+    budget: z11.number().nonnegative().nullable().optional(),
+    customer_id: z11.string().uuid().nullable().optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async ({ id, ...patch }, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
+    if (!Object.keys(clean).length) return err("No fields to update.");
+    const { data, error } = await sb6(ctx).from("jobs").update(clean).eq("id", id).select().single();
+    if (error) return err(error.message);
+    return ok(`Updated job ${id}`, { job: data });
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "fxfljmqpckujerawkwhq";
 var mcp_default = defineMcp({
   name: "fasttract-mcp",
   title: "FastTract MCP",
-  version: "0.1.0",
-  instructions: "Tools for FastTract, a contractor CRM. Use these to read and create the signed-in user's customers, leads, estimates, and jobs. All calls run under the user's Row-Level Security context.",
+  version: "0.2.0",
+  instructions: "Tools for FastTract, a contractor CRM. Use these to read, create, and update the signed-in user's customers, leads, estimates, invoices, and jobs. All calls run under the user's Row-Level Security context.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [list_customers_default, create_customer_default, list_jobs_default, list_leads_default, list_estimates_default]
+  tools: [
+    list_customers_default,
+    create_customer_default,
+    list_jobs_default,
+    list_leads_default,
+    list_estimates_default,
+    create_estimate_default,
+    update_estimate_default,
+    create_invoice_default,
+    update_invoice_default,
+    create_job_default,
+    update_job_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts

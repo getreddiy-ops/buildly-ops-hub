@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "fasttract-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "FastTract MCP"
     },
     "tools": [
@@ -158,6 +158,442 @@
               "default": 25
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_estimate",
+        "title": "Create estimate",
+        "description": "Create a new estimate for the signed-in user's organization, with optional line items.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "accepted",
+                "declined"
+              ],
+              "default": "draft"
+            },
+            "tax": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "notes": {
+              "type": "string"
+            },
+            "line_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "description",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_estimate",
+        "title": "Update estimate",
+        "description": "Update fields on an existing estimate. Only provided fields are changed.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customer_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "accepted",
+                "declined"
+              ]
+            },
+            "subtotal": {
+              "type": "number",
+              "minimum": 0
+            },
+            "tax": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total": {
+              "type": "number",
+              "minimum": 0
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_invoice",
+        "title": "Create invoice",
+        "description": "Create a new invoice for the signed-in user's organization, with optional line items.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "job_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "estimate_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "number": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "default": "draft"
+            },
+            "issue_date": {
+              "type": "string",
+              "description": "ISO date (YYYY-MM-DD)."
+            },
+            "due_date": {
+              "type": "string"
+            },
+            "tax_rate": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "notes": {
+              "type": "string"
+            },
+            "terms": {
+              "type": "string"
+            },
+            "line_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "description",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "issue_date"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_invoice",
+        "title": "Update invoice",
+        "description": "Update fields on an existing invoice. Only provided fields are changed.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string"
+            },
+            "number": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "issue_date": {
+              "type": "string"
+            },
+            "due_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "subtotal": {
+              "type": "number",
+              "minimum": 0
+            },
+            "tax_rate": {
+              "type": "number",
+              "minimum": 0
+            },
+            "tax_amount": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total": {
+              "type": "number",
+              "minimum": 0
+            },
+            "amount_paid": {
+              "type": "number",
+              "minimum": 0
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "terms": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_job",
+        "title": "Create job",
+        "description": "Create a new job for the signed-in user's organization.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "estimate_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "default": "scheduled"
+            },
+            "address": {
+              "type": "string"
+            },
+            "scheduled_start": {
+              "type": "string",
+              "description": "ISO timestamp"
+            },
+            "scheduled_end": {
+              "type": "string",
+              "description": "ISO timestamp"
+            },
+            "budget": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_job",
+        "title": "Update job",
+        "description": "Update fields on an existing job. Only provided fields are changed.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scheduled_start": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scheduled_end": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "budget": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "customer_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
