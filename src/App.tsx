@@ -146,7 +146,7 @@ const App = () => (
               <Route path="branding" element={<Branding />} />
               <Route path="developer" element={<Developer />} />
 
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="settings" element={<Preferences />} />
 
             </Route>
 
