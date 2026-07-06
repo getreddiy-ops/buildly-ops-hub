@@ -73,7 +73,8 @@ import AdminOrgs from "./pages/admin/AdminOrgs";
 import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
-import { Messages, SettingsPage, FieldProfile } from "./pages/stubs";
+import { Messages, FieldProfile } from "./pages/stubs";
+import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 
@@ -145,7 +146,7 @@ const App = () => (
               <Route path="branding" element={<Branding />} />
               <Route path="developer" element={<Developer />} />
 
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="settings" element={<Preferences />} />
 
             </Route>
 
