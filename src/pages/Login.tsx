@@ -43,7 +43,7 @@ export default function Login() {
   const handleGoogle = async () => {
     const redirectTarget = nextPath
       ? window.location.origin + "/login?next=" + encodeURIComponent(nextPath)
-      : window.location.origin;
+      : window.location.origin + "/login";
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: redirectTarget,
     });
