@@ -10,4 +10,4 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /onboarding
 
-Sitemap: https://fasttract.online/sitemap.xml
+Sitemap: https://fasttract.org/sitemap.xml
