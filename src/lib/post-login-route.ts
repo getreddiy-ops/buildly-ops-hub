@@ -2,7 +2,7 @@
 // Priority: platform_admin > worker (field app) > owner/admin/manager (office app)
 //         > agent-only > no memberships (onboarding).
 
-type Role = "platform_admin" | "agent" | "owner" | "admin" | "manager" | "worker";
+type Role = "platform_admin" | "agent" | "owner" | "admin" | "worker";
 
 interface Membership {
   role: Role | string;
@@ -15,13 +15,11 @@ interface Args {
 }
 
 export function resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent }: Args): string {
-  // Platform admins always land in the admin console.
   if (isPlatformAdmin) return "/admin";
 
-  // Users with an org membership go into the product, split by role.
   if (memberships.length > 0) {
     const roles = memberships.map((m) => m.role);
-    const hasOffice = roles.some((r) => r === "owner" || r === "admin" || r === "manager");
+    const hasOffice = roles.some((r) => r === "owner" || r === "admin");
     if (hasOffice) return "/app";
     if (roles.every((r) => r === "worker")) return "/field";
     return "/app";
