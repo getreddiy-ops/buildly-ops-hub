@@ -49,8 +49,10 @@ export default function Login() {
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
     }
+    // Post-auth routing is centralized in the useEffect above (fires when the
+    // session + memberships load). This keeps workers → /field, admins → /admin,
+    // agents → /agent, and unenrolled users → /onboarding.
     if (nextPath) { window.location.href = nextPath; return; }
-    navigate("/app");
   };
 
   const handleGoogle = async () => {
