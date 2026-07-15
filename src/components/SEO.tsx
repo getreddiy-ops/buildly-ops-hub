@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 
-const SITE = "https://fasttract.online";
+const SITE = "https://fasttract.org";
 
 type Props = {
   title: string;
