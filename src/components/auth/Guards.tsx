@@ -14,11 +14,16 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   const { user, loading, memberships, isPlatformAdmin, isAgent } = useAuth();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
-  // Platform admins and agents have their own portals and don't require an org membership.
   if (memberships.length === 0) {
     if (isPlatformAdmin) return <Navigate to="/admin" replace />;
     if (isAgent) return <Navigate to="/agent" replace />;
     return <Navigate to="/onboarding" replace />;
+  }
+  // Worker-only memberships never see the office app — push them to the field app.
+  const roles = memberships.map((m) => m.role);
+  const hasOffice = roles.some((r) => r === "owner" || r === "admin");
+  if (!hasOffice && roles.every((r) => r === "worker")) {
+    return <Navigate to="/field" replace />;
   }
   return <>{children}</>;
 }

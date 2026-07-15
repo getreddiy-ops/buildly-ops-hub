@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolvePostLoginRoute, safeNextPath } from "@/lib/post-login-route";
 
 export default function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const rawNext = params.get("next");
-  const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
+  const nextPath = safeNextPath(params.get("next"));
   const { user, loading: authLoading, memberships, isPlatformAdmin, isAgent } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,10 +25,8 @@ export default function Login() {
   useEffect(() => {
     if (authLoading || !user) return;
     if (nextPath) { window.location.href = nextPath; return; }
-    if (memberships.length > 0) navigate("/app", { replace: true });
-    else if (isPlatformAdmin) navigate("/admin", { replace: true });
-    else if (isAgent) navigate("/agent", { replace: true });
-    else navigate("/onboarding", { replace: true });
+    const dest = resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent });
+    navigate(dest, { replace: true });
   }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,8 +49,10 @@ export default function Login() {
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
     }
+    // Post-auth routing is centralized in the useEffect above (fires when the
+    // session + memberships load). This keeps workers → /field, admins → /admin,
+    // agents → /agent, and unenrolled users → /onboarding.
     if (nextPath) { window.location.href = nextPath; return; }
-    navigate("/app");
   };
 
   const handleGoogle = async () => {
@@ -67,8 +67,8 @@ export default function Login() {
       return;
     }
     if (result.redirected) return;
-    if (nextPath) { window.location.href = nextPath; return; }
-    navigate("/app");
+    // Popup path: useEffect routes by role once memberships load.
+    if (nextPath) window.location.href = nextPath;
   };
 
   return (
