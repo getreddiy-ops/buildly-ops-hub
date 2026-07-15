@@ -67,8 +67,8 @@ export default function Login() {
       return;
     }
     if (result.redirected) return;
-    if (nextPath) { window.location.href = nextPath; return; }
-    navigate("/app");
+    // Popup path: useEffect routes by role once memberships load.
+    if (nextPath) window.location.href = nextPath;
   };
 
   return (
