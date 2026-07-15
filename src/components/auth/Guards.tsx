@@ -21,7 +21,7 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   }
   // Worker-only memberships never see the office app — push them to the field app.
   const roles = memberships.map((m) => m.role);
-  const hasOffice = roles.some((r) => r === "owner" || r === "admin" || r === "manager");
+  const hasOffice = roles.some((r) => r === "owner" || r === "admin");
   if (!hasOffice && roles.every((r) => r === "worker")) {
     return <Navigate to="/field" replace />;
   }
