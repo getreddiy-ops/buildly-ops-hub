@@ -59,6 +59,8 @@ export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
   const { openCheckout, loading } = usePaddleCheckout();
+  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
+  const checkoutRef = useRef<HTMLDivElement>(null);
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
@@ -67,15 +69,20 @@ export default function Pricing() {
       toast.error("Only the organization owner can subscribe.");
       return;
     }
+    setSelectedTier(tier);
     try {
       await openCheckout({
         priceId: TIERS[tier].priceId,
         customerEmail: user.email ?? undefined,
         customData: { userId: user.id, orgId: activeOrg.organization_id },
+        displayMode: "inline",
+        frameTarget: "paddle-checkout-container",
       });
+      setTimeout(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e) {
       toast.error("Could not open checkout");
       console.error(e);
+      setSelectedTier(null);
     }
   };
 
