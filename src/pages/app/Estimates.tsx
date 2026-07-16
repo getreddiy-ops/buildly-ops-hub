@@ -53,6 +53,8 @@ const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", curr
 
 export default function Estimates() {
   const { activeOrg, user } = useAuth();
+  const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<(Estimate & { customers?: { name: string } | null })[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
