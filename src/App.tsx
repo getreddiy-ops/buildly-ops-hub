@@ -74,6 +74,7 @@ import AdminOrgs from "./pages/admin/AdminOrgs";
 import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
+import AdminAiUsage from "./pages/admin/AdminAiUsage";
 import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -181,6 +182,7 @@ const App = () => (
               <Route path="organizations/:id" element={<AdminOrgDetail />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="audit" element={<AdminAudit />} />
+              <Route path="ai-usage" element={<AdminAiUsage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

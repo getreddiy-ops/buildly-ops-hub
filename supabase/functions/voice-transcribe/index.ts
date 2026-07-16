@@ -39,6 +39,26 @@ Deno.serve(async (req) => {
       });
     }
     const data = await res.json();
+
+    // Track per-org AI usage
+    try {
+      const {
+        logAiUsage, estimateTranscribeCostUsd, getServiceClient,
+        getUserIdFromAuth, resolvePrimaryOrgId,
+      } = await import("../_shared/ai-usage.ts");
+      const admin = getServiceClient();
+      const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
+      const orgId = uid ? await resolvePrimaryOrgId(admin, uid) : null;
+      await logAiUsage(admin, {
+        organizationId: orgId,
+        userId: uid,
+        functionName: "voice-transcribe",
+        model: "openai/gpt-4o-mini-transcribe",
+        estimatedCostUsd: estimateTranscribeCostUsd(file.size),
+        metadata: { audioBytes: file.size },
+      });
+    } catch (_) { /* ignore */ }
+
     return new Response(JSON.stringify({ text: data.text ?? "" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

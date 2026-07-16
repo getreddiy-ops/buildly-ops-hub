@@ -128,6 +128,30 @@ ${body.fields.map((f) => `- ${f.name} (${f.type ?? "string"}): ${f.description ?
       if (v !== null && v !== undefined && v !== "") cleaned[k] = v;
     }
 
+    // Track per-org AI usage
+    try {
+      const {
+        logAiUsage, estimateChatCostUsd, getServiceClient,
+        getUserIdFromAuth, resolvePrimaryOrgId,
+      } = await import("../_shared/ai-usage.ts");
+      const admin = getServiceClient();
+      const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
+      const orgId = uid ? await resolvePrimaryOrgId(admin, uid) : null;
+      const usage = data.usage ?? {};
+      const pt = Number(usage.prompt_tokens ?? 0);
+      const ct = Number(usage.completion_tokens ?? 0);
+      await logAiUsage(admin, {
+        organizationId: orgId,
+        userId: uid,
+        functionName: "ai-form-fill",
+        model: "google/gemini-2.5-flash",
+        promptTokens: pt,
+        completionTokens: ct,
+        estimatedCostUsd: estimateChatCostUsd("google/gemini-2.5-flash", pt, ct),
+        metadata: { formName: body.formName ?? null },
+      });
+    } catch (_) { /* ignore */ }
+
     return new Response(JSON.stringify({ values: cleaned }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
