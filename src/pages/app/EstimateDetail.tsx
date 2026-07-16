@@ -45,30 +45,46 @@ export default function EstimateDetail() {
     nav("/app/estimates");
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = () => {
     if (!est) return;
     try {
-      await generateDocumentPdf({
-        branding,
-        type: "estimate",
-        documentNumber: est.id.slice(0, 8).toUpperCase(),
-        customerName: est.customers?.name,
-        customerAddress: est.customers?.address,
-        issueDate: est.created_at,
-        lineItems: items.map((i) => ({
-          description: i.description,
-          quantity: Number(i.quantity),
-          unit_price: Number(i.unit_price),
-          total: Number(i.total),
-        })),
-        subtotal: Number(est.subtotal),
-        taxAmount: Number(est.tax),
-        total: Number(est.total),
-      });
+      const { blob, filename } = generateDocumentPdf(
+        {
+          doc_type: "estimate",
+          title: est.title,
+          recipient: {
+            name: est.customers?.name,
+            address: est.customers?.address,
+            email: est.customers?.email,
+            phone: est.customers?.phone,
+          },
+          line_items: items.map((i) => ({
+            description: i.description,
+            quantity: Number(i.quantity),
+            unit_price: Number(i.unit_price),
+          })),
+          tax_rate: Number(est.subtotal) > 0 ? (Number(est.tax) / Number(est.subtotal)) * 100 : 0,
+          terms: est.notes ?? undefined,
+        },
+        {
+          name: branding?.name ?? undefined,
+          address: branding?.address ?? undefined,
+          phone: branding?.phone ?? undefined,
+          email: branding?.email ?? undefined,
+          website: branding?.website ?? undefined,
+        },
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to generate PDF");
     }
   };
+
 
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (!est) return (
