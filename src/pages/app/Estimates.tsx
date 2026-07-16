@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +53,8 @@ const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", curr
 
 export default function Estimates() {
   const { activeOrg, user } = useAuth();
+  const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<(Estimate & { customers?: { name: string } | null })[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +112,19 @@ export default function Estimates() {
     })));
     setOpen(true);
   };
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || !rows.length) return;
+    const target = rows.find((r) => r.id === editId);
+    if (target) {
+      openEdit(target);
+      searchParams.delete("edit");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, searchParams]);
+
 
   const save = async () => {
     const parsed = headerSchema.safeParse({ title, customer_id: customerId, status, tax: Number(taxPct), notes });
@@ -318,7 +334,7 @@ export default function Estimates() {
                 <TableRow
                   key={e.id}
                   className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => openEdit(e)}
+                  onClick={() => nav(`/app/estimates/${e.id}`)}
                 >
                   <TableCell className="font-medium">{e.title}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.customers?.name ?? "—"}</TableCell>
