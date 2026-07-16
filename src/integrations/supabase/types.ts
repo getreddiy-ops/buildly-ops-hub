@@ -58,6 +58,59 @@ export type Database = {
           },
         ]
       }
+      ai_usage: {
+        Row: {
+          completion_tokens: number
+          created_at: string
+          estimated_cost_usd: number
+          function_name: string
+          id: string
+          metadata: Json | null
+          model: string | null
+          organization_id: string | null
+          prompt_tokens: number
+          status: string
+          total_tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          completion_tokens?: number
+          created_at?: string
+          estimated_cost_usd?: number
+          function_name: string
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          organization_id?: string | null
+          prompt_tokens?: number
+          status?: string
+          total_tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          completion_tokens?: number
+          created_at?: string
+          estimated_cost_usd?: number
+          function_name?: string
+          id?: string
+          metadata?: Json | null
+          model?: string | null
+          organization_id?: string | null
+          prompt_tokens?: number
+          status?: string
+          total_tokens?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           body: string | null
