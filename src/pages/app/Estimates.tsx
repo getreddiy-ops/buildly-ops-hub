@@ -113,6 +113,19 @@ export default function Estimates() {
     setOpen(true);
   };
 
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || !rows.length) return;
+    const target = rows.find((r) => r.id === editId);
+    if (target) {
+      openEdit(target);
+      searchParams.delete("edit");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, searchParams]);
+
+
   const save = async () => {
     const parsed = headerSchema.safeParse({ title, customer_id: customerId, status, tax: Number(taxPct), notes });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
