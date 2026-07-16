@@ -334,7 +334,7 @@ export default function Estimates() {
                 <TableRow
                   key={e.id}
                   className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => openEdit(e)}
+                  onClick={() => nav(`/app/estimates/${e.id}`)}
                 >
                   <TableCell className="font-medium">{e.title}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.customers?.name ?? "—"}</TableCell>
