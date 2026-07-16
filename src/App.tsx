@@ -39,6 +39,7 @@ import Dashboard from "./pages/app/Dashboard";
 import Leads from "./pages/app/Leads";
 import Customers from "./pages/app/Customers";
 import Estimates from "./pages/app/Estimates";
+import EstimateDetail from "./pages/app/EstimateDetail";
 import Jobs from "./pages/app/Jobs";
 import Crew from "./pages/app/Crew";
 import TimeTracking from "./pages/app/TimeTracking";
