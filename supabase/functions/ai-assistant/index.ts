@@ -453,6 +453,24 @@ Deno.serve(async (req) => {
       };
     });
 
+    // Track per-org AI usage (best-effort, non-blocking)
+    try {
+      const { logAiUsage, estimateChatCostUsd } = await import("../_shared/ai-usage.ts");
+      const usage = data.usage ?? {};
+      const pt = Number(usage.prompt_tokens ?? 0);
+      const ct = Number(usage.completion_tokens ?? 0);
+      await logAiUsage(admin, {
+        organizationId,
+        userId: userData.user.id,
+        functionName: "ai-assistant",
+        model: payload.model,
+        promptTokens: pt,
+        completionTokens: ct,
+        totalTokens: Number(usage.total_tokens ?? pt + ct),
+        estimatedCostUsd: estimateChatCostUsd(payload.model, pt, ct),
+      });
+    } catch (_) { /* never break the response on logging */ }
+
     return new Response(
       JSON.stringify({ content: choice.content ?? "", tool_calls: toolCalls }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
