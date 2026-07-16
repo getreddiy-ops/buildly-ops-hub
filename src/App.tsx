@@ -102,6 +102,9 @@ const App = () => (
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refunds" element={<Refunds />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/refunds" element={<Refunds />} />
             <Route path="/features/contractor-crm" element={<ContractorCRMOld />} />
             <Route path="/features" element={<Features />} />
             <Route path="/ai-photo-estimator" element={<AIPhotoEstimator />} />

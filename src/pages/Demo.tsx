@@ -217,7 +217,7 @@ export default function Demo() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract Live Demo — See the AI Contractor OS in Action"
+        title="FastTract Live Demo — See the AI Contractor Operating System in Action"
         description="Watch FastTract turn a phone call into a lead, AI estimate, contract, material list, schedule, and invoice — all in one continuous flow."
         path="/demo"
       />
