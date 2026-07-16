@@ -78,9 +78,9 @@ const whyBullets = [
 ];
 
 const pricingTiers = [
-  { name: "Starter", tagline: "For solo contractors getting organized", price: "Starting at $__/mo", cta: "Start Free Trial", to: "/signup", variant: "default" as const },
-  { name: "Pro", tagline: "For contractors managing multiple jobs", price: "Starting at $__/mo", cta: "Choose Pro", to: "/pricing", variant: "default" as const, featured: true },
-  { name: "Agency / Multi-Company", tagline: "For teams, resellers, and operators managing multiple contractor accounts", price: "Custom pricing", cta: "Book Demo", to: "/contact", variant: "outline" as const },
+  { name: "FastTract", tagline: "For solo contractors getting organized", price: "$69/mo", cta: "Start Free Trial", to: "/pricing", variant: "default" as const },
+  { name: "FastTract Plus", tagline: "For contractors managing multiple jobs", price: "$169/mo", cta: "Choose Plus", to: "/pricing", variant: "default" as const, featured: true },
+  { name: "FastTract Premium", tagline: "For teams that want AI phone answering 24/7", price: "$269/mo", cta: "Choose Premium", to: "/pricing", variant: "outline" as const },
 ];
 
 const faqItems = [

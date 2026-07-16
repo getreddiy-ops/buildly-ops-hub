@@ -96,7 +96,7 @@ export default function Pricing() {
       "@type": "Offer",
       price: String(t.price),
       priceCurrency: "USD",
-      url: "https://fasttract.online/pricing",
+      url: "https://fasttract.org/pricing",
       availability: "https://schema.org/InStock",
     },
   }));

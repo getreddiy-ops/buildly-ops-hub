@@ -39,6 +39,7 @@ const footerCols = [
       { to: "/signup", label: "Start free" },
       { to: "/legal/privacy", label: "Privacy" },
       { to: "/legal/terms", label: "Terms" },
+      { to: "/legal/refunds", label: "Refunds" },
     ],
   },
 ];
