@@ -54,6 +54,25 @@ Deno.serve(async (req) => {
     }
     const b64 = btoa(binary);
 
+    // Track per-org AI usage
+    try {
+      const {
+        logAiUsage, estimateTtsCostUsd, getServiceClient,
+        getUserIdFromAuth, resolvePrimaryOrgId,
+      } = await import("../_shared/ai-usage.ts");
+      const admin = getServiceClient();
+      const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
+      const orgId = uid ? await resolvePrimaryOrgId(admin, uid) : null;
+      await logAiUsage(admin, {
+        organizationId: orgId,
+        userId: uid,
+        functionName: "voice-speak",
+        model: "openai/gpt-4o-mini-tts",
+        estimatedCostUsd: estimateTtsCostUsd(capped.length),
+        metadata: { chars: capped.length, voice: voice || "alloy" },
+      });
+    } catch (_) { /* ignore */ }
+
     return new Response(JSON.stringify({ audio: b64, mime: "audio/mpeg" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
