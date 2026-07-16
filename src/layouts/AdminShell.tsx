@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, Users, ShieldAlert, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Building2, Users, ShieldAlert, LogOut, Menu, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ const nav = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/organizations", label: "Organizations", icon: Building2 },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/ai-usage", label: "AI Usage", icon: Sparkles },
   { to: "/admin/audit", label: "Audit Log", icon: ShieldAlert },
 ];
 
