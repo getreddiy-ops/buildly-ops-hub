@@ -105,7 +105,7 @@ export default function EstimateDetail() {
       </div>
       <PageHeader
         title={est.title}
-        description={<div className="flex items-center gap-2"><StatusBadge status={est.status} /><span className="text-xs text-muted-foreground">#{est.id.slice(0, 8).toUpperCase()}</span></div>}
+        description={`Estimate #${est.id.slice(0, 8).toUpperCase()}`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={downloadPdf}><Download className="h-4 w-4" /> PDF</Button>
@@ -115,6 +115,8 @@ export default function EstimateDetail() {
           </div>
         }
       />
+      <div className="mb-4"><StatusBadge status={est.status} /></div>
+
 
       <div className="rounded-lg border border-border bg-card p-4 md:p-6">
         <DocumentPreview
