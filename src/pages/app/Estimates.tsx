@@ -315,12 +315,16 @@ export default function Estimates() {
             </TableHeader>
             <TableBody>
               {rows.map((e) => (
-                <TableRow key={e.id}>
+                <TableRow
+                  key={e.id}
+                  className="cursor-pointer hover:bg-muted/40"
+                  onClick={() => openEdit(e)}
+                >
                   <TableCell className="font-medium">{e.title}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.customers?.name ?? "—"}</TableCell>
                   <TableCell><StatusBadge status={e.status} /></TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(Number(e.total))}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={(ev) => ev.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="icon" variant="ghost" aria-label="Estimate actions"><MoreHorizontal className="h-4 w-4" /></Button>
