@@ -75,6 +75,12 @@ import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
 import AdminAiUsage from "./pages/admin/AdminAiUsage";
+import SuperShell from "./pages/super/SuperShell";
+import SuperOverview from "./pages/super/SuperOverview";
+import SuperControls from "./pages/super/SuperControls";
+import SuperOrgs from "./pages/super/SuperOrgs";
+import SuperData from "./pages/super/SuperData";
+import SuperLive from "./pages/super/SuperLive";
 import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -183,6 +189,15 @@ const App = () => (
               <Route path="users" element={<AdminUsers />} />
               <Route path="audit" element={<AdminAudit />} />
               <Route path="ai-usage" element={<AdminAiUsage />} />
+            </Route>
+
+            {/* Super admin ops console (Midnight Indigo) */}
+            <Route path="/super" element={<RequireAuth><RequirePlatformAdmin><SuperShell /></RequirePlatformAdmin></RequireAuth>}>
+              <Route index element={<SuperOverview />} />
+              <Route path="controls" element={<SuperControls />} />
+              <Route path="orgs" element={<SuperOrgs />} />
+              <Route path="data" element={<SuperData />} />
+              <Route path="live" element={<SuperLive />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
