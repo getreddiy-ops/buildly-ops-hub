@@ -249,6 +249,13 @@ export default function AppShell() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-2 md:flex">
+            {isPlatformAdmin && (
+              <Button asChild variant="outline" size="sm" className="gap-2 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 hover:text-indigo-800 dark:text-indigo-300">
+                <Link to="/super">
+                  <Terminal className="h-4 w-4" /> Super Admin
+                </Link>
+              </Button>
+            )}
             <OrgSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
