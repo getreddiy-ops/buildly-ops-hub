@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Briefcase, Users, FileText, Receipt, DollarSign, Sparkles, Plus,
-  ArrowRight, HardHat, UserCheck, ClipboardList,
+  ArrowRight, HardHat, UserCheck, ClipboardList, CheckCircle2, Circle,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,7 @@ type JobRow = {
 };
 type LeadRow = { id: string; name: string | null; status: string | null; source: string | null };
 
-const STAT_META: Record<StatKey, { label: string; icon: any; accent: string; to: string }> = {
+const STAT_META: Record<StatKey, { label: string; icon: LucideIcon; accent: string; to: string }> = {
   won_leads: {
     label: "Won Leads", icon: UserCheck, to: "/app/leads",
     accent: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/20",
@@ -74,16 +75,17 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [pipeline, setPipeline] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activation, setActivation] = useState({ profile: false, customer: false, estimate: false, sent: false });
 
   useEffect(() => {
     if (!orgId) return;
     let alive = true;
     (async () => {
       setLoading(true);
-      const [leadsRes, jobsRes, estimatesRes, invoicesRes, activeJobsRes, pipelineRes] = await Promise.all([
+      const [leadsRes, jobsRes, estimatesRes, invoicesRes, activeJobsRes, pipelineRes, customersRes, profileRes] = await Promise.all([
         supabase.from("leads").select("id,status", { count: "exact", head: false }).eq("organization_id", orgId).eq("status", "won"),
         supabase.from("jobs").select("id,status").eq("organization_id", orgId),
-        supabase.from("estimates").select("id,status").eq("organization_id", orgId).in("status", ["draft", "sent"]),
+        supabase.from("estimates").select("id,status").eq("organization_id", orgId),
         supabase.from("invoices").select("id,status,total,amount_paid").eq("organization_id", orgId),
         supabase
           .from("jobs")
@@ -100,6 +102,8 @@ export default function Dashboard() {
           .neq("status", "won")
           .order("created_at", { ascending: false })
           .limit(5),
+        supabase.from("customers").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("organizations").select("business_profile").eq("id", orgId).maybeSingle(),
       ]);
       if (!alive) return;
 
@@ -111,18 +115,33 @@ export default function Dashboard() {
       setStats({
         won_leads: leadsRes.data?.length ?? 0,
         active_jobs: activeJobsCount,
-        pending_estimates: estimatesRes.data?.length ?? 0,
+        pending_estimates: (estimatesRes.data ?? []).filter((estimate) => estimate.status === "draft" || estimate.status === "sent").length,
         unpaid_invoices: unpaid,
         revenue_paid: revenue,
       });
       setJobs((activeJobsRes.data ?? []) as JobRow[]);
       setPipeline((pipelineRes.data ?? []) as LeadRow[]);
+      const estimates = estimatesRes.data ?? [];
+      const businessProfile = profileRes.data?.business_profile as Record<string, unknown> | null | undefined;
+      setActivation({
+        profile: Boolean(businessProfile && Object.values(businessProfile).some((value) => value != null && value !== "" && (!(Array.isArray(value)) || value.length > 0))),
+        customer: (customersRes.count ?? 0) > 0,
+        estimate: estimates.length > 0,
+        sent: estimates.some((estimate) => estimate.status === "sent" || estimate.status === "approved"),
+      });
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [orgId]);
 
   const orderedStats: StatKey[] = ["won_leads", "active_jobs", "pending_estimates", "unpaid_invoices", "revenue_paid"];
+  const activationSteps = [
+    { done: activation.profile, label: "Add your business profile", detail: "Teach FastTract your trade, service area, rates, and policies.", to: "/app/business-profile" },
+    { done: activation.customer, label: "Add your first customer", detail: "Create the customer record used for estimates and invoices.", to: "/app/customers" },
+    { done: activation.estimate, label: "Build your first estimate", detail: "Turn a real job opportunity into a professional draft.", to: "/app/estimates" },
+    { done: activation.sent, label: "Send the estimate", detail: "Deliver the first customer-facing document and follow up.", to: "/app/estimates" },
+  ];
+  const completedActivation = activationSteps.filter((step) => step.done).length;
 
   return (
     <div className="flex flex-col gap-10">
@@ -153,6 +172,30 @@ export default function Dashboard() {
           </Button>
         </div>
       </section>
+
+      {completedActivation < activationSteps.length && (
+        <section className="overflow-hidden rounded-2xl border border-primary/30 bg-primary/5">
+          <div className="flex flex-col gap-3 border-b border-primary/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">First value checklist</div>
+              <h2 className="mt-1 text-xl font-semibold">Get from signup to a sent estimate</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Complete these once and FastTract becomes useful on a real job—not just another dashboard.</p>
+            </div>
+            <div className="shrink-0 text-sm font-semibold text-primary">{completedActivation} of {activationSteps.length} complete</div>
+          </div>
+          <div className="grid gap-px bg-border/50 md:grid-cols-2 xl:grid-cols-4">
+            {activationSteps.map((step) => (
+              <Link key={step.label} to={step.to} className="group flex gap-3 bg-card/95 p-5 transition-colors hover:bg-card">
+                {step.done ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" /> : <Circle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />}
+                <span>
+                  <strong className="block text-sm">{step.label}</strong>
+                  <small className="mt-1 block leading-relaxed text-muted-foreground">{step.detail}</small>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -257,7 +300,7 @@ function Panel({
 }: {
   title: string;
   viewAllTo: string;
-  icon: any;
+  icon: LucideIcon;
   empty?: string;
   children: React.ReactNode;
 }) {
@@ -283,3 +326,4 @@ function Panel({
     </div>
   );
 }
+
