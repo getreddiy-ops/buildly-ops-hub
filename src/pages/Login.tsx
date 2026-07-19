@@ -90,6 +90,15 @@ export default function Login() {
           <h1 className="text-2xl font-semibold">Sign in to FastTract</h1>
           <p className="mt-1 text-sm text-muted-foreground">Most crews sign in with Google — one tap, no password to forget.</p>
 
+          {user && authedDest && (
+            <div className="mt-4 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
+              You're already signed in as <strong>{user.email}</strong>.{" "}
+              <a href={authedDest} className="font-semibold text-primary underline">
+                Continue →
+              </a>
+            </div>
+          )}
+
           <Button className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google
           </Button>
