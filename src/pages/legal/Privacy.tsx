@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Privacy Policy — FastTract" description="How FastTract (Morgan Marc Lynch) collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
+      <SEO title="Privacy Policy — FastTract" description="How FastTract, operated by Lynchmarc LLC, collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -14,7 +14,7 @@ export default function Privacy() {
         <h1 className="text-4xl font-semibold mb-2">Privacy Notice</h1>
         <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
 
-        <p className="mt-6">This Privacy Notice explains how Morgan Marc Lynch ("we", "us", "our"), operating FastTract, collects and processes your personal data. We act as the data controller for personal data collected through FastTract.</p>
+        <p className="mt-6">This Privacy Notice explains how Lynchmarc LLC ("we", "us", "our"), operating FastTract, collects and processes your personal data. We act as the data controller for personal data collected through FastTract.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">1. Data We Collect</h2>
         <ul className="list-disc pl-6">
@@ -60,11 +60,11 @@ export default function Privacy() {
         <p>Your data may be processed outside your country. Where applicable, we rely on appropriate safeguards such as Standard Contractual Clauses.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">9. Contact</h2>
-        <p>Morgan Marc Lynch — <a href="mailto:getreddiy@gmail.com" className="text-primary">getreddiy@gmail.com</a></p>
+        <p>Lynchmarc LLC — <a href="mailto:getreddiy@gmail.com" className="text-primary">getreddiy@gmail.com</a> — <a href="tel:+15037527402" className="text-primary">503-752-7402</a></p>
       </main>
       <footer className="border-t border-border mt-12">
         <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-muted-foreground sm:px-6 lg:px-8 flex flex-col sm:flex-row gap-4 justify-between">
-          <div>© {new Date().getFullYear()} Morgan Marc Lynch</div>
+          <div>© {new Date().getFullYear()} Lynchmarc LLC</div>
           <div className="flex gap-4">
             <Link to="/legal/terms" className="hover:text-foreground">Terms</Link>
             <Link to="/legal/privacy" className="hover:text-foreground">Privacy</Link>
