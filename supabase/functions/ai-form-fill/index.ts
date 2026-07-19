@@ -2,6 +2,7 @@
 // Returns a JSON object keyed by the requested field names.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
+import { requireAuthedUser } from "../_shared/require-user.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -21,6 +22,9 @@ type Body = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const auth = requireAuthedUser(req);
+  if (!auth.ok) return auth.response;
 
   try {
     const body = (await req.json()) as Body;
