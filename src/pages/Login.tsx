@@ -26,8 +26,18 @@ export default function Login() {
     if (authLoading || !user) return;
     if (nextPath) { window.location.href = nextPath; return; }
     const dest = resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent });
+    // Hard nav as fallback: some preview/iframe scenarios silently swallow
+    // client-side navigate() right after OAuth returns.
     navigate(dest, { replace: true });
+    const t = setTimeout(() => {
+      if (window.location.pathname === "/login") window.location.replace(dest);
+    }, 400);
+    return () => clearTimeout(t);
   }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate, nextPath]);
+
+  const authedDest = user
+    ? resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent })
+    : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
