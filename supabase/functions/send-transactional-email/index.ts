@@ -35,6 +35,33 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Auth: require an authenticated user or service-role caller.
+  // Gateway verify_jwt alone accepts the public anon key, which would let
+  // anyone trigger email sends. Inspect the JWT role claim to block that.
+  {
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    let role = ''
+    let sub = ''
+    const parts = token.split('.')
+    if (parts.length >= 2) {
+      try {
+        const payload = parts[1].replaceAll('-', '+').replaceAll('_', '/')
+          .padEnd(Math.ceil(parts[1].length / 4) * 4, '=')
+        const claims = JSON.parse(atob(payload)) as Record<string, unknown>
+        role = (claims.role as string) || ''
+        sub = (claims.sub as string) || ''
+      } catch { /* ignore */ }
+    }
+    const ok = role === 'service_role' || (role === 'authenticated' && !!sub)
+    if (!ok) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 

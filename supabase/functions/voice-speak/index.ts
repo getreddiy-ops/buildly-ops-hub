@@ -1,6 +1,7 @@
 // Text-to-speech via Lovable AI Gateway (OpenAI-compatible).
 // Accepts JSON { text, voice? }; returns { audio: base64 mp3 }.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireAuthedUser } from "../_shared/require-user.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -9,6 +10,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
+
+  const auth = requireAuthedUser(req);
+  if (!auth.ok) return auth.response;
 
   try {
     const { text, voice } = await req.json() as { text?: string; voice?: string };
