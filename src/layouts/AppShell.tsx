@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-do
 import {
   LayoutDashboard, Users, FileText, Briefcase, Clock, Receipt,
   Settings, LogOut, Sparkles, Menu, Smartphone, ShieldCheck,
-  ChevronDown, Wrench,
+  ChevronDown, Wrench, Terminal,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,6 +227,13 @@ export default function AppShell() {
                     </Link>
                   </DropdownMenuItem>
                 )}
+                {isPlatformAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/super" className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4" /> Super Admin Console
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -249,6 +256,13 @@ export default function AppShell() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-2 md:flex">
+            {isPlatformAdmin && (
+              <Button asChild variant="outline" size="sm" className="gap-2 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 hover:text-indigo-800 dark:text-indigo-300">
+                <Link to="/super">
+                  <Terminal className="h-4 w-4" /> Super Admin
+                </Link>
+              </Button>
+            )}
             <OrgSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -273,6 +287,13 @@ export default function AppShell() {
                   <DropdownMenuItem asChild>
                     <Link to="/admin" className="flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4" /> Platform Admin
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {isPlatformAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/super" className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4" /> Super Admin Console
                     </Link>
                   </DropdownMenuItem>
                 )}
