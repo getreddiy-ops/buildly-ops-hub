@@ -227,6 +227,13 @@ export default function AppShell() {
                     </Link>
                   </DropdownMenuItem>
                 )}
+                {isPlatformAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/super" className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4" /> Super Admin Console
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
