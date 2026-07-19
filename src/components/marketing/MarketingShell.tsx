@@ -70,7 +70,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           <div>
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              FastTract by GetReddiy — the AI-powered operating system for contractors.
+              FastTract by Lynchmarc LLC — the AI-powered operating system for contractors.
             </p>
           </div>
           {footerCols.map((col) => (
@@ -88,7 +88,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         </div>
         <div className="border-t border-border">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-            <div>© {new Date().getFullYear()} GetReddiy · FastTract</div>
+            <div>© {new Date().getFullYear()} Lynchmarc LLC · FastTract</div>
             <div>AI-assisted estimates are drafts. Contractors approve and verify before sending final quotes.</div>
           </div>
         </div>

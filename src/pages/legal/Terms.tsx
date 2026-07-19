@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Terms() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Terms of Service — FastTract" description="Terms governing your use of FastTract, operated by Morgan Marc Lynch with Paddle as merchant of record." path="/legal/terms" />
+      <SEO title="Terms of Service — FastTract" description="Terms governing your use of FastTract, operated by Lynchmarc LLC with Paddle as merchant of record." path="/legal/terms" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -15,7 +15,7 @@ export default function Terms() {
         <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
 
         <h2 className="mt-8 text-2xl font-semibold">1. Who We Are</h2>
-        <p>FastTract is provided by Morgan Marc Lynch ("we", "us", "our"). By creating an account or using the service, you are entering into an agreement with Morgan Marc Lynch.</p>
+        <p>FastTract is operated by Lynchmarc LLC, an Oregon limited liability company ("we", "us", "our"). By creating an account or using the service, you are entering into an agreement with Lynchmarc LLC.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">2. Acceptance</h2>
         <p>By accessing or using FastTract, you agree to be bound by these Terms. If you do not agree, do not use the service. You confirm you are of legal age and, if signing up on behalf of an organization, that you have authority to bind it.</p>
@@ -52,17 +52,17 @@ export default function Terms() {
         <p>You will indemnify us against claims arising from your content, unlawful use, or breach of these Terms.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">13. Governing Law</h2>
-        <p>These Terms are governed by the laws of the jurisdiction in which Morgan Marc Lynch resides, without regard to conflict of laws principles. Disputes will be resolved in the courts of that jurisdiction.</p>
+        <p>These Terms are governed by the laws of the State of Oregon, without regard to conflict of laws principles. Disputes will be resolved in the state or federal courts located in Oregon, except where applicable consumer law requires otherwise.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">14. Changes</h2>
         <p>We may update these Terms; continued use after changes constitutes acceptance.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">15. Contact</h2>
-        <p>Morgan Marc Lynch — <a href="mailto:getreddiy@gmail.com" className="text-primary">getreddiy@gmail.com</a></p>
+        <p>Lynchmarc LLC — <a href="mailto:getreddiy@gmail.com" className="text-primary">getreddiy@gmail.com</a> — <a href="tel:+15037527402" className="text-primary">503-752-7402</a></p>
       </main>
       <footer className="border-t border-border mt-12">
         <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-muted-foreground sm:px-6 lg:px-8 flex flex-col sm:flex-row gap-4 justify-between">
-          <div>© {new Date().getFullYear()} Morgan Marc Lynch</div>
+          <div>© {new Date().getFullYear()} Lynchmarc LLC</div>
           <div className="flex gap-4">
             <Link to="/legal/terms" className="hover:text-foreground">Terms</Link>
             <Link to="/legal/privacy" className="hover:text-foreground">Privacy</Link>
