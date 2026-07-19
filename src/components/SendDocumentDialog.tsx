@@ -59,7 +59,19 @@ export function SendDocumentDialog({
       },
     });
     setSending(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      let messageText = error.message;
+      const context = (error as any).context;
+      if (context instanceof Response) {
+        try {
+          const responseBody = await context.clone().json();
+          messageText = responseBody?.error ?? messageText;
+        } catch {
+          // Keep the SDK error when the response does not contain JSON.
+        }
+      }
+      return toast.error(messageText);
+    }
     const r = (data as any)?.results || {};
     const msgs: string[] = [];
     if (r.email) msgs.push(r.email.ok ? "Email queued" : `Email failed: ${r.email.error || r.email.reason || "unknown"}`);

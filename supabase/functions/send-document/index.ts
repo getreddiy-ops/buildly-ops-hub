@@ -69,6 +69,19 @@ Deno.serve(async (req) => {
       .select('id').eq('user_id', user.id).eq('organization_id', doc.organization_id).maybeSingle()
     if (!member) return json({ error: 'Forbidden' }, 403)
 
+    // Resolve the state from the job/customer address and freeze the currently
+    // approved rule before anything leaves FastTract. This fails closed.
+    const { data: compliance, error: complianceError } = await svc.rpc('prepare_document_compliance', {
+      p_document_type: docType,
+      p_document_id: docId,
+    })
+    if (complianceError || !compliance) {
+      return json({
+        error: complianceError?.message || 'State compliance review is required before sending this document.',
+        code: 'compliance_review_required',
+      }, 409)
+    }
+
     const { data: items } = await svc.from(liTable)
       .select('description, quantity, unit_price, total').eq(fk, docId).order('position')
 
@@ -99,6 +112,7 @@ Deno.serve(async (req) => {
       dueDate: (doc as any).due_date || undefined,
       terms: (doc as any).terms || undefined,
       notes: (doc as any).notes || undefined,
+      compliance,
       brandColor: org.brand_color || undefined,
     }
 

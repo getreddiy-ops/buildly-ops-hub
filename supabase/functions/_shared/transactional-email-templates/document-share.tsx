@@ -5,6 +5,14 @@ import {
 import type { TemplateEntry } from './registry.ts'
 
 interface LineItem { description: string; quantity: number; unit_price: number; total: number }
+interface ComplianceSnapshot {
+  state_code: string
+  state_name: string
+  rule_version: number
+  required_text: string
+  effective_on?: string
+  source_citations?: Array<{ title: string; url: string }>
+}
 interface Props {
   docType?: 'estimate' | 'invoice'
   docNumber?: string
@@ -21,6 +29,7 @@ interface Props {
   dueDate?: string
   terms?: string
   notes?: string
+  compliance?: ComplianceSnapshot
   brandColor?: string
 }
 
@@ -44,6 +53,7 @@ const Email = (props: Props) => {
     dueDate,
     terms,
     notes,
+    compliance,
     brandColor = '#d9531e',
   } = props
   const label = docType === 'estimate' ? 'Estimate' : 'Invoice'
@@ -114,6 +124,24 @@ const Email = (props: Props) => {
             </Section>
           )}
 
+          {compliance?.required_text && (
+            <Section style={complianceBox}>
+              <Text style={sectionTitle}>
+                State terms &amp; disclosures — {compliance.state_name} ({compliance.state_code})
+              </Text>
+              <Text style={body}>{compliance.required_text}</Text>
+              <Text style={sourceText}>
+                Rule version {compliance.rule_version}
+                {compliance.effective_on ? ` · effective ${compliance.effective_on}` : ''}
+              </Text>
+              {(compliance.source_citations ?? []).map((source, index) => (
+                <Text key={index} style={sourceText}>
+                  Source: <Link href={source.url} style={{ color: brandColor }}>{source.title}</Link>
+                </Text>
+              ))}
+            </Section>
+          )}
+
           <Hr style={hr} />
           <Text style={muted}>
             Questions? Reply to this email
@@ -170,3 +198,5 @@ const totalsLabel = { color: '#8a8a8a', marginRight: '12px' }
 const hr = { borderTop: '1px solid #eee', margin: '22px 0' }
 const sectionTitle = { fontSize: '12px', color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.06em', margin: '0 0 4px' }
 const body = { fontSize: '13px', color: '#333', margin: 0, whiteSpace: 'pre-wrap' as const }
+const complianceBox = { background: '#f7fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px 16px', margin: '18px 0 4px' }
+const sourceText = { fontSize: '11px', color: '#64748b', margin: '8px 0 0' }

@@ -10,6 +10,7 @@ import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { ArrowLeft, Send, Pencil, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generateDocumentPdf } from "@/lib/generateDocumentPdf";
+import { asComplianceSnapshot } from "@/lib/compliance";
 
 type Row = any;
 
@@ -65,6 +66,7 @@ export default function EstimateDetail() {
           })),
           tax_rate: Number(est.subtotal) > 0 ? (Number(est.tax) / Number(est.subtotal)) * 100 : 0,
           terms: est.notes ?? undefined,
+          compliance: asComplianceSnapshot(est.compliance_snapshot) ?? undefined,
         },
         {
           name: branding?.name ?? undefined,
@@ -135,6 +137,7 @@ export default function EstimateDetail() {
           subtotal={Number(est.subtotal)}
           taxAmount={Number(est.tax)}
           total={Number(est.total)}
+          compliance={asComplianceSnapshot(est.compliance_snapshot)}
         />
         {est.notes && (
           <div className="mt-6">

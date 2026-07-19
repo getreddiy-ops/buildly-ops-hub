@@ -24,19 +24,39 @@ export type Jurisdiction = {
   stateName: string | null;
 };
 
+export type ComplianceCitation = {
+  title: string;
+  url: string;
+};
+
+export type ComplianceSnapshot = {
+  state_code: string;
+  state_name: string;
+  document_type: "estimate" | "invoice" | "contract";
+  job_site_address: string;
+  rule_id: string;
+  rule_version: number;
+  required_text: string;
+  source_citations: ComplianceCitation[];
+  effective_on: string;
+  reviewed_at: string;
+  verified_at: string;
+};
+
 /** Best-effort detect a US state from a free-form address string. */
 export function inferUsState(address?: string | null): Jurisdiction {
   if (!address) return { stateCode: null, stateName: null };
   const raw = String(address);
+  const upper = raw.toUpperCase();
 
   // 1) Match ZIP-anchored code, e.g. ", CA 94016" or " CA 94016-1234"
-  const zipMatch = raw.match(/\b([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/);
+  const zipMatch = upper.match(/\b([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/);
   if (zipMatch && US_STATES[zipMatch[1]]) {
     return { stateCode: zipMatch[1], stateName: US_STATES[zipMatch[1]] };
   }
 
   // 2) Match comma-separated two-letter state code, e.g. ", CA,"
-  const codeMatch = raw.match(/,\s*([A-Z]{2})(?:[\s,]|$)/);
+  const codeMatch = upper.match(/,\s*([A-Z]{2})(?:[\s,]|$)/);
   if (codeMatch && US_STATES[codeMatch[1]]) {
     return { stateCode: codeMatch[1], stateName: US_STATES[codeMatch[1]] };
   }
@@ -55,11 +75,8 @@ export function inferUsState(address?: string | null): Jurisdiction {
   return { stateCode: null, stateName: null };
 }
 
-/**
- * Compliance guidance block injected into AI prompts. Intentionally generic
- * (the model already knows state-specific rules); we tell it which state to
- * apply and which contractor-business topics to cover.
- */
+/** Safety instructions for AI drafting. Exact legal text is never sourced from
+ * model memory; the server appends an approved, versioned compliance snapshot. */
 export function jurisdictionPromptBlock(orgAddress?: string | null, customerAddress?: string | null): string {
   const orgJ = inferUsState(orgAddress);
   const custJ = inferUsState(customerAddress);
@@ -72,14 +89,23 @@ export function jurisdictionPromptBlock(orgAddress?: string | null, customerAddr
     lines.push(`- Job/customer is also in ${custJ.stateName}.`);
   }
   if (!orgJ.stateName && !custJ.stateName) {
-    lines.push("- No US state detected from the address. Before drafting a contract, estimate, or invoice, ask which state the work will be performed in and apply that state's rules.");
+    lines.push("- No US state was verified from the address. Ask for the complete job-site address before producing a final estimate, contract, or invoice.");
   }
   lines.push(
-    "- When drafting CONTRACTS, include clauses required by the applicable state's home-improvement / contractor laws, such as: contractor license number and classification, written scope of work, total price and payment schedule (and any statutory cap on deposits), start/substantial-completion dates, change-order procedure, mechanic's/construction lien notice in the wording the state requires, statutory right of rescission (e.g. 3-day notice of cancellation for home-solicitation sales), warranty language, dispute-resolution and governing-law clauses set to the job-site state, and any required consumer-protection or recovery-fund notices.",
-    "- When drafting ESTIMATES and INVOICES, apply the correct state and local sales-tax treatment for the type of work (labor vs. materials, real-property improvements vs. repairs, exempt customers). If the tax treatment is unclear, ask before assuming a rate.",
+    "- Do not rely on model memory for statutes, required notices, deposit caps, cancellation periods, lien wording, licensing rules, or tax treatment.",
+    "- Do not invent or paraphrase state-required legal language. FastTract appends exact text only from an approved, versioned compliance rule after the job-site state is verified.",
+    "- Keep the document in draft and explain what is missing when the job-site state cannot be verified or its rule has not been reviewed.",
+    "- Never choose a sales-tax rate from general knowledge. Use a contractor-entered, verified rate or ask for it.",
     "- Disclose the business's license number on any contract, estimate, invoice, or advertisement when the state requires it. If the license number is missing from the business profile, ask for it instead of inventing one.",
-    "- Never give the customer legal advice and never guarantee that a document is legally sufficient. Recommend a licensed attorney review of contracts before signing for large or unusual jobs.",
-    "- Do not invent statutes, license numbers, bond amounts, or tax rates. If a required fact is missing, ask.",
+    "- Never give legal advice or guarantee that a document is legally sufficient. Recommend review by a lawyer licensed in the job-site state for unusual or high-value work.",
   );
   return lines.join("\n");
+}
+
+export function normalizeComplianceDocumentType(value?: string | null): ComplianceSnapshot["document_type"] | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized.includes("estimate") || normalized.includes("quote") || normalized.includes("proposal")) return "estimate";
+  if (normalized.includes("invoice") || normalized.includes("receipt")) return "invoice";
+  if (normalized.includes("contract") || normalized.includes("agreement") || normalized.includes("change_order")) return "contract";
+  return null;
 }

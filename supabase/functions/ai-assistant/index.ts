@@ -2,7 +2,12 @@
 // Uses OpenAI directly when OPENAI_API_KEY is set; otherwise falls back to Lovable AI Gateway.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
+import {
+  inferUsState,
+  jurisdictionPromptBlock,
+  normalizeComplianceDocumentType,
+  type ComplianceSnapshot,
+} from "../_shared/jurisdiction.ts";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
@@ -283,7 +288,7 @@ TRADE-SPECIFIC ADJUSTMENTS
 Adapt to the specific trade. Identify main cost drivers, labor-heavy phases, material-heavy phases, common waste factors, hidden costs, equipment needs, inspection requirements, safety concerns, common exclusions, common change order triggers.
 
 STATE-BY-STATE ADJUSTMENT
-Ask for or infer project state. Adjust for sales tax, permits, contractor licensing notes, lien notice considerations, required disclosures, right-to-cancel notices, regional labor/material price differences, climate, local code. If unknown, clearly state document should be reviewed against local contractor board, municipal code, and state law.
+Ask for the complete project address and identify the job-site state. You may adjust non-legal planning assumptions such as climate and regional pricing, but never invent sales-tax treatment, permit requirements, licensing rules, lien notices, required disclosures, cancellation rights, statutory wording, or local-code requirements. FastTract appends exact legal text from its approved rule library after server verification. If verification is unavailable, keep the document in draft and say what must be reviewed.
 
 OUTPUT FORMAT (for full job package, provide):
 A. Customer-Facing Proposal  B. Customer-Facing Contract  C. Invoice  D. Contractor Material List  E. Projected Labor Plan  F. Internal Job Costing Summary  G. Assumptions & Exclusions  H. Questions Needed Before Finalizing.
@@ -452,6 +457,69 @@ Deno.serve(async (req) => {
         needsApproval: WRITE_TOOLS.has(tc.function?.name),
       };
     });
+
+    // Final customer-facing legal documents may only use reviewed rule text.
+    // The model never supplies or edits this snapshot; it is appended here.
+    for (const call of toolCalls) {
+      if (call.name !== "generate_document") continue;
+      const documentType = normalizeComplianceDocumentType(call.args?.doc_type);
+      if (!documentType) continue;
+
+      const jobSiteAddress = String(call.args?.recipient?.address ?? "").trim();
+      const jurisdiction = inferUsState(jobSiteAddress);
+      if (!jurisdiction.stateCode) {
+        return new Response(
+          JSON.stringify({
+            error: "Add the complete customer or job-site address before creating this PDF. FastTract must verify the state first.",
+            code: "compliance_address_required",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const { data: rule, error: ruleError } = await admin
+        .from("state_compliance_rules")
+        .select("id,state_code,document_type,version,required_text,source_citations,effective_on,reviewed_at")
+        .eq("state_code", jurisdiction.stateCode)
+        .eq("document_type", documentType)
+        .eq("status", "approved")
+        .lte("effective_on", new Date().toISOString().slice(0, 10))
+        .or(`expires_on.is.null,expires_on.gte.${new Date().toISOString().slice(0, 10)}`)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ruleError || !rule) {
+        return new Response(
+          JSON.stringify({
+            error: `This ${documentType} cannot be finalized because the ${jurisdiction.stateName} compliance rule has not been approved or is out of date. Keep it as a draft.`,
+            code: "compliance_review_required",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const sourceCitations = (Array.isArray(rule.source_citations) ? rule.source_citations : [])
+        .filter((source: unknown): source is { title: string; url: string } => {
+          if (!source || typeof source !== "object") return false;
+          const value = source as Record<string, unknown>;
+          return typeof value.title === "string" && typeof value.url === "string";
+        });
+      const snapshot: ComplianceSnapshot = {
+        state_code: rule.state_code,
+        state_name: jurisdiction.stateName!,
+        document_type: documentType,
+        job_site_address: jobSiteAddress,
+        rule_id: rule.id,
+        rule_version: rule.version,
+        required_text: rule.required_text,
+        source_citations: sourceCitations,
+        effective_on: rule.effective_on,
+        reviewed_at: rule.reviewed_at,
+        verified_at: new Date().toISOString(),
+      };
+      call.args.compliance = snapshot;
+    }
 
     // Track per-org AI usage (best-effort, non-blocking)
     try {

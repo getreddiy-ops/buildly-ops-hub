@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import type { ComplianceSnapshot } from "@/lib/compliance";
 
 export type DocArgs = {
   doc_type: string;
@@ -10,6 +11,7 @@ export type DocArgs = {
   tax_rate?: number;
   terms?: string;
   signature_block?: boolean;
+  compliance?: ComplianceSnapshot;
 };
 
 export type OrgHeader = {
@@ -26,6 +28,10 @@ const MARGIN = 54;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 export function generateDocumentPdf(args: DocArgs, org: OrgHeader = {}): { blob: Blob; filename: string } {
+  const guardedTypes = new Set(["estimate", "invoice", "contract", "agreement", "quote", "proposal"]);
+  if (guardedTypes.has(args.doc_type.trim().toLowerCase()) && !args.compliance) {
+    throw new Error("State compliance has not been verified. Keep this document as a draft until an approved rule is available.");
+  }
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   let y = MARGIN;
 
@@ -193,6 +199,25 @@ export function generateDocumentPdf(args: DocArgs, org: OrgHeader = {}): { blob:
     writeWrapped("Terms", { size: 11, bold: true, gapAfter: 2 });
     for (const para of args.terms.split(/\n\s*\n/)) {
       writeWrapped(para.trim(), { size: 9.5, color: [80, 80, 80], gapAfter: 4 });
+    }
+  }
+
+  // Exact, versioned state text supplied by the server — never AI-authored.
+  if (args.compliance) {
+    y += 8;
+    writeWrapped(
+      `State terms & disclosures — ${args.compliance.state_name} (${args.compliance.state_code})`,
+      { size: 11, bold: true, gapAfter: 3 },
+    );
+    for (const para of args.compliance.required_text.split(/\n\s*\n/)) {
+      writeWrapped(para.trim(), { size: 9.5, color: [65, 75, 90], gapAfter: 4 });
+    }
+    writeWrapped(
+      `Rule version ${args.compliance.rule_version} · Effective ${args.compliance.effective_on}`,
+      { size: 8, color: [110, 120, 135], gapAfter: 2 },
+    );
+    for (const source of args.compliance.source_citations) {
+      writeWrapped(`Source: ${source.title} — ${source.url}`, { size: 8, color: [110, 120, 135], gapAfter: 2 });
     }
   }
 

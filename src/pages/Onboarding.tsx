@@ -13,6 +13,7 @@ export default function Onboarding() {
   const { user, memberships, loading, refresh, setActiveOrgId, signOut, isPlatformAdmin, isAgent } = useAuth();
   const [companyName, setCompanyName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [companyCreated, setCompanyCreated] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -20,14 +21,14 @@ export default function Onboarding() {
       navigate("/login", { replace: true });
       return;
     }
-    if (memberships.length > 0) {
+    if (memberships.length > 0 && !companyCreated) {
       navigate("/app", { replace: true });
       return;
     }
     // Users without an org but with a platform role belong in their own portal.
     if (isPlatformAdmin) navigate("/admin", { replace: true });
     else if (isAgent) navigate("/agent", { replace: true });
-  }, [user, loading, memberships, isPlatformAdmin, isAgent, navigate]);
+  }, [user, loading, memberships, isPlatformAdmin, isAgent, companyCreated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +48,11 @@ export default function Onboarding() {
       .insert({ organization_id: org.id, user_id: user.id, role: "owner" });
     setSubmitting(false);
     if (merr) return toast({ title: "Could not add you as owner", description: merr.message, variant: "destructive" });
+    setCompanyCreated(true);
     setActiveOrgId(org.id);
     await refresh();
-    toast({ title: "Welcome", description: `${org.name} is set up.` });
-    navigate("/app");
+    toast({ title: "Company created", description: `Choose the FastTract plan that fits ${org.name}.` });
+    navigate("/pricing?onboarding=complete", { replace: true });
   };
 
   return (
@@ -79,7 +81,7 @@ export default function Onboarding() {
                 placeholder="Acme Roofing & Renovations" />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Creating…" : "Create company"}
+              {submitting ? "Creating…" : "Create company & choose plan"}
             </Button>
           </form>
         </div>

@@ -25,6 +25,7 @@ import {
 import { FileSignature, MoreHorizontal, Plus, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { asComplianceSnapshot } from "@/lib/compliance";
 
 const STATUSES = ["draft", "sent", "signed", "void"] as const;
 type ContractStatus = (typeof STATUSES)[number];
@@ -233,7 +234,8 @@ export default function Contracts() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Contract preview</span>
-              <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Button size="sm" variant="outline" onClick={() => window.print()}
+                disabled={!asComplianceSnapshot(previewing?.compliance_snapshot)}>
                 <Printer className="mr-2 h-4 w-4" /> Print
               </Button>
             </DialogTitle>
@@ -248,6 +250,7 @@ export default function Contracts() {
                 customerAddress={previewing.customers?.address}
                 issueDate={new Date(previewing.created_at).toLocaleDateString()}
                 body={renderBody(previewing.body ?? "", previewing.customers?.name)}
+                compliance={asComplianceSnapshot(previewing.compliance_snapshot)}
                 template={{
                   header: undefined,
                   footer: branding?.document_defaults?.contract?.footer,

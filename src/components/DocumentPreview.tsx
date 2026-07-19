@@ -1,4 +1,5 @@
 import { Branding, DocumentTemplate } from "@/hooks/useBranding";
+import type { ComplianceSnapshot } from "@/lib/compliance";
 
 interface LineItem {
   description: string;
@@ -22,6 +23,7 @@ interface Props {
   total?: number;
   template?: DocumentTemplate;
   body?: string; // for contracts
+  compliance?: ComplianceSnapshot | null;
 }
 
 const money = (n?: number) =>
@@ -44,6 +46,7 @@ export function DocumentPreview({
   total,
   template,
   body,
+  compliance,
 }: Props) {
   const color = branding?.brand_color ?? "#3b82f6";
   const label = type === "invoice" ? "INVOICE" : type === "contract" ? "CONTRACT" : "ESTIMATE";
@@ -174,6 +177,29 @@ export function DocumentPreview({
             Terms &amp; Conditions
           </div>
           <div className="mt-1 whitespace-pre-line text-xs text-slate-600">{template.terms}</div>
+        </div>
+      )}
+
+      {compliance ? (
+        <div className="mb-4 rounded-md border border-slate-300 bg-slate-50 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+            State terms &amp; disclosures — {compliance.state_name} ({compliance.state_code})
+          </div>
+          <div className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-700">
+            {compliance.required_text}
+          </div>
+          <div className="mt-3 text-[10px] text-slate-500">
+            Rule version {compliance.rule_version} · Effective {compliance.effective_on}
+          </div>
+          {compliance.source_citations.map((source, index) => (
+            <div key={index} className="mt-1 text-[10px] text-slate-500">
+              Source: <a className="underline" href={source.url} target="_blank" rel="noreferrer">{source.title}</a>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mb-4 rounded-md border-2 border-amber-500 bg-amber-50 p-4 text-center text-xs font-bold uppercase tracking-wide text-amber-900">
+          Draft only — state compliance has not been verified. Do not send or sign.
         </div>
       )}
 

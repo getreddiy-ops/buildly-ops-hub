@@ -54,7 +54,7 @@ export default function Signup() {
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-semibold">Join FastTract</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Free while in beta. No credit card.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Create your account, set up your company, then choose a 7-day trial plan.</p>
           <Button variant="outline" className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google
           </Button>
@@ -69,9 +69,12 @@ export default function Signup() {
             <div><Label htmlFor="password">Password</Label>
               <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating…" : "Create account"}
+              {loading ? "Creating…" : "Create account & continue"}
             </Button>
           </form>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            You will review pricing before entering payment details.
+          </p>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have one? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
           </p>

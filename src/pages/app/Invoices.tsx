@@ -26,6 +26,7 @@ import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucid
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { asComplianceSnapshot } from "@/lib/compliance";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -315,7 +316,8 @@ export default function Invoices() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Invoice preview</span>
-              <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Button size="sm" variant="outline" onClick={() => window.print()}
+                disabled={!asComplianceSnapshot(previewing?.compliance_snapshot)}>
                 <Printer className="mr-2 h-4 w-4" /> Print
               </Button>
             </DialogTitle>
@@ -340,6 +342,7 @@ export default function Invoices() {
                 taxRate={Number(previewing.tax_rate)}
                 taxAmount={Number(previewing.tax_amount)}
                 total={Number(previewing.total)}
+                compliance={asComplianceSnapshot(previewing.compliance_snapshot)}
                 template={{
                   header: branding?.document_defaults?.invoice?.header,
                   footer: branding?.document_defaults?.invoice?.footer,
