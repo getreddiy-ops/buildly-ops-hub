@@ -7,9 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { trackTrialStart } from "@/lib/gtag";
@@ -38,9 +37,9 @@ const PLAN_FEATURES: Record<Tier, string[]> = {
 };
 
 export default function Billing() {
-  const { user, activeOrg } = useAuth();
+  const { activeOrg } = useAuth();
   const { subscription, isActive, isPastDue, isOwner, tier, loading, refetch } = useSubscription();
-  const { openCheckout, loading: checkoutLoading } = usePaddleCheckout();
+  const { openCheckout, loading: checkoutLoading } = useStripeCheckout();
   const [portalLoading, setPortalLoading] = useState(false);
   const [pendingTier, setPendingTier] = useState<Tier | null>(null);
   const [params, setParams] = useSearchParams();
@@ -67,8 +66,7 @@ export default function Billing() {
     try {
       await openCheckout({
         priceId: TIERS[target].priceId,
-        customerEmail: user?.email ?? undefined,
-        customData: { userId: user?.id ?? "", orgId: activeOrg.organization_id },
+        organizationId: activeOrg.organization_id,
       });
     } catch (e) {
       toast.error("Could not open checkout");
@@ -82,13 +80,13 @@ export default function Billing() {
     if (!activeOrg) return;
     setPortalLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("paddle-customer-portal", {
-        body: { organizationId: activeOrg.organization_id, environment: getPaddleEnvironment() },
+      const { data, error } = await supabase.functions.invoke("stripe-customer-portal", {
+        body: { organizationId: activeOrg.organization_id },
       });
       if (error || !data?.url) throw new Error(error?.message ?? "Failed to open portal");
       window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not open customer portal");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not open customer portal");
     } finally {
       setPortalLoading(false);
     }
@@ -145,15 +143,11 @@ export default function Billing() {
             {ORDER.map((t) => {
               const plan = TIERS[t];
               const isCurrent = isActive && tier === t;
-              const currentIdx = tier ? ORDER.indexOf(tier) : -1;
-              const targetIdx = ORDER.indexOf(t);
               const action = !isActive
                 ? "Start 7-day free trial"
                 : isCurrent
                 ? "Current plan"
-                : targetIdx > currentIdx
-                ? "Upgrade"
-                : "Downgrade";
+                : "Manage plan";
 
               return (
                 <Card
@@ -177,7 +171,7 @@ export default function Billing() {
                     className="mt-6 w-full"
                     variant={isCurrent ? "outline" : "default"}
                     disabled={isCurrent || !isOwner || (checkoutLoading && pendingTier === t)}
-                    onClick={() => subscribeTo(t)}
+                    onClick={() => isActive ? onManage() : subscribeTo(t)}
                   >
                     {checkoutLoading && pendingTier === t ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening checkout…</>

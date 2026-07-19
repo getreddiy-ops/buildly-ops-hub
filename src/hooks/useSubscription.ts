@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getBillingEnvironment } from "@/lib/billing";
 import { tierFromPriceId, hasAssistant, hasPhoneAssistant } from "@/lib/tiers";
 
 export type SubscriptionRow = {
@@ -41,7 +41,7 @@ export function useSubscription() {
         "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,environment,created_at",
       )
       .eq("organization_id", orgId)
-      .eq("environment", getPaddleEnvironment())
+      .eq("environment", getBillingEnvironment())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

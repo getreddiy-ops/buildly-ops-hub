@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Terms() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Terms of Service — FastTract" description="Terms governing your use of FastTract, operated by Lynchmarc LLC with Paddle as merchant of record." path="/legal/terms" />
+      <SEO title="Terms of Service — FastTract" description="Terms governing your use of FastTract, operated by Lynchmarc LLC with Stripe as payment processor." path="/legal/terms" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -36,8 +36,8 @@ export default function Terms() {
         <p>We retain all rights to the service, including software, documentation, and branding. We grant you a limited, non-exclusive, non-transferable right to use the service within your subscribed plan.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">8. Payments, Subscriptions, and Taxes</h2>
-        <p>Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns.</p>
-        <p>Subscription fees, billing cycles, renewals, cancellations, taxes, and refunds are governed by Paddle's <a href="https://www.paddle.com/legal/checkout-buyer-terms" className="text-primary" target="_blank" rel="noreferrer">Buyer Terms</a>. Cancelling a subscription stops future renewals; you retain access until the end of the current paid period. Upgrades and downgrades take effect immediately.</p>
+        <p>Payments are processed securely by Stripe. Lynchmarc LLC is the seller and is responsible for FastTract subscriptions, customer support, cancellations, and refunds.</p>
+        <p>Subscriptions renew automatically each month after any stated trial period until cancelled. Cancelling stops future renewals; you retain access until the end of the current paid period. Prices and applicable taxes are shown before checkout.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">9. Service Levels</h2>
         <p>We work to keep FastTract available but do not guarantee uninterrupted or error-free performance.</p>

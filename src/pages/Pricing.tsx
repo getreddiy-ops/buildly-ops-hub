@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
@@ -58,9 +58,8 @@ const PLANS: PlanDef[] = [
 export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
-  const { openCheckout, loading } = usePaddleCheckout();
+  const { openCheckout, loading } = useStripeCheckout();
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const checkoutRef = useRef<HTMLDivElement>(null);
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
@@ -73,12 +72,8 @@ export default function Pricing() {
     try {
       await openCheckout({
         priceId: TIERS[tier].priceId,
-        customerEmail: user.email ?? undefined,
-        customData: { userId: user.id, orgId: activeOrg.organization_id },
-        displayMode: "inline",
-        frameTarget: "paddle-checkout-container",
+        organizationId: activeOrg.organization_id,
       });
-      setTimeout(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e) {
       toast.error("Could not open checkout");
       console.error(e);
@@ -170,33 +165,16 @@ export default function Pricing() {
           })}
         </div>
 
-        <div ref={checkoutRef} className="mt-16">
-          {selectedTier && (
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Complete your {TIERS[selectedTier].name} checkout</h2>
-                <p className="text-sm text-muted-foreground">
-                  7-day free trial · ${TIERS[selectedTier].price}/mo after · cancel anytime
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedTier(null)}>
-                Change plan
-              </Button>
-            </div>
-          )}
-          <div
-            id="paddle-checkout-container"
-            className={cn(
-              "rounded-xl border bg-card p-4 shadow-card transition-all",
-              !selectedTier && "hidden",
-            )}
-          />
-        </div>
+        {selectedTier && (
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            Redirecting securely to Stripe for your {TIERS[selectedTier].name} trial…
+          </p>
+        )}
       </section>
 
       <footer className="mt-20 border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-          <div>© {new Date().getFullYear()} GetReddiy · FastTract</div>
+          <div>© {new Date().getFullYear()} Lynchmarc LLC · FastTract</div>
           <nav className="flex flex-wrap items-center gap-4">
             <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
             <Link to="/privacy" className="hover:text-foreground">Privacy Notice</Link>

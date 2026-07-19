@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PaywallGate } from "@/components/PaywallGate";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getBillingEnvironment } from "@/lib/billing";
 
 type Assistant = {
   id: string;
@@ -121,7 +121,7 @@ function PhoneAssistant() {
     const { data, error } = await supabase.functions.invoke("phone-assistant", {
       body: {
         organization_id: orgId,
-        environment: getPaddleEnvironment(),
+        environment: getBillingEnvironment(),
         enabled: editing.enabled,
         voice_id: editing.voice_id,
         greeting: editing.greeting,
