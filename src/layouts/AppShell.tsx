@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from "react-router-do
 import {
   LayoutDashboard, Users, FileText, Briefcase, Clock, Receipt,
   Settings, LogOut, Sparkles, Menu, Smartphone, ShieldCheck,
-  ChevronDown, Wrench,
+  ChevronDown, Wrench, Terminal,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
