@@ -24,7 +24,7 @@ const features = [
   { icon: FileSignature, title: "Customer-Facing Contracts", desc: "Turn approved estimates into professional contracts with clear scope, exclusions, payment terms, and state-by-state language placeholders." },
   { icon: Package, title: "Material Lists", desc: "Generate contractor material lists for ordering, pickup, delivery, and crew prep." },
   { icon: Users2, title: "Labor Projections", desc: "Estimate crew size, hours, production rate, and job duration before the work starts." },
-  { icon: Receipt, title: "Invoices & Payments", desc: "Send clean invoices, track balances, and keep every payment connected to the job." },
+  { icon: Receipt, title: "Invoices & Balance Tracking", desc: "Send clean invoices, record payments, track balances, and keep every invoice connected to the job." },
   { icon: Wrench, title: "CRM & Follow-Up", desc: "Track leads, customers, bids, callbacks, appointments, and won/lost jobs." },
   { icon: LayoutDashboard, title: "Job Dashboard", desc: "See every job by status: new lead, estimate sent, approved, scheduled, in progress, invoiced, and paid." },
 ];
@@ -444,3 +444,4 @@ export default function Landing() {
     </MarketingShell>
   );
 }
+
