@@ -26,8 +26,18 @@ export default function Login() {
     if (authLoading || !user) return;
     if (nextPath) { window.location.href = nextPath; return; }
     const dest = resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent });
+    // Hard nav as fallback: some preview/iframe scenarios silently swallow
+    // client-side navigate() right after OAuth returns.
     navigate(dest, { replace: true });
+    const t = setTimeout(() => {
+      if (window.location.pathname === "/login") window.location.replace(dest);
+    }, 400);
+    return () => clearTimeout(t);
   }, [authLoading, user, memberships, isPlatformAdmin, isAgent, navigate, nextPath]);
+
+  const authedDest = user
+    ? resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent })
+    : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +89,15 @@ export default function Login() {
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-semibold">Sign in to FastTract</h1>
           <p className="mt-1 text-sm text-muted-foreground">Most crews sign in with Google — one tap, no password to forget.</p>
+
+          {user && authedDest && (
+            <div className="mt-4 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
+              You're already signed in as <strong>{user.email}</strong>.{" "}
+              <a href={authedDest} className="font-semibold text-primary underline">
+                Continue →
+              </a>
+            </div>
+          )}
 
           <Button className="mt-6 w-full" onClick={handleGoogle}>
             Continue with Google
