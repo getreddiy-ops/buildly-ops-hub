@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [isAgent, setIsAgent] = useState(false);
+  const profileLoadId = useRef(0);
 
   const setActiveOrgId = (id: string) => {
     localStorage.setItem("activeOrgId", id);
@@ -57,24 +58,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!activeOrgId && list.length > 0) setActiveOrgId(list[0].organization_id);
   };
 
+  const clearProfile = () => {
+    setMemberships([]);
+    setIsPlatformAdmin(false);
+    setIsAgent(false);
+  };
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      const requestId = ++profileLoadId.current;
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadProfile(s.user.id), 0);
+        setLoading(true);
+        setTimeout(() => {
+          loadProfile(s.user.id).finally(() => {
+            if (profileLoadId.current === requestId) setLoading(false);
+          });
+        }, 0);
       } else {
-        setMemberships([]);
-        setIsPlatformAdmin(false);
-        setIsAgent(false);
+        clearProfile();
+        setLoading(false);
       }
     });
 
     supabase.auth.getSession().then(async ({ data }) => {
+      const requestId = ++profileLoadId.current;
       setSession(data.session);
       setUser(data.session?.user ?? null);
       if (data.session?.user) await loadProfile(data.session.user.id);
-      setLoading(false);
+      else clearProfile();
+      if (profileLoadId.current === requestId) setLoading(false);
     });
 
     return () => sub.subscription.unsubscribe();
