@@ -1,5 +1,6 @@
 // Single source of truth for FastTract subscription tiers.
-// price_id values come from Paddle (created via create_product).
+// Provider-neutral IDs stored in subscription entitlements. Stripe Price IDs
+// stay server-side and are mapped to these values by Edge Functions.
 
 export type Tier = "base" | "plus" | "premium";
 
