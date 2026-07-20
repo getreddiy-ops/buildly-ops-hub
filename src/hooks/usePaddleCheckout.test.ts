@@ -7,8 +7,8 @@ vi.mock("@/lib/paddle", () => ({
   PADDLE_EVENT: "fasttract:paddle-event",
 }));
 
-const toastError = vi.fn();
-vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a) } }));
+const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 import { usePaddleCheckout } from "./usePaddleCheckout";
 import { getPaddlePriceId } from "@/lib/paddle";
