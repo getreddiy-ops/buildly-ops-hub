@@ -15,7 +15,7 @@ import { getPaddlePriceId } from "@/lib/paddle";
 
 describe("usePaddleCheckout", () => {
   beforeEach(() => {
-    toastError.mockClear();
+    vi.mocked(toast.error).mockClear();
     (window as unknown as { Paddle?: unknown }).Paddle = {
       Checkout: { open: vi.fn() },
     };
