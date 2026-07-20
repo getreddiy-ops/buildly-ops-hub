@@ -69,7 +69,11 @@ export default function Pricing() {
       toast.error("Only the organization owner can subscribe.");
       return;
     }
+    // Reveal the inline container BEFORE calling Paddle so the frameTarget
+    // element is visible in the DOM when Paddle mounts its iframe. Wait a
+    // frame so React commits before we hand off to Paddle.
     setSelectedTier(tier);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
       await openCheckout({
         priceId: TIERS[tier].priceId,
@@ -79,9 +83,8 @@ export default function Pricing() {
         frameTarget: "paddle-checkout-container",
       });
       setTimeout(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    } catch (e) {
-      toast.error("Could not open checkout");
-      console.error(e);
+    } catch {
+      // usePaddleCheckout already surfaced a toast with the real message.
       setSelectedTier(null);
     }
   };
