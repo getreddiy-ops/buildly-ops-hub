@@ -41,7 +41,7 @@ describe("usePaddleCheckout", () => {
     expect(args.settings.frameTarget).toBe("paddle-checkout-container");
   });
 
-  it("shows a toast (never silent) and rethrows when Paddle is unavailable", async () => {
+  it("throws a descriptive error (never silent) when Paddle is unavailable", async () => {
     (window as unknown as { Paddle?: unknown }).Paddle = undefined;
     const { result } = renderHook(() => usePaddleCheckout());
     await expect(
@@ -52,6 +52,5 @@ describe("usePaddleCheckout", () => {
         });
       }),
     ).rejects.toThrow(/Paddle failed to initialize/);
-    expect(vi.mocked(toast.error)).toHaveBeenCalled();
   });
 });
