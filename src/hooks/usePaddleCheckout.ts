@@ -46,7 +46,11 @@ export function usePaddleCheckout() {
     try {
       await initializePaddle();
       const paddlePriceId = await getPaddlePriceId(options.priceId);
-      const displayMode = options.displayMode ?? "overlay";
+      // Overlay is the only supported customer-facing display mode.
+      // Inline requires a valid frameTarget DOM node, and if the container
+      // is missing/hidden Paddle throws "Cannot read properties of undefined
+      // (reading 'appendChild')". Overlay is self-contained and reliable.
+      const displayMode: "overlay" | "inline" = options.displayMode ?? "overlay";
 
       const settings: Record<string, unknown> = {
         displayMode,
@@ -59,11 +63,15 @@ export function usePaddleCheckout() {
       if (displayMode === "overlay") {
         settings.variant = "one-page";
       } else {
-        // Inline mode: do NOT pass `variant: "one-page"` — Paddle's inline
-        // checkout uses its own multi-step layout and can silently fail to
-        // render when overlay-only settings are passed.
-        settings.frameTarget =
-          options.frameTarget ?? "paddle-checkout-container";
+        // Inline path retained only for internal/embedded use. Requires the
+        // caller to have already mounted the target element in the DOM.
+        const frameTarget = options.frameTarget ?? "paddle-checkout-container";
+        if (typeof document === "undefined" || !document.getElementById(frameTarget)) {
+          throw new Error(
+            `Inline checkout target #${frameTarget} not found. Use overlay mode instead.`,
+          );
+        }
+        settings.frameTarget = frameTarget;
         settings.frameInitialHeight = 450;
         settings.frameStyle =
           "width: 100%; min-width: 312px; background-color: transparent; border: none;";
