@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -21,6 +21,34 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [googleHint, setGoogleHint] = useState(false);
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    cooldownTimer.current = window.setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => {
+      if (cooldownTimer.current) window.clearTimeout(cooldownTimer.current);
+    };
+  }, [resendCooldown]);
+
+  const handleResendConfirmation = async () => {
+    if (!email || resending || resendCooldown > 0) return;
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: window.location.origin + "/onboarding" },
+    });
+    setResending(false);
+    if (error) {
+      return toast({ title: "Couldn't resend email", description: error.message, variant: "destructive" });
+    }
+    setResendCooldown(45);
+    toast({ title: "Confirmation email sent", description: `Check ${email}.` });
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -43,18 +71,26 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setGoogleHint(false);
+    setUnconfirmed(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      // Detect Google-only accounts: Supabase returns "Invalid login credentials" for
-      // users who signed up via OAuth and have no password set. If the email exists in
-      // an OAuth identity, guide them to Google instead of a silent 400.
       const msg = (error.message || "").toLowerCase();
+      if (msg.includes("not confirmed") || msg.includes("email_not_confirmed") || msg.includes("confirm your email")) {
+        setUnconfirmed(true);
+        return toast({
+          title: "Email not confirmed",
+          description: "Click the confirmation link we emailed you, or resend it below.",
+          variant: "destructive",
+        });
+      }
+      // Detect Google-only accounts: Supabase returns "Invalid login credentials" for
+      // users who signed up via OAuth and have no password set.
       if (msg.includes("invalid login") || msg.includes("invalid_credentials")) {
         setGoogleHint(true);
         return toast({
-          title: "Try Google sign-in",
-          description: "This email may be registered with Google. Tap Continue with Google.",
+          title: "Check your credentials",
+          description: "If you signed up with Google, use Continue with Google. If you signed up with email, make sure you've confirmed it.",
         });
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
@@ -131,6 +167,27 @@ export default function Login() {
                   {loading ? "Signing in…" : "Sign in with email"}
                 </Button>
               </form>
+              {unconfirmed && (
+                <div data-testid="unconfirmed-notice" className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground">
+                  Your email isn't confirmed yet. Check your inbox for the FastTract
+                  confirmation link, then sign in.
+                </div>
+              )}
+              <div className="mt-4 text-center text-xs text-muted-foreground">
+                Didn't receive your confirmation email?{" "}
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={!email || resending || resendCooldown > 0}
+                  className="text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {resending
+                    ? "Resending…"
+                    : resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : "Resend it"}
+                </button>
+              </div>
             </>
           )}
 
