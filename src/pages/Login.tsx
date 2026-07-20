@@ -71,18 +71,26 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setGoogleHint(false);
+    setUnconfirmed(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      // Detect Google-only accounts: Supabase returns "Invalid login credentials" for
-      // users who signed up via OAuth and have no password set. If the email exists in
-      // an OAuth identity, guide them to Google instead of a silent 400.
       const msg = (error.message || "").toLowerCase();
+      if (msg.includes("not confirmed") || msg.includes("email_not_confirmed") || msg.includes("confirm your email")) {
+        setUnconfirmed(true);
+        return toast({
+          title: "Email not confirmed",
+          description: "Click the confirmation link we emailed you, or resend it below.",
+          variant: "destructive",
+        });
+      }
+      // Detect Google-only accounts: Supabase returns "Invalid login credentials" for
+      // users who signed up via OAuth and have no password set.
       if (msg.includes("invalid login") || msg.includes("invalid_credentials")) {
         setGoogleHint(true);
         return toast({
-          title: "Try Google sign-in",
-          description: "This email may be registered with Google. Tap Continue with Google.",
+          title: "Check your credentials",
+          description: "If you signed up with Google, use Continue with Google. If you signed up with email, make sure you've confirmed it.",
         });
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
