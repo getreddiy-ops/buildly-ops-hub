@@ -173,28 +173,6 @@ export default function Pricing() {
           })}
         </div>
 
-        <div ref={checkoutRef} className="mt-16">
-          {selectedTier && (
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Complete your {TIERS[selectedTier].name} checkout</h2>
-                <p className="text-sm text-muted-foreground">
-                  7-day free trial · ${TIERS[selectedTier].price}/mo after · cancel anytime
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedTier(null)}>
-                Change plan
-              </Button>
-            </div>
-          )}
-          <div
-            id="paddle-checkout-container"
-            className={cn(
-              "rounded-xl border bg-card p-4 shadow-card transition-all",
-              !selectedTier && "hidden",
-            )}
-          />
-        </div>
       </section>
 
       <footer className="mt-20 border-t border-border">
