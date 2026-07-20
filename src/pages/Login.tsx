@@ -167,6 +167,27 @@ export default function Login() {
                   {loading ? "Signing in…" : "Sign in with email"}
                 </Button>
               </form>
+              {unconfirmed && (
+                <div data-testid="unconfirmed-notice" className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground">
+                  Your email isn't confirmed yet. Check your inbox for the FastTract
+                  confirmation link, then sign in.
+                </div>
+              )}
+              <div className="mt-4 text-center text-xs text-muted-foreground">
+                Didn't receive your confirmation email?{" "}
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={!email || resending || resendCooldown > 0}
+                  className="text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {resending
+                    ? "Resending…"
+                    : resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : "Resend it"}
+                </button>
+              </div>
             </>
           )}
 
