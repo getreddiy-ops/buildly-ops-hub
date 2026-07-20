@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { toast } from "sonner";
 
 vi.mock("@/lib/paddle", () => ({
   initializePaddle: vi.fn().mockResolvedValue(undefined),
@@ -7,8 +8,7 @@ vi.mock("@/lib/paddle", () => ({
   PADDLE_EVENT: "fasttract:paddle-event",
 }));
 
-const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 import { usePaddleCheckout } from "./usePaddleCheckout";
 import { getPaddlePriceId } from "@/lib/paddle";
