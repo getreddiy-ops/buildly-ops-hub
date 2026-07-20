@@ -52,6 +52,6 @@ describe("usePaddleCheckout", () => {
         });
       }),
     ).rejects.toThrow(/Paddle failed to initialize/);
-    expect(toastError).toHaveBeenCalled();
+    expect(vi.mocked(toast.error)).toHaveBeenCalled();
   });
 });
