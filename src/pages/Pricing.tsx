@@ -58,8 +58,6 @@ export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
   const { openCheckout, loading } = usePaddleCheckout();
-  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const checkoutRef = useRef<HTMLDivElement>(null);
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
@@ -68,23 +66,16 @@ export default function Pricing() {
       toast.error("Only the organization owner can subscribe.");
       return;
     }
-    // Reveal the inline container BEFORE calling Paddle so the frameTarget
-    // element is visible in the DOM when Paddle mounts its iframe. Wait a
-    // frame so React commits before we hand off to Paddle.
-    setSelectedTier(tier);
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
       await openCheckout({
         priceId: TIERS[tier].priceId,
         customerEmail: user.email ?? undefined,
         customData: { userId: user.id, orgId: activeOrg.organization_id },
-        displayMode: "inline",
-        frameTarget: "paddle-checkout-container",
+        displayMode: "overlay",
+        successUrl: `${window.location.origin}/app/billing?checkout=success`,
       });
-      setTimeout(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch {
       // usePaddleCheckout already surfaced a toast with the real message.
-      setSelectedTier(null);
     }
   };
 
