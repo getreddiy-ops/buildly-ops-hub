@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -59,8 +58,6 @@ export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
   const { openCheckout, loading } = usePaddleCheckout();
-  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const checkoutRef = useRef<HTMLDivElement>(null);
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
@@ -69,23 +66,16 @@ export default function Pricing() {
       toast.error("Only the organization owner can subscribe.");
       return;
     }
-    // Reveal the inline container BEFORE calling Paddle so the frameTarget
-    // element is visible in the DOM when Paddle mounts its iframe. Wait a
-    // frame so React commits before we hand off to Paddle.
-    setSelectedTier(tier);
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
       await openCheckout({
         priceId: TIERS[tier].priceId,
         customerEmail: user.email ?? undefined,
         customData: { userId: user.id, orgId: activeOrg.organization_id },
-        displayMode: "inline",
-        frameTarget: "paddle-checkout-container",
+        displayMode: "overlay",
+        successUrl: `${window.location.origin}/app/billing?checkout=success`,
       });
-      setTimeout(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch {
       // usePaddleCheckout already surfaced a toast with the real message.
-      setSelectedTier(null);
     }
   };
 
@@ -173,28 +163,6 @@ export default function Pricing() {
           })}
         </div>
 
-        <div ref={checkoutRef} className="mt-16">
-          {selectedTier && (
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Complete your {TIERS[selectedTier].name} checkout</h2>
-                <p className="text-sm text-muted-foreground">
-                  7-day free trial · ${TIERS[selectedTier].price}/mo after · cancel anytime
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedTier(null)}>
-                Change plan
-              </Button>
-            </div>
-          )}
-          <div
-            id="paddle-checkout-container"
-            className={cn(
-              "rounded-xl border bg-card p-4 shadow-card transition-all",
-              !selectedTier && "hidden",
-            )}
-          />
-        </div>
       </section>
 
       <footer className="mt-20 border-t border-border">
