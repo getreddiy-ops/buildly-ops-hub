@@ -21,6 +21,34 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [googleHint, setGoogleHint] = useState(false);
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    cooldownTimer.current = window.setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => {
+      if (cooldownTimer.current) window.clearTimeout(cooldownTimer.current);
+    };
+  }, [resendCooldown]);
+
+  const handleResendConfirmation = async () => {
+    if (!email || resending || resendCooldown > 0) return;
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: window.location.origin + "/onboarding" },
+    });
+    setResending(false);
+    if (error) {
+      return toast({ title: "Couldn't resend email", description: error.message, variant: "destructive" });
+    }
+    setResendCooldown(45);
+    toast({ title: "Confirmation email sent", description: `Check ${email}.` });
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
