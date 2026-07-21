@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const active = sub && (["active", "trialing", "past_due"].includes(sub.status) || sub.status === "canceled") &&
+    const active = sub && ["active", "trialing", "past_due"].includes(sub.status) &&
       (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now());
     if (!active || !PREMIUM_PRICE_IDS.has(sub?.price_id)) {
       return json({ error: "Premium subscription required" }, 402);

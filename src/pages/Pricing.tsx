@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
@@ -58,10 +59,12 @@ export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
   const { openCheckout, loading } = usePaddleCheckout();
+  const { isActive } = useSubscription();
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
     if (!activeOrg) { navigate("/onboarding"); return; }
+    if (isActive) { navigate("/app/billing"); return; }
     if (activeOrg.role !== "owner") {
       toast.error("Only the organization owner can subscribe.");
       return;

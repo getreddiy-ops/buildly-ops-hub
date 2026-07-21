@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Check, Loader2, ExternalLink } from "lucide-react";
+import { AlertTriangle, Check, Loader2, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,9 @@ import { trackTrialStart } from "@/lib/gtag";
 import { cn } from "@/lib/utils";
 
 const ORDER: Tier[] = ["base", "plus", "premium"];
+const ACTIVATION_POLL_MS = 2_000;
+const ACTIVATION_TIMEOUT_MS = 45_000;
+type ActivationState = "idle" | "verifying" | "delayed";
 
 const PLAN_FEATURES: Record<Tier, string[]> = {
   base: [
@@ -43,24 +46,47 @@ export default function Billing() {
   const { openCheckout, loading: checkoutLoading } = usePaddleCheckout();
   const [portalLoading, setPortalLoading] = useState(false);
   const [pendingTier, setPendingTier] = useState<Tier | null>(null);
+  const [activationState, setActivationState] = useState<ActivationState>("idle");
   const [params, setParams] = useSearchParams();
 
   useEffect(() => {
     if (params.get("checkout") === "success") {
-      trackTrialStart();
-      toast.success("Subscription activated!");
-      const t = setInterval(() => refetch(), 2000);
-      const stop = setTimeout(() => clearInterval(t), 15000);
-      params.delete("checkout");
-      setParams(params, { replace: true });
-      return () => { clearInterval(t); clearTimeout(stop); };
+      setActivationState("verifying");
+      const nextParams = new URLSearchParams(params);
+      nextParams.delete("checkout");
+      setParams(nextParams, { replace: true });
     }
   }, [params, setParams, refetch]);
+
+  useEffect(() => {
+    if (activationState !== "verifying") return;
+    void refetch();
+    const poll = window.setInterval(() => void refetch(), ACTIVATION_POLL_MS);
+    const stop = window.setTimeout(() => {
+      window.clearInterval(poll);
+      setActivationState("delayed");
+    }, ACTIVATION_TIMEOUT_MS);
+    return () => {
+      window.clearInterval(poll);
+      window.clearTimeout(stop);
+    };
+  }, [activationState, refetch]);
+
+  useEffect(() => {
+    if (activationState !== "verifying" || !isActive) return;
+    setActivationState("idle");
+    if (subscription?.status === "trialing") trackTrialStart();
+    toast.success("Subscription activated — your plan is ready.");
+  }, [activationState, isActive, subscription?.status]);
 
   const subscribeTo = async (target: Tier) => {
     if (!activeOrg) return;
     if (!isOwner) {
       toast.error("Only the organization owner can subscribe.");
+      return;
+    }
+    if (isActive) {
+      await onManage();
       return;
     }
     setPendingTier(target);
@@ -87,8 +113,8 @@ export default function Billing() {
       });
       if (error || !data?.url) throw new Error(error?.message ?? "Failed to open portal");
       window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not open customer portal");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not open customer portal");
     } finally {
       setPortalLoading(false);
     }
@@ -104,6 +130,44 @@ export default function Billing() {
         </div>
       ) : (
         <>
+          {activationState === "verifying" && (
+            <Card role="status" className="border-primary/50 bg-primary/5 p-5">
+              <div className="flex items-start gap-3">
+                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
+                <div>
+                  <h3 className="font-semibold">Activating your subscription…</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Checkout finished. We’re securely confirming it with Paddle. This usually takes less than a minute.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {activationState === "delayed" && (
+            <Card role="alert" className="border-amber-500/50 bg-amber-500/5 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex max-w-2xl items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                  <div>
+                    <h3 className="font-semibold">Your access is still syncing</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Don’t submit another payment. Check again below; if access still does not appear, contact support and we’ll verify the checkout.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setActivationState("verifying")}>
+                    Check again
+                  </Button>
+                  <Button variant="ghost" asChild>
+                    <a href="mailto:getreddiy@gmail.com">Contact support</a>
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {isActive && tier && (
             <Card className="p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -152,8 +216,8 @@ export default function Billing() {
                 : isCurrent
                 ? "Current plan"
                 : targetIdx > currentIdx
-                ? "Upgrade"
-                : "Downgrade";
+                ? "Manage upgrade"
+                : "Manage downgrade";
 
               return (
                 <Card

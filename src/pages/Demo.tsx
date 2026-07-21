@@ -444,7 +444,7 @@ export default function Demo() {
             Ready to run your business this way?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Start a free trial — no credit card required for the first 7 days. Cancel anytime.
+            Start a 7-day free trial. Card required; you won't be charged until the trial ends. Cancel anytime.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild>
