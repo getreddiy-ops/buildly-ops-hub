@@ -24,7 +24,7 @@ function truncate(s: string | undefined | null, n = 90) {
 }
 
 export default function Preferences() {
-  const { user, activeOrg, signOut } = useAuth();
+  const { user, activeOrg, signOut, isPlatformAdmin } = useAuth();
   const { branding } = useBranding();
   const navigate = useNavigate();
 
@@ -429,19 +429,20 @@ export default function Preferences() {
         </Button>
       </Card>
 
-      {/* Developer */}
-      <Card className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Code2 className="h-5 w-5 text-primary" />
-          <div>
-            <div className="font-semibold">Developer</div>
-            <div className="text-sm text-muted-foreground">GitHub sync and local development tools.</div>
+      {isPlatformAdmin && (
+        <Card className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Code2 className="h-5 w-5 text-primary" />
+            <div>
+              <div className="font-semibold">Developer</div>
+              <div className="text-sm text-muted-foreground">GitHub sync and local development tools.</div>
+            </div>
           </div>
-        </div>
-        <Button variant="outline" asChild>
-          <Link to="/app/developer">Open developer</Link>
-        </Button>
-      </Card>
+          <Button variant="outline" asChild>
+            <Link to="/app/developer">Open developer</Link>
+          </Button>
+        </Card>
+      )}
 
       {/* Billing — compact, LAST */}
       <Card className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
