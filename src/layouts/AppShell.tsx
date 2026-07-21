@@ -66,10 +66,12 @@ const moreGroups: { label: string; items: NavItem[] }[] = [
 
 const settingsItem: NavItem = { to: "/app/settings", label: "Settings", icon: Settings };
 const settingsGroup: NavItem[] = [
-  { to: "/app/branding", label: "Branding", icon: Sparkles },
-  { to: "/app/billing", label: "Billing", icon: Receipt },
+  { to: "/app/settings", label: "Settings Home", icon: Settings },
+  { to: "/app/business-profile", label: "Business Profile", icon: Sparkles },
+  { to: "/app/branding", label: "Invoice & Branding", icon: Sparkles },
+  { to: "/app/crew", label: "Team & Crew", icon: Users },
   { to: "/app/developer", label: "Developer", icon: Wrench },
-  { to: "/app/settings", label: "Preferences", icon: Settings },
+  { to: "/app/billing", label: "Billing & Plan", icon: Receipt },
 ];
 
 export default function AppShell() {
