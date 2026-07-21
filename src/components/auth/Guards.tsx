@@ -52,10 +52,16 @@ export function RequireRole({
   return <>{children}</>;
 }
 
-export function RequirePlatformAdmin({ children }: { children: ReactNode }) {
+export function RequirePlatformAdmin({
+  children,
+  redirectTo = "/app",
+}: {
+  children: ReactNode;
+  redirectTo?: string;
+}) {
   const { isPlatformAdmin, loading } = useAuth();
   if (loading) return <FullPageSpinner />;
-  if (!isPlatformAdmin) return <Navigate to="/app" replace />;
+  if (!isPlatformAdmin) return <Navigate to={redirectTo} replace />;
   return <>{children}</>;
 }
 

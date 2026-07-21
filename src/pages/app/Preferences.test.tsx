@@ -3,6 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Preferences from "./Preferences";
 
+const authState = vi.hoisted(() => ({ isPlatformAdmin: false }));
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
@@ -20,6 +22,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     user: { id: "u1", email: "jane@example.com" },
     activeOrg: { organization_id: "o1", organization: { id: "o1", name: "Acme Roofing", slug: null } },
     signOut: vi.fn(),
+    isPlatformAdmin: authState.isPlatformAdmin,
   }),
 }));
 vi.mock("@/hooks/useBranding", () => ({
@@ -44,7 +47,31 @@ vi.mock("@/hooks/useBranding", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 describe("Settings Home", () => {
+  it("hides Developer settings from regular customers", async () => {
+    authState.isPlatformAdmin = false;
+    render(
+      <MemoryRouter>
+        <Preferences />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getAllByText(/Acme Roofing/i).length).toBeGreaterThan(0));
+    expect(screen.queryByText(/^Developer$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Open developer/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps Developer settings available to platform administrators", async () => {
+    authState.isPlatformAdmin = true;
+    render(
+      <MemoryRouter>
+        <Preferences />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText(/^Developer$/i)).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: /Open developer/i })).toHaveAttribute("href", "/app/developer");
+  });
+
   it("renders org-personalized header and section cards with correct links", async () => {
+    authState.isPlatformAdmin = false;
     render(
       <MemoryRouter>
         <Preferences />

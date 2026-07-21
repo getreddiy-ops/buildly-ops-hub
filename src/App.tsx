@@ -156,7 +156,10 @@ const App = () => (
               <Route path="billing" element={<Billing />} />
               <Route path="business-profile" element={<BusinessProfile />} />
               <Route path="branding" element={<Branding />} />
-              <Route path="developer" element={<Developer />} />
+              <Route
+                path="developer"
+                element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>}
+              />
 
               <Route path="settings" element={<Preferences />} />
 

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Plus, Mic, MicOff, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Plus, Mic, MicOff, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +69,7 @@ export default function PhoneAssistantPage() {
   );
 }
 
-function PhoneAssistant() {
+export function PhoneAssistant() {
   const { activeOrg } = useAuth();
   const { isOwner } = useSubscription();
   const orgId = activeOrg?.organization_id ?? null;
@@ -87,6 +87,8 @@ function PhoneAssistant() {
   const [searching, setSearching] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [releasing, setReleasing] = useState(false);
+  const [saveState, setSaveState] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
+  const draftRevision = useRef(0);
 
   const load = useCallback(async () => {
     if (!orgId) return;
@@ -102,7 +104,36 @@ function PhoneAssistant() {
   useEffect(() => { load(); }, [load]);
 
   const [draft, setDraft] = useState<Partial<Assistant>>({});
-  useEffect(() => { setDraft({}); }, [assistant?.id]);
+  const draftKey = orgId ? `fasttract:phone-assistant-draft:${orgId}` : null;
+
+  useEffect(() => {
+    setDraft({});
+    setSaveState("saved");
+    draftRevision.current = 0;
+    if (!draftKey) return;
+    try {
+      const stored = sessionStorage.getItem(draftKey);
+      if (!stored) return;
+      const recovered = JSON.parse(stored) as Partial<Assistant>;
+      if (recovered && typeof recovered === "object") {
+        setDraft(recovered);
+        setSaveState("unsaved");
+      }
+    } catch {
+      sessionStorage.removeItem(draftKey);
+    }
+  }, [draftKey]);
+
+  const updateDraft = useCallback((patch: Partial<Assistant>) => {
+    draftRevision.current += 1;
+    setSaveState("unsaved");
+    setDraft((current) => {
+      const next = { ...current, ...patch };
+      if (draftKey) sessionStorage.setItem(draftKey, JSON.stringify(next));
+      return next;
+    });
+  }, [draftKey]);
+
   const merged = useMemo<Assistant | null>(() => assistant ? { ...assistant, ...draft } : null, [assistant, draft]);
 
   // Defaults when no assistant yet
@@ -115,9 +146,11 @@ function PhoneAssistant() {
     ...draft,
   };
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (!orgId) return;
+    const revision = draftRevision.current;
     setSaving(true);
+    setSaveState("saving");
     const { data, error } = await supabase.functions.invoke("phone-assistant", {
       body: {
         organization_id: orgId,
@@ -132,12 +165,25 @@ function PhoneAssistant() {
     setSaving(false);
     if (error || (data as any)?.error) {
       toast.error((data as any)?.error ?? error?.message ?? "Failed to save");
+      setSaveState("error");
       return;
     }
-    toast.success("Assistant saved");
-    setDraft({});
-    load();
-  };
+    const savedAssistant = (data as any)?.assistant as Assistant | undefined;
+    if (savedAssistant) setAssistant(savedAssistant);
+    if (revision === draftRevision.current) {
+      setDraft({});
+      if (draftKey) sessionStorage.removeItem(draftKey);
+      setSaveState("saved");
+    } else {
+      setSaveState("unsaved");
+    }
+  }, [draftKey, editing.capabilities, editing.enabled, editing.greeting, editing.transfer_number, editing.voice_id, orgId]);
+
+  useEffect(() => {
+    if (loading || !canEdit || Object.keys(draft).length === 0) return;
+    const timer = window.setTimeout(() => { void save(); }, 900);
+    return () => window.clearTimeout(timer);
+  }, [canEdit, draft, loading, save]);
 
   const callProvision = async (payload: Record<string, unknown>) => {
     if (!orgId) return null;
@@ -301,7 +347,7 @@ function PhoneAssistant() {
             <div className="flex items-center gap-2">
               <Switch
                 checked={!!editing.enabled}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, enabled: v }))}
+                onCheckedChange={(v) => updateDraft({ enabled: v })}
                 disabled={!canEdit}
                 id="enabled"
               />
@@ -311,10 +357,11 @@ function PhoneAssistant() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Voice</Label>
+              <Label htmlFor="assistant-voice">Voice</Label>
               <select
+                id="assistant-voice"
                 value={editing.voice_id}
-                onChange={(e) => setDraft((d) => ({ ...d, voice_id: e.target.value }))}
+                onChange={(e) => updateDraft({ voice_id: e.target.value })}
                 disabled={!canEdit}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
@@ -322,22 +369,26 @@ function PhoneAssistant() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Transfer-to number</Label>
+              <Label htmlFor="assistant-transfer-number">Transfer-to number</Label>
               <Input
+                id="assistant-transfer-number"
                 placeholder="+1 555 000 0000"
                 value={editing.transfer_number ?? ""}
-                onChange={(e) => setDraft((d) => ({ ...d, transfer_number: e.target.value }))}
+                onChange={(e) => updateDraft({ transfer_number: e.target.value })}
+                onBlur={() => { if (Object.keys(draft).length > 0) void save(); }}
                 disabled={!canEdit}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Greeting script</Label>
+            <Label htmlFor="assistant-greeting">Greeting script</Label>
             <Textarea
+              id="assistant-greeting"
               rows={4}
               value={editing.greeting ?? ""}
-              onChange={(e) => setDraft((d) => ({ ...d, greeting: e.target.value }))}
+              onChange={(e) => updateDraft({ greeting: e.target.value })}
+              onBlur={() => { if (Object.keys(draft).length > 0) void save(); }}
               disabled={!canEdit}
             />
           </div>
@@ -351,12 +402,9 @@ function PhoneAssistant() {
                     type="checkbox"
                     className="h-4 w-4"
                     checked={!!editing.capabilities?.[key]}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        capabilities: { ...(editing.capabilities ?? {}), [key]: e.target.checked },
-                      }))
-                    }
+                    onChange={(e) => updateDraft({
+                      capabilities: { ...(editing.capabilities ?? {}), [key]: e.target.checked },
+                    })}
                     disabled={!canEdit}
                   />
                   {label}
@@ -366,12 +414,15 @@ function PhoneAssistant() {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {assistant?.elevenlabs_agent_id ? `Agent ID: ${assistant.elevenlabs_agent_id}` : "No agent yet — saving will create one."}
-            </span>
-            <Button onClick={save} disabled={!canEdit || saving}>
+            <div className="space-y-1">
+              <SaveStatus state={saveState} />
+              <div className="text-xs text-muted-foreground">
+                {assistant?.elevenlabs_agent_id ? `Agent ID: ${assistant.elevenlabs_agent_id}` : "Your first saved change will create the assistant."}
+              </div>
+            </div>
+            <Button onClick={() => void save()} disabled={!canEdit || saving || Object.keys(draft).length === 0}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {assistant?.elevenlabs_agent_id ? "Save changes" : "Create assistant"}
+              Save now
             </Button>
           </div>
         </Card>
@@ -420,6 +471,19 @@ function PhoneAssistant() {
       </Card>
     </div>
   );
+}
+
+function SaveStatus({ state }: { state: "saved" | "unsaved" | "saving" | "error" }) {
+  if (state === "saving") {
+    return <span className="flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving every change…</span>;
+  }
+  if (state === "error") {
+    return <span className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5" />Not saved — your draft is kept in this tab</span>;
+  }
+  if (state === "unsaved") {
+    return <span className="flex items-center gap-1 text-xs text-amber-600"><Clock className="h-3.5 w-3.5" />Change detected — saving automatically</span>;
+  }
+  return <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" />All changes saved</span>;
 }
 
 function TestConsole(props: { agentReady: boolean; orgId: string | null }) {

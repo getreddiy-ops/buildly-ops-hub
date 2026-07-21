@@ -70,9 +70,15 @@ const settingsGroup: NavItem[] = [
   { to: "/app/business-profile", label: "Business Profile", icon: Sparkles },
   { to: "/app/branding", label: "Invoice & Branding", icon: Sparkles },
   { to: "/app/crew", label: "Team & Crew", icon: Users },
-  { to: "/app/developer", label: "Developer", icon: Wrench },
   { to: "/app/billing", label: "Billing & Plan", icon: Receipt },
 ];
+const developerSettingsItem: NavItem = { to: "/app/developer", label: "Developer", icon: Wrench };
+
+export function getSettingsGroup(isPlatformAdmin: boolean): NavItem[] {
+  return isPlatformAdmin
+    ? [...settingsGroup.slice(0, -1), developerSettingsItem, settingsGroup[settingsGroup.length - 1]]
+    : settingsGroup;
+}
 
 export default function AppShell() {
   const { user, activeOrg, signOut, memberships, setActiveOrgId, isPlatformAdmin } = useAuth();
@@ -81,6 +87,7 @@ export default function AppShell() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const currentPath = location.pathname;
+  const visibleSettingsGroup = getSettingsGroup(isPlatformAdmin);
 
   const linkClass = (isActive: boolean) =>
     cn(
@@ -149,7 +156,7 @@ export default function AppShell() {
               </SheetHeader>
               <nav className="flex-1 overflow-y-auto p-3">
                 <ul className="space-y-0.5">
-                  {[...primary, ...moreGroups.flatMap(g => g.items), ...settingsGroup].map(item => (
+                  {[...primary, ...moreGroups.flatMap(g => g.items), ...visibleSettingsGroup].map(item => (
                     <li key={item.to}>
                       <NavLink
                         to={item.to}
@@ -246,7 +253,7 @@ export default function AppShell() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {settingsGroup.map(item => (
+                {visibleSettingsGroup.map(item => (
                   <DropdownMenuItem key={item.to} asChild>
                     <Link to={item.to} className="flex items-center gap-2">
                       <item.icon className="h-4 w-4" /> {item.label}
