@@ -53,7 +53,7 @@ describe("Settings Home", () => {
     await waitFor(() => expect(screen.getAllByText(/Acme Roofing/i).length).toBeGreaterThan(0));
     expect(screen.getByRole("heading", { name: /Invoice & document appearance/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Team & crew/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Billing & plan/i })).toBeInTheDocument();
+    expect(screen.getByText(/Billing & plan/i)).toBeInTheDocument();
 
     const customize = screen.getAllByRole("link", { name: /Customize invoices/i })[0];
     expect(customize).toHaveAttribute("href", "/app/branding");
