@@ -388,8 +388,8 @@ Deno.serve(async (req) => {
     const periodEnd = subRow?.current_period_end ? new Date(subRow.current_period_end).getTime() : null;
     const activeStatus =
       subRow &&
-      ((["active", "trialing", "past_due"].includes(subRow.status) && (!periodEnd || periodEnd > now)) ||
-        (subRow.status === "canceled" && !!periodEnd && periodEnd > now));
+      ["active", "trialing", "past_due"].includes(subRow.status) &&
+      (!periodEnd || periodEnd > now);
     if (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id)) {
       return new Response(
         JSON.stringify({ error: "Plus or Premium subscription required", code: "subscription_required" }),

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { tierFromPriceId, hasAssistant, hasPhoneAssistant } from "@/lib/tiers";
+import { hasSubscriptionAccess } from "@/lib/subscription-access";
 
 export type SubscriptionRow = {
   id: string;
@@ -69,15 +70,7 @@ export function useSubscription() {
     };
   }, [orgId, fetchSub]);
 
-  const now = Date.now();
-  const periodEnd = subscription?.current_period_end
-    ? new Date(subscription.current_period_end).getTime()
-    : null;
-  const isActive =
-    !!subscription &&
-    ((["active", "trialing", "past_due"].includes(subscription.status) &&
-      (!periodEnd || periodEnd > now)) ||
-      (subscription.status === "canceled" && !!periodEnd && periodEnd > now));
+  const isActive = hasSubscriptionAccess(subscription);
   const isPastDue = subscription?.status === "past_due";
   const isOwner = activeOrg?.role === "owner";
   const tier = isActive ? tierFromPriceId(subscription?.price_id) : null;
