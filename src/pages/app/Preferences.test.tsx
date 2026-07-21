@@ -50,7 +50,7 @@ describe("Settings Home", () => {
         <Preferences />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText(/Acme Roofing/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Acme Roofing/i).length).toBeGreaterThan(0));
     expect(screen.getByRole("heading", { name: /Invoice & document appearance/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Team & crew/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Billing & plan/i })).toBeInTheDocument();
