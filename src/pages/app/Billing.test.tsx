@@ -3,33 +3,34 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Billing from "./Billing";
 
-const openCheckout = vi.fn();
-const refetch = vi.fn();
-const invoke = vi.fn();
-const trackTrialStart = vi.fn();
-const toastSuccess = vi.fn();
-
 type MockSubscription = {
   status: string;
   current_period_end: string | null;
   cancel_at_period_end?: boolean;
 };
 
-const subscriptionState: {
-  subscription: MockSubscription | null;
-  isActive: boolean;
-  isPastDue: boolean;
-  isOwner: boolean;
-  tier: "base" | "plus" | "premium" | null;
-  loading: boolean;
-} = {
-  subscription: null,
-  isActive: false,
-  isPastDue: false,
-  isOwner: true,
-  tier: null,
-  loading: false,
-};
+const {
+  openCheckout,
+  refetch,
+  invoke,
+  trackTrialStart,
+  toastSuccess,
+  subscriptionState,
+} = vi.hoisted(() => ({
+  openCheckout: vi.fn(),
+  refetch: vi.fn(),
+  invoke: vi.fn(),
+  trackTrialStart: vi.fn(),
+  toastSuccess: vi.fn(),
+  subscriptionState: {
+    subscription: null as MockSubscription | null,
+    isActive: false,
+    isPastDue: false,
+    isOwner: true,
+    tier: null as "base" | "plus" | "premium" | null,
+    loading: false,
+  },
+}));
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
@@ -115,7 +116,9 @@ describe("Billing checkout activation", () => {
         <Billing />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole("button", { name: /manage upgrade/i }));
+    const upgradeButtons = screen.getAllByRole("button", { name: /manage upgrade/i });
+    expect(upgradeButtons).toHaveLength(2);
+    fireEvent.click(upgradeButtons[0]);
 
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
     expect(openCheckout).not.toHaveBeenCalled();

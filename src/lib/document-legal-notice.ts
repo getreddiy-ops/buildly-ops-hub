@@ -1,0 +1,2 @@
+export const GENERIC_DOCUMENT_LEGAL_NOTICE =
+  "Important state and local law notice: This is a general business form, not legal advice. Requirements vary by project location. Before using or signing it, the contractor must review and update any contract, estimate, invoice, tax, licensing, permit, lien, cancellation, notice, and consumer-protection language required by applicable state and local law. Consult a licensed attorney, contractor licensing board, or state agency when needed.";

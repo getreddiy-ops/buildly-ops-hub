@@ -38,7 +38,7 @@ Contractor agrees to perform the work described in the attached scope and estima
 Client agrees to pay the total price set out in the estimate, on the schedule agreed in writing.
 
 3. WARRANTY
-Contractor warrants workmanship for one (1) year from the date of substantial completion.
+Any workmanship warranty must be stated in writing and is subject to applicable state and local law.
 
 4. SIGNATURES
 By signing below, both parties agree to the terms of this Agreement.`;

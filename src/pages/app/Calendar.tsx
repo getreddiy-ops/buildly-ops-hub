@@ -16,6 +16,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Check, X, Loader2, Plus, Info 
 import { toast } from "sonner";
 import { ruleForState, computeBalance } from "@/lib/pto-accrual";
 import { cn } from "@/lib/utils";
+import { toLocalDateInputValue } from "@/lib/local-date";
 
 // Best-effort infer US state from a free-form address (client-side mirror of server helper).
 function inferStateCode(address?: string | null): string | null {
@@ -116,7 +117,7 @@ export default function CalendarPage() {
   const monthLabel = monthAnchor.toLocaleString(undefined, { month: "long", year: "numeric" });
 
   const dayRequests = (day: Date) => {
-    const dstr = day.toISOString().slice(0, 10);
+    const dstr = toLocalDateInputValue(day);
     return requests.filter((r) => r.start_date <= dstr && r.end_date >= dstr && r.status !== "cancelled" && r.status !== "denied");
   };
 
