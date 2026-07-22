@@ -1,4 +1,5 @@
 import { Branding, DocumentTemplate } from "@/hooks/useBranding";
+import { GENERIC_DOCUMENT_LEGAL_NOTICE } from "@/lib/document-legal-notice";
 
 interface LineItem {
   description: string;
@@ -176,6 +177,10 @@ export function DocumentPreview({
           <div className="mt-1 whitespace-pre-line text-xs text-slate-600">{template.terms}</div>
         </div>
       )}
+
+      <div className="mt-6 rounded border border-amber-300 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-950">
+        {GENERIC_DOCUMENT_LEGAL_NOTICE}
+      </div>
 
       {template?.footer && (
         <div

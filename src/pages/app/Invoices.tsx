@@ -26,6 +26,7 @@ import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucid
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { toLocalDateInputValue } from "@/lib/local-date";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -48,7 +49,7 @@ export default function Invoices() {
   const [number, setNumber] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [status, setStatus] = useState<InvStatus>("draft");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [issueDate, setIssueDate] = useState(() => toLocalDateInputValue());
   const [dueDate, setDueDate] = useState("");
   const [taxPct, setTaxPct] = useState(0);
   const [notes, setNotes] = useState("");
@@ -79,7 +80,7 @@ export default function Invoices() {
 
   const resetForm = () => {
     setNumber(""); setCustomerId(""); setStatus("draft");
-    setIssueDate(new Date().toISOString().slice(0, 10));
+    setIssueDate(toLocalDateInputValue());
     setDueDate(""); setTaxPct(0); setNotes(""); setTerms("");
     setItems([{ description: "", quantity: 1, unit_price: 0 }]);
   };

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { DollarSign, Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { toLocalDateInputValue } from "@/lib/local-date";
 
 interface JobLite { id: string; title: string; budget: number | null; status: string; }
 interface CostRow {
@@ -54,7 +55,7 @@ export default function Costing() {
   const [category, setCategory] = useState<typeof CATEGORIES[number]>("materials");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [incurredOn, setIncurredOn] = useState(new Date().toISOString().slice(0, 10));
+  const [incurredOn, setIncurredOn] = useState(() => toLocalDateInputValue());
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
