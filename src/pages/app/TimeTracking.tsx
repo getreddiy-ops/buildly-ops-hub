@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/select";
 import { Clock, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import FieldClock from "@/pages/field/FieldClock";
 
 interface Entry {
   id: string;
   user_id: string;
-  job_id: string;
+  job_id: string | null;
   clock_in: string;
   clock_out: string | null;
   clock_in_lat: number | null;
@@ -27,6 +28,8 @@ interface Entry {
   status: string;
   jobs: { title: string } | null;
 }
+
+type TimeScope = "week" | "month" | "all";
 
 const hrs = (e: Entry) => {
   if (e.approved_hours != null) return Number(e.approved_hours);
@@ -42,10 +45,10 @@ export default function TimeTracking() {
   const isAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const [entries, setEntries] = useState<Entry[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
-  const [scope, setScope] = useState<"week" | "month" | "all">("week");
+  const [scope, setScope] = useState<TimeScope>("week");
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!activeOrg) return;
     setLoading(true);
     let q = supabase.from("time_entries").select("*, jobs(title)").eq("organization_id", activeOrg.organization_id);
@@ -57,19 +60,23 @@ export default function TimeTracking() {
     }
     const { data, error } = await q.order("clock_in", { ascending: false });
     if (error) toast.error(error.message);
-    const list = (data ?? []) as any as Entry[];
+    const list = (data ?? []) as unknown as Entry[];
     setEntries(list);
     const ids = Array.from(new Set(list.map((e) => e.user_id)));
     if (ids.length) {
       const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
       const map: Record<string, string> = {};
-      (profs ?? []).forEach((p: any) => { map[p.id] = p.full_name || p.email || p.id.slice(0, 8); });
+      (profs ?? []).forEach((profile) => {
+        map[profile.id] = profile.full_name || profile.email || profile.id.slice(0, 8);
+      });
       setNames(map);
     }
     setLoading(false);
-  };
+  }, [activeOrg, isAdmin, scope, user]);
 
-  useEffect(() => { load(); }, [activeOrg?.organization_id, scope, isAdmin]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const total = useMemo(() => entries.reduce((s, e) => s + hrs(e), 0), [entries]);
 
@@ -79,7 +86,7 @@ export default function TimeTracking() {
         title="Time Tracking"
         description={isAdmin ? "All crew time entries." : "Your time entries."}
         actions={
-          <Select value={scope} onValueChange={(v) => setScope(v as any)}>
+          <Select value={scope} onValueChange={(value) => setScope(value as TimeScope)}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="week">Last 7 days</SelectItem>
@@ -89,6 +96,16 @@ export default function TimeTracking() {
           </Select>
         }
       />
+
+      <section className="mb-6 rounded-xl border border-border bg-card p-4 sm:p-6">
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold">My clock</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose a job, clock yourself in, and let FastTract capture your phone's location at clock-in and clock-out.
+          </p>
+        </div>
+        <FieldClock embedded onEntryChanged={load} />
+      </section>
 
       <div className="mb-4 flex gap-6 text-sm">
         <Stat label="Entries" value={String(entries.length)} />
@@ -111,7 +128,7 @@ export default function TimeTracking() {
                 <TableHead>Clock out</TableHead>
                 <TableHead className="text-right">Hours</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-10" />
+                <TableHead>Locations</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,16 +141,30 @@ export default function TimeTracking() {
                   <TableCell className="text-right tabular-nums">{e.clock_out ? fmtHrs(hrs(e)) : "—"}</TableCell>
                   <TableCell><StatusBadge status={e.status} /></TableCell>
                   <TableCell>
-                    {e.clock_in_lat != null && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${e.clock_in_lat},${e.clock_in_lng}`}
-                        target="_blank" rel="noreferrer"
-                        className="text-muted-foreground hover:text-primary"
-                        title="View clock-in location"
-                      >
-                        <MapPin className="h-4 w-4" />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-3 text-xs">
+                      {e.clock_in_lat != null && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${e.clock_in_lat},${e.clock_in_lng}`}
+                          target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary"
+                          title="View clock-in location"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          In
+                        </a>
+                      )}
+                      {e.clock_out_lat != null && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${e.clock_out_lat},${e.clock_out_lng}`}
+                          target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary"
+                          title="View clock-out location"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          Out
+                        </a>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

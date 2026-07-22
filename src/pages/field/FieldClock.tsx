@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, MapPin, Loader2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AUTO_JOB_RADIUS_METERS,
+  canChooseAnyOrgJob,
+  distanceInMeters,
+  elapsedTime,
+  getCurrentPosition,
+} from "@/lib/time-clock";
 
 interface OpenEntry {
   id: string;
@@ -26,41 +33,32 @@ interface AssignedJob {
   address: string | null;
 }
 
-const AUTO_RADIUS_M = 250;
+interface AssignedJobRecord extends AssignedJob {
+  organization_id: string;
+  status: string;
+}
 
-const getPos = (): Promise<GeolocationPosition> =>
-  new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("Geolocation not available on this device"));
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0,
-    });
-  });
-
-// Haversine distance in meters
-const distM = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-};
-
-const elapsed = (since: string) => {
-  const ms = Date.now() - new Date(since).getTime();
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-};
+interface CrewAssignmentRecord {
+  jobs: AssignedJobRecord | null;
+}
 
 type PermState = "unknown" | "prompt" | "granted" | "denied";
 
-export default function FieldClock() {
+interface FieldClockProps {
+  embedded?: boolean;
+  onEntryChanged?: () => void;
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return fallback;
+};
+
+export default function FieldClock({ embedded = false, onEntryChanged }: FieldClockProps) {
   const { user, activeOrg } = useAuth();
   const [openEntry, setOpenEntry] = useState<OpenEntry | null>(null);
   const [jobs, setJobs] = useState<AssignedJob[]>([]);
@@ -87,9 +85,7 @@ export default function FieldClock() {
     let cancelled = false;
     (async () => {
       try {
-        // @ts-ignore — permissions API may be missing on iOS Safari
         if (navigator.permissions?.query) {
-          // @ts-ignore
           const status = await navigator.permissions.query({ name: "geolocation" });
           if (!cancelled) setPerm(status.state as PermState);
           status.onchange = () => !cancelled && setPerm(status.state as PermState);
@@ -103,128 +99,182 @@ export default function FieldClock() {
     return () => { cancelled = true; };
   }, []);
 
-  const requestPermission = async () => {
-    try {
-      await getPos();
-      setPerm("granted");
-      toast.success("Location enabled");
-      detectNearestJob();
-    } catch (e: any) {
-      setPerm("denied");
-      toast.error(e?.message ?? "Location permission denied");
-    }
-  };
-
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user || !activeOrg) return;
     setLoading(true);
-    const [{ data: entry }, { data: ca }] = await Promise.all([
-      supabase
+    const { data: entry, error: entryError } = await supabase
         .from("time_entries")
         .select("id, job_id, clock_in, note, jobs(title)")
         .eq("user_id", user.id)
+        .eq("organization_id", activeOrg.organization_id)
         .is("clock_out", null)
         .order("clock_in", { ascending: false })
         .limit(1)
-        .maybeSingle(),
-      supabase
+        .maybeSingle();
+
+    let list: AssignedJob[] = [];
+    if (canChooseAnyOrgJob(activeOrg.role)) {
+      const { data: orgJobs, error } = await supabase
+        .from("jobs")
+        .select("id, title, status, organization_id, latitude, longitude, address")
+        .eq("organization_id", activeOrg.organization_id)
+        .not("status", "in", "(completed,cancelled)")
+        .order("title");
+      if (error) toast.error(error.message);
+      list = (orgJobs ?? []).map((job) => ({
+        id: job.id,
+        title: job.title,
+        latitude: job.latitude,
+        longitude: job.longitude,
+        address: job.address,
+      }));
+    } else {
+      const { data: assignments, error } = await supabase
         .from("crew_assignments")
         .select("job_id, jobs!inner(id, title, status, organization_id, latitude, longitude, address)")
-        .eq("user_id", user.id),
-    ]);
-    setOpenEntry((entry as any) ?? null);
-    const list = ((ca ?? []) as any[])
-      .map((r) => r.jobs)
-      .filter((j) => j && j.organization_id === activeOrg.organization_id && j.status !== "completed" && j.status !== "cancelled")
-      .map((j) => ({ id: j.id, title: j.title, latitude: j.latitude, longitude: j.longitude, address: j.address }));
+        .eq("user_id", user.id);
+      if (error) toast.error(error.message);
+      list = ((assignments ?? []) as unknown as CrewAssignmentRecord[])
+        .map((row) => row.jobs)
+        .filter((job) =>
+          job &&
+          job.organization_id === activeOrg.organization_id &&
+          job.status !== "completed" &&
+          job.status !== "cancelled",
+        )
+        .map((job) => ({
+          id: job.id,
+          title: job.title,
+          latitude: job.latitude,
+          longitude: job.longitude,
+          address: job.address,
+        }));
+    }
+
+    if (entryError) toast.error(entryError.message);
+    setOpenEntry((entry as unknown as OpenEntry | null) ?? null);
     setJobs(list);
+    setManualJob((current) =>
+      current !== "__none__" && !list.some((job) => job.id === current) ? "__none__" : current,
+    );
     setLoading(false);
-  };
+  }, [activeOrg, user]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id, activeOrg?.organization_id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const detectNearestJob = async () => {
+  const detectNearestJob = useCallback(async (knownPosition?: GeolocationPosition) => {
     if (jobs.length === 0) return;
     setDetecting(true);
     try {
-      const pos = await getPos();
+      const pos = knownPosition ?? await getCurrentPosition();
       setPerm("granted");
       const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       let best: { job: AssignedJob; distance: number } | null = null;
       for (const j of jobs) {
         if (j.latitude == null || j.longitude == null) continue;
-        const d = distM(here, { lat: Number(j.latitude), lng: Number(j.longitude) });
+        const d = distanceInMeters(here, { lat: Number(j.latitude), lng: Number(j.longitude) });
         if (!best || d < best.distance) best = { job: j, distance: d };
       }
       setDetected(best);
-      if (best && best.distance <= AUTO_RADIUS_M) {
+      if (best && best.distance <= AUTO_JOB_RADIUS_METERS) {
         setManualJob(best.job.id);
       }
-    } catch (e: any) {
+    } catch (error: unknown) {
       setPerm("denied");
-      toast.error(e?.message ?? "Could not read location");
+      toast.error(getErrorMessage(error, "Could not read location"));
     } finally {
       setDetecting(false);
+    }
+  }, [jobs]);
+
+  const requestPermission = async () => {
+    try {
+      const position = await getCurrentPosition();
+      setPerm("granted");
+      toast.success("Location enabled");
+      await detectNearestJob(position);
+    } catch (error: unknown) {
+      setPerm("denied");
+      toast.error(getErrorMessage(error, "Location permission denied"));
     }
   };
 
   useEffect(() => {
     if (perm === "granted" && jobs.length > 0 && !openEntry && !detected) {
-      detectNearestJob();
+      void detectNearestJob();
     }
-    // eslint-disable-next-line
-  }, [perm, jobs.length, openEntry]);
+  }, [perm, jobs.length, openEntry, detected, detectNearestJob]);
 
   const clockIn = async () => {
     if (!user || !activeOrg) return;
-    const hasAuto = detected && detected.distance <= AUTO_RADIUS_M;
-    const jobId = hasAuto ? detected!.job.id : (manualJob !== "__none__" ? manualJob : null);
+    const jobId = manualJob !== "__none__" ? manualJob : null;
     if (!jobId && !activity.trim()) {
-      toast.error("Describe what you'll be doing so your boss can attach the hours.");
+      toast.error("Choose a job or describe what you'll be working on.");
       return;
     }
     setWorking(true);
     try {
-      const pos = await getPos();
+      let position: GeolocationPosition | null = null;
+      try {
+        position = await getCurrentPosition();
+        setPerm("granted");
+      } catch {
+        setPerm("denied");
+        toast.warning("Location was unavailable. Your time will still be recorded.");
+      }
       const { error } = await supabase.from("time_entries").insert({
         organization_id: activeOrg.organization_id,
         user_id: user.id,
         job_id: jobId,
         clock_in: new Date().toISOString(),
-        clock_in_lat: pos.coords.latitude,
-        clock_in_lng: pos.coords.longitude,
+        clock_in_lat: position?.coords.latitude ?? null,
+        clock_in_lng: position?.coords.longitude ?? null,
         status: "pending",
         note: jobId ? null : activity.trim(),
       });
       if (error) throw error;
-      toast.success(jobId ? "Clocked in" : "Clocked in — boss will attach this to a job");
+      toast.success(jobId ? "Clocked in to the selected job" : "Clocked in — assign the entry later");
       setManualJob("__none__"); setActivity(""); setDetected(null);
-      load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Could not clock in");
+      await load();
+      onEntryChanged?.();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Could not clock in"));
     } finally {
       setWorking(false);
     }
   };
 
   const clockOut = async () => {
-    if (!openEntry) return;
+    if (!openEntry || !user || !activeOrg) return;
     setWorking(true);
     try {
-      const pos = await getPos();
+      let position: GeolocationPosition | null = null;
+      try {
+        position = await getCurrentPosition();
+        setPerm("granted");
+      } catch {
+        setPerm("denied");
+        toast.warning("Location was unavailable. Your clock-out will still be saved.");
+      }
       const { error } = await supabase
         .from("time_entries")
         .update({
           clock_out: new Date().toISOString(),
-          clock_out_lat: pos.coords.latitude,
-          clock_out_lng: pos.coords.longitude,
+          clock_out_lat: position?.coords.latitude ?? null,
+          clock_out_lng: position?.coords.longitude ?? null,
         })
-        .eq("id", openEntry.id);
+        .eq("id", openEntry.id)
+        .eq("user_id", user.id)
+        .eq("organization_id", activeOrg.organization_id)
+        .is("clock_out", null);
       if (error) throw error;
-      toast.success("Clocked out — awaiting approval");
-      load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Could not clock out");
+      toast.success("Clocked out — time entry saved");
+      await load();
+      onEntryChanged?.();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Could not clock out"));
     } finally {
       setWorking(false);
     }
@@ -236,7 +286,7 @@ export default function FieldClock() {
 
   if (openEntry) {
     return (
-      <div className="mx-auto max-w-sm space-y-6 pt-6 text-center">
+      <div className={embedded ? "space-y-4 text-center" : "mx-auto max-w-sm space-y-6 pt-6 text-center"}>
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-8">
           <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-primary/20 text-primary">
             <Clock className="h-7 w-7" />
@@ -245,21 +295,21 @@ export default function FieldClock() {
           <p className="mt-1 text-xl font-semibold">
             {openEntry.jobs?.title ?? (openEntry.note ? `Unassigned · ${openEntry.note}` : "Unassigned")}
           </p>
-          <p className="mt-4 font-mono text-4xl tabular-nums" key={tick}>{elapsed(openEntry.clock_in)}</p>
+          <p className="mt-4 font-mono text-4xl tabular-nums" key={tick}>{elapsedTime(openEntry.clock_in)}</p>
           <p className="mt-2 text-xs text-muted-foreground">Since {new Date(openEntry.clock_in).toLocaleTimeString()}</p>
         </div>
         <Button onClick={clockOut} disabled={working} size="lg" variant="destructive" className="w-full">
           {working ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving location…</> : <><MapPin className="h-4 w-4" /> Clock out</>}
         </Button>
-        <p className="text-xs text-muted-foreground">Your GPS location is recorded at clock-out so your boss can verify your hours.</p>
+        <p className="text-xs text-muted-foreground">FastTract requests your current location again at clock-out. If it is unavailable, your hours are still saved.</p>
       </div>
     );
   }
 
-  const hasAuto = detected && detected.distance <= AUTO_RADIUS_M;
+  const hasAuto = detected && detected.distance <= AUTO_JOB_RADIUS_METERS;
 
   return (
-    <div className="mx-auto max-w-sm space-y-5 pt-6">
+    <div className={embedded ? "space-y-5" : "mx-auto max-w-sm space-y-5 pt-6"}>
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-muted text-muted-foreground">
           <Clock className="h-7 w-7" />
@@ -276,9 +326,9 @@ export default function FieldClock() {
             <div className="flex-1">
               <p className="text-sm font-medium">Location permission needed</p>
               <p className="text-xs text-muted-foreground mt-1">
-                We use your phone's GPS only when you clock in and out so your employer can verify your hours and match you to the right job.
+                FastTract asks for your phone's current location only when you clock in and out. Clock locations can be opened in Google Maps; there is no background tracking.
               </p>
-              <Button size="sm" onClick={requestPermission} className="mt-3">Allow location</Button>
+              <Button size="sm" onClick={requestPermission} className="mt-3">Use my phone's location</Button>
               {perm === "denied" && (
                 <p className="text-xs text-destructive mt-2">
                   Permission was blocked. Open your browser settings for this site and enable Location, then reload.
@@ -293,7 +343,7 @@ export default function FieldClock() {
         <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center gap-2 text-sm">
           <ShieldCheck className="h-4 w-4 text-emerald-600" />
           <span>Location enabled</span>
-          <Button size="sm" variant="ghost" className="ml-auto h-7" onClick={detectNearestJob} disabled={detecting}>
+          <Button size="sm" variant="ghost" className="ml-auto h-7" onClick={() => detectNearestJob()} disabled={detecting}>
             {detecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Re-check"}
           </Button>
         </div>
@@ -314,29 +364,31 @@ export default function FieldClock() {
             <>
               <p className="text-xs uppercase tracking-wide text-amber-600">No job at your location</p>
               <p className="text-xs text-muted-foreground">
-                Closest assigned job is {detected.job.title} ({Math.round(detected.distance)}m away — outside the {AUTO_RADIUS_M}m range).
+                Closest available job is {detected.job.title} ({Math.round(detected.distance)}m away — outside the {AUTO_JOB_RADIUS_METERS}m range).
               </p>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">No assigned jobs have a saved address. Pick one below or describe what you're doing.</p>
+            <p className="text-xs text-muted-foreground">No available jobs have saved map coordinates. Pick one below or describe what you're doing.</p>
           )}
         </div>
       )}
 
-      {/* Manual fallback */}
-      {!hasAuto && (
-        <div className="space-y-3 rounded-xl border border-border p-4">
+      {/* Job selection and manual fallback */}
+      <div className="space-y-3 rounded-xl border border-border p-4">
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Pick a job (optional)</Label>
+            <Label className="text-xs text-muted-foreground">Job for these hours</Label>
             <Select value={manualJob} onValueChange={setManualJob}>
               <SelectTrigger className="h-11">
-                <SelectValue placeholder={jobs.length === 0 ? "No jobs assigned to you" : "Select a job"} />
+                <SelectValue placeholder={jobs.length === 0 ? "No active jobs available" : "Select a job"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">No job — boss will attach later</SelectItem>
+                <SelectItem value="__none__">No job — add a note</SelectItem>
                 {jobs.map((j) => <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>)}
               </SelectContent>
             </Select>
+            {canChooseAnyOrgJob(activeOrg?.role) && jobs.length > 0 && (
+              <p className="text-xs text-muted-foreground">As an owner or admin, you can clock your own hours to any active job.</p>
+            )}
           </div>
 
           {manualJob === "__none__" && (
@@ -348,21 +400,20 @@ export default function FieldClock() {
                 value={activity}
                 onChange={(e) => setActivity(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Your boss will assign these hours to a job or invoice after you clock out.</p>
+              <p className="text-xs text-muted-foreground">You can assign this entry to a job after clock-out.</p>
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       <Button
         onClick={clockIn}
-        disabled={working || perm !== "granted"}
+        disabled={working || (manualJob === "__none__" && !activity.trim())}
         size="lg"
         className="w-full"
       >
-        {working ? <><Loader2 className="h-4 w-4 animate-spin" /> Getting location…</> : <><MapPin className="h-4 w-4" /> Clock in</>}
+        {working ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving clock-in…</> : <><MapPin className="h-4 w-4" /> Clock in</>}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">GPS is captured at clock-in and clock-out only.</p>
+      <p className="text-center text-xs text-muted-foreground">FastTract will request location when you clock in. If GPS is unavailable, time tracking still works.</p>
     </div>
   );
 }
