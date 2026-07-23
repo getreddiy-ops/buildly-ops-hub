@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { withSupabase } from "jsr:@supabase/server@^1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,20 +57,10 @@ function normalizeHex(color: string) {
   return clean.slice(0, 7);
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Sign in is required.");
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Sign in is required.");
-
-    const { website } = await req.json();
+export default {
+  fetch: withSupabase({ auth: "user" }, async (req) => {
+    try {
+      const { website } = await req.json();
     const url = safeUrl(String(website ?? "").trim());
     const response = await fetch(url, {
       redirect: "follow",
@@ -140,10 +130,11 @@ Deno.serve(async (req) => {
       secondaryColor,
       logo,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Brand scan failed." }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Brand scan failed." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }),
+};
