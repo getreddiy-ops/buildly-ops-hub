@@ -112,8 +112,8 @@ export default function Pricing() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your crew.</h1>
-          <p className="mt-3 text-muted-foreground">Start with a 7-day free trial on any plan. Monthly billing per company. Cancel anytime.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Card required — you won't be charged until your trial ends.</p>
+          <p className="mt-3 text-muted-foreground">Try any plan free for 7 days. Monthly billing per company. Cancel anytime.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Card required · No charge until the trial ends</p>
         </div>
         <h2 className="mb-6 text-center text-xl font-medium tracking-tight">Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
@@ -159,7 +159,7 @@ export default function Pricing() {
                 >
                   {loading ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening checkout…</>
-                  ) : user ? "Start 7-day free trial" : "Start free trial"}
+                  ) : "Start 7-day free trial"}
                 </Button>
               </div>
             );
@@ -170,7 +170,7 @@ export default function Pricing() {
 
       <footer className="mt-20 border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-          <div>© {new Date().getFullYear()} GetReddiy · FastTract</div>
+          <div>© {new Date().getFullYear()} Lynchmarc LLC · FastTract</div>
           <nav className="flex flex-wrap items-center gap-4">
             <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
             <Link to="/privacy" className="hover:text-foreground">Privacy Notice</Link>

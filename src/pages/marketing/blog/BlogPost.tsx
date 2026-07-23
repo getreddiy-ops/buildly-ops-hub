@@ -21,7 +21,7 @@ export default function BlogPost() {
           headline: post.title,
           datePublished: post.date,
           author: { "@type": "Organization", name: "FastTract" },
-          publisher: { "@type": "Organization", name: "GetReddiy" },
+          publisher: { "@type": "Organization", name: "FastTract" },
         }}
       />
       <article className="mx-auto max-w-3xl px-4 pt-16 pb-16 sm:px-6 lg:px-8 lg:pt-24">

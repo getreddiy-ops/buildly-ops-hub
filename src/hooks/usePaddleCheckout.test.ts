@@ -32,7 +32,7 @@ describe("usePaddleCheckout", () => {
         priceId: "contractor_os_pro_monthly",
         customerEmail: "owner@example.com",
         customData: { userId: "u1", orgId: "o1" },
-        successUrl: "https://contractoros.online/app/billing?checkout=success",
+        successUrl: "https://fasttract.org/app/billing?checkout=success",
       });
     });
 
@@ -45,7 +45,7 @@ describe("usePaddleCheckout", () => {
     expect(args.settings.displayMode).toBe("overlay");
     expect(args.settings.variant).toBe("one-page");
     expect(args.settings.successUrl).toBe(
-      "https://contractoros.online/app/billing?checkout=success",
+      "https://fasttract.org/app/billing?checkout=success",
     );
     expect(args.settings.allowLogout).toBe(false);
     // Critical: overlay must NOT include any inline-only settings that
