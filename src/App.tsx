@@ -107,6 +107,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+            {import.meta.env.DEV && <Route path="/onboarding-preview" element={<Onboarding />} />}
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refunds" element={<Refunds />} />

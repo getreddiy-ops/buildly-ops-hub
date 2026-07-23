@@ -49,3 +49,36 @@ Focused inspection covered the command bar, first runbook row, grouped task rows
 - Suppress the test-payment banner in visual demo environments when payment testing is not the subject.
 
 final result: passed
+
+---
+
+## Brand-crawler onboarding extension
+
+- Visual grounding: the selected FastTract dashboard direction above
+- Implementation screenshot: `C:\Users\Morgan\Documents\Codex\2026-07-23\wha\work\buildly-ops-hub\onboarding-brand-preview.png`
+- Viewport: 1440 × 1024 CSS px, device scale 1
+- State: desktop onboarding, manual fallback state
+
+The onboarding screen extends the selected dashboard's dark espresso surfaces, orange brand accent, typography, border treatment, four-category miniature preview, and restrained density. The source and implementation are different workflow states, so this comparison evaluates design-system continuity rather than one-to-one layout geometry.
+
+### Interaction evidence
+
+- Company website input enables the brand-scan action.
+- Company-name edits immediately update the dashboard preview.
+- Logo upload, both color controls, and the final continuation control are keyboard-addressable.
+- Browser console showed no errors from the onboarding route; only existing React Router future-flag warnings were present.
+
+### Findings
+
+- No actionable P0, P1, or P2 visual or interaction findings.
+- P3: The live crawler response could not be exercised in the unauthenticated design-preview route because production correctly requires a valid user JWT.
+
+### Fidelity surfaces
+
+- Typography: matches the established FastTract scale and hierarchy.
+- Spacing: balanced two-column onboarding/preview layout with a single clear progression.
+- Colors: uses existing semantic tokens and previews detected colors without altering the global FastTract shell during setup.
+- Assets: real detected or uploaded logos are rendered with `object-contain`; no placeholder artwork or CSS-drawn logo is used.
+- Copy: clearly explains public-site scanning, approval, manual fallback, and privacy boundaries.
+
+final result: passed
