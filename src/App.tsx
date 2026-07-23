@@ -131,7 +131,11 @@ const App = () => (
             <Route path="/siding-contractor-software" element={<TradePage />} />
             <Route path="/deck-builder-software" element={<TradePage />} />
             <Route path="/general-contractor-software" element={<TradePage />} />
-
+            {import.meta.env.DEV && (
+              <Route path="/design-preview" element={<BrandingProvider><AppShell /></BrandingProvider>}>
+                <Route index element={<Dashboard />} />
+              </Route>
+            )}
             {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
