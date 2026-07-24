@@ -113,7 +113,6 @@ function Onboarding() {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [input, setInput] = useState("");
   const [assistantState, setAssistantState] = useState<AssistantState>("idle");
-  const [viseme, setViseme] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -121,7 +120,6 @@ function Onboarding() {
   const [saving, setSaving] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const talkTimerRef = useRef<number | null>(null);
   const speechFallbackRef = useRef<number | null>(null);
   const speechRunRef = useRef(0);
 
@@ -166,22 +164,12 @@ function Onboarding() {
     if (muted) return setAssistantState("idle");
     const run = ++speechRunRef.current;
     window.speechSynthesis.cancel();
-    if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
     setAssistantState("speaking");
-    setViseme(1);
-    let frame = 1;
-    talkTimerRef.current = window.setInterval(() => {
-      frame = frame === 1 ? 2 : Math.random() > 0.32 ? 1 : 0;
-      setViseme(frame);
-    }, 135);
     const finishSpeaking = () => {
       if (speechRunRef.current !== run) return;
-      if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
       if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
-      talkTimerRef.current = null;
       speechFallbackRef.current = null;
-      setViseme(0);
       setAssistantState("idle");
     };
     speechFallbackRef.current = window.setTimeout(finishSpeaking, Math.min(16000, Math.max(3500, text.length * 68)));
@@ -194,7 +182,6 @@ function Onboarding() {
       utterance.volume = 0.92;
       utterance.voice = await getBestBrowserVoice();
       if (speechRunRef.current !== run) return;
-      utterance.onboundary = () => setViseme((frame) => frame === 1 ? 2 : 1);
       utterance.onend = finishSpeaking;
       utterance.onerror = finishSpeaking;
       window.speechSynthesis.speak(utterance);
@@ -204,7 +191,6 @@ function Onboarding() {
   };
 
   useEffect(() => () => {
-    if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
     window.speechSynthesis?.cancel();
   }, []);
@@ -331,18 +317,23 @@ function Onboarding() {
 
   if (!started) {
     return (
-      <main className="relative min-h-[100dvh] overflow-hidden bg-[#100b08] text-white">
-        <img src="/ava-onboarding.png" alt="Ava, your FastTract AI assistant" className="absolute inset-0 h-full w-full object-cover object-[50%_22%] opacity-80 md:left-auto md:right-0 md:w-[62%] md:object-[50%_20%]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#100b08]/10 via-[#100b08]/25 to-[#100b08] md:bg-gradient-to-r md:from-[#100b08]/90 md:via-[#100b08]/55 md:to-transparent" />
-        <div className="relative flex min-h-[100dvh] items-end px-3 pb-3 pt-[38dvh] md:items-center md:px-14 md:py-12">
-          <section className="w-full max-w-xl rounded-[26px] border border-white/15 bg-[#17100c]/90 p-5 shadow-2xl backdrop-blur-xl md:p-9">
+      <main className="relative min-h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_50%_15%,rgba(249,115,22,.16),transparent_36%),#100b08] text-white">
+        <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl items-center px-4 py-12">
+          <section className="w-full rounded-[28px] border border-white/15 bg-[#17100c]/90 p-6 text-center shadow-2xl backdrop-blur-xl md:p-10">
+            <div className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-400 shadow-[0_0_70px_rgba(249,115,22,.18)]">
+              <div className="flex h-10 items-center gap-1">
+                {[12, 22, 32, 18, 28, 14].map((height, index) => (
+                  <span key={index} className="ava-wave w-1 rounded-full bg-orange-500" style={{ height, animationDelay: `${index * 90}ms` }} />
+                ))}
+              </div>
+            </div>
             <div className="mb-3 flex items-center justify-between md:mb-5">
               <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-100">
                 <Sparkles className="h-3.5 w-3.5" /> AVA · FASTTRACT AI
               </span>
               {!isPreview && <button className="text-xs text-white/65 hover:text-white" onClick={signOut}>Sign out</button>}
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">Meet the AI that will help run your business.</h1>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">Let’s set up your business through a conversation.</h1>
             <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. We’ll set up FastTract together through a simple conversation, and you can change anything later.</p>
             <div className="mt-4 space-y-3 rounded-2xl bg-white/[0.06] p-3.5 md:mt-6 md:p-4">
               <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
@@ -385,32 +376,36 @@ function Onboarding() {
         </div>
       </header>
 
-      <div className={`relative mx-auto grid min-h-[100dvh] max-w-[1500px] transition-all md:grid-cols-[minmax(340px,1.1fr)_minmax(420px,.9fr)] ${minimized ? "grid-rows-[120px_1fr] md:grid-cols-[180px_1fr]" : ""}`}>
-        <section className={`relative overflow-hidden ${minimized ? "h-[120px] md:h-full" : "h-[46dvh] md:h-[100dvh]"}`}>
-          <div className={`relative h-full w-full overflow-hidden transition-transform duration-700 ${assistantState === "speaking" ? "scale-[1.018]" : "scale-100"}`}>
-            {[
-              "/ava-onboarding.png",
-              "/ava-viseme-oh.png",
-              "/ava-viseme-ee.png",
-            ].map((src, index) => (
-              <img
-                key={src}
-                src={src}
-                alt={index === 0 ? "Ava, your FastTract AI assistant" : ""}
-                aria-hidden={index === 0 ? undefined : true}
-                className={`absolute inset-0 h-full w-full object-cover ${minimized ? "object-[50%_23%]" : "object-[50%_18%]"} ${viseme === index ? "opacity-100" : "opacity-0"}`}
-              />
-            ))}
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#100b08] md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-[#100b08]" />
-          <div className="absolute bottom-5 left-5 flex items-center gap-3 rounded-full border border-white/15 bg-black/45 px-4 py-2 backdrop-blur-md">
-            <span className={`h-2.5 w-2.5 rounded-full ${assistantState === "listening" ? "animate-pulse bg-emerald-400" : assistantState === "speaking" ? "animate-pulse bg-orange-500" : "bg-white/60"}`} />
-            <div><p className="text-sm font-semibold">Ava <span className="font-normal text-white/55">· AI</span></p><p className="text-[10px] uppercase tracking-[.16em] text-white/60">{statusLabel}</p></div>
-            {assistantState === "speaking" && <div className="ml-2 flex h-5 items-center gap-0.5">{[8,14,20,11,17,7].map((h, i) => <span key={i} className="ava-wave w-0.5 rounded-full bg-orange-500" style={{ height: h, animationDelay: `${i * 90}ms` }} />)}</div>}
-          </div>
-        </section>
-
-        <section className="relative z-10 flex min-h-[54dvh] flex-col justify-end bg-[#100b08] px-5 pb-6 pt-5 md:min-h-[100dvh] md:justify-center md:px-12 md:py-24">
+      <div className="relative mx-auto flex min-h-[100dvh] max-w-3xl">
+        <section className="relative z-10 flex min-h-[100dvh] w-full flex-col justify-center px-5 pb-6 pt-24 md:px-12 md:py-24">
+          {!minimized && (
+            <div className="mx-auto mb-8 w-full max-w-xl text-center">
+              <div className={`mx-auto grid h-24 w-24 place-items-center rounded-full border transition-all ${
+                assistantState === "listening"
+                  ? "border-emerald-400/50 bg-emerald-400/10 shadow-[0_0_70px_rgba(52,211,153,.18)]"
+                  : "border-orange-500/40 bg-orange-500/10 shadow-[0_0_70px_rgba(249,115,22,.18)]"
+              }`}>
+                {assistantState === "listening" ? (
+                  <Mic className="h-8 w-8 text-emerald-300" />
+                ) : (
+                  <div className="flex h-10 items-center gap-1">
+                    {[12, 22, 32, 18, 28, 14].map((height, index) => (
+                      <span
+                        key={index}
+                        className={`w-1 rounded-full bg-orange-500 ${assistantState === "speaking" ? "ava-wave" : ""}`}
+                        style={{ height, animationDelay: `${index * 90}ms` }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${assistantState === "listening" ? "animate-pulse bg-emerald-400" : assistantState === "speaking" ? "animate-pulse bg-orange-500" : "bg-white/50"}`} />
+                <span className="text-sm font-semibold">Ava <span className="font-normal text-white/45">· FastTract AI</span></span>
+                <span className="text-xs uppercase tracking-[.16em] text-white/45">{statusLabel}</span>
+              </div>
+            </div>
+          )}
           {paused ? (
             <div className="mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-white/[0.05] p-7 text-center">
               <Pause className="mx-auto h-9 w-9 text-orange-500" />
