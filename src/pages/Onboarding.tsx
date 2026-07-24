@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Check, Globe2, Loader2, Palette, ScanSearch, Upload } from "lucide-react";
+import {
+  ArrowLeft, Check, ChevronDown, ChevronRight, Loader2, Mic, MicOff,
+  Pause, Play, RotateCcw, Send, ShieldCheck, Sparkles, Volume2, VolumeX,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 
+type AnswerMap = Record<string, string>;
+type AssistantState = "idle" | "listening" | "thinking" | "speaking" | "muted";
 type BrandScan = {
   companyName: string;
   website: string;
@@ -16,246 +19,378 @@ type BrandScan = {
   secondaryColor: string;
   logo: { data: string; contentType: string; sourceUrl: string } | null;
 };
+type Question = {
+  id: string;
+  prompt: (answers: AnswerMap) => string;
+  placeholder?: string;
+  optional?: boolean;
+  choices?: string[];
+  sensitiveNote?: string;
+};
+
+const QUESTIONS: Question[] = [
+  { id: "businessType", prompt: () => "What type of business do you run?", placeholder: "For example, landscaping or accounting" },
+  { id: "businessName", prompt: () => "What is your business name?", placeholder: "Your company name" },
+  { id: "specialty", prompt: ({ businessName }) => `What does ${businessName || "your business"} specialize in?`, placeholder: "Tell me in your own words" },
+  { id: "location", prompt: () => "Where is your business located, and what areas do you serve?", placeholder: "City, state, and service area" },
+  { id: "website", prompt: () => "Do you have a website? If so, what is its address?", placeholder: "yourcompany.com", optional: true },
+  { id: "stage", prompt: () => "Are you already operating, or are you starting something new?", choices: ["Already operating", "Starting something new"] },
+  { id: "team", prompt: () => "Do you work alone, or do you have employees or subcontractors?", choices: ["I work alone", "Employees", "Subcontractors", "Employees and subcontractors"] },
+  { id: "contact", prompt: () => "How do customers currently find and contact you?", placeholder: "For example, referrals, Google, phone, or social media" },
+  { id: "timeDrain", prompt: () => "What takes up the most time in your business right now?", placeholder: "The busywork you want off your plate" },
+  { id: "worry", prompt: () => "What are you most worried about right now?", choices: ["Getting paid", "Tracking expenses", "Taxes", "Finding customers", "Scheduling work", "Something else"] },
+  { id: "firstValue", prompt: () => "What would make FastTract immediately valuable to you?", placeholder: "The first result you want Ava to help deliver" },
+  {
+    id: "legalName",
+    prompt: () => "What is the legal name of the business?",
+    placeholder: "Legal business name",
+    optional: true,
+    sensitiveNote: "I use this only to organize official records correctly. You can skip it and add it later.",
+  },
+  { id: "structure", prompt: () => "How is the business structured?", choices: ["Sole proprietor", "LLC", "Partnership", "S corporation", "C corporation", "Not sure yet"], optional: true },
+  {
+    id: "ein",
+    prompt: () => "Would you like to add the last four digits of your EIN now?",
+    placeholder: "Last 4 digits only",
+    optional: true,
+    sensitiveNote: "This helps match tax records. I will mask it, and I will not save it until you approve your summary.",
+  },
+  { id: "connections", prompt: () => "Which financial connection would help most first?", choices: ["Business checking", "Business savings", "Business credit card", "Payment processor", "Skip for now"], optional: true },
+  { id: "imports", prompt: () => "What would you like me to import first?", choices: ["Accounting system", "Bank transactions", "Spreadsheet", "Customer list", "Website profile", "Calendar or email", "Skip for now"], optional: true },
+  { id: "firstWin", prompt: () => "Let’s finish with one useful result. What should we do first?", choices: ["Create my first customer", "Build an estimate", "Send an invoice", "Review transactions", "Set up tax reserves", "Connect my calendar"] },
+];
+
+const INTRO = "Hi, I’m Ava, your FastTract AI assistant. I’m here to help you run your business, stay organized, understand your money, and handle the busywork. We’ll set everything up together through a simple conversation. You can talk to me naturally, and you can change anything later. Ready to begin?";
+
+const emptyBrand: BrandScan = {
+  companyName: "", website: "", primaryColor: "#ff5a2a", secondaryColor: "#241812", logo: null,
+};
 
 function base64ToBlob(data: string, contentType: string) {
   const binary = atob(data);
   const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: contentType });
 }
 
-function extensionFor(contentType: string) {
-  if (contentType.includes("svg")) return "svg";
-  if (contentType.includes("webp")) return "webp";
-  if (contentType.includes("jpeg")) return "jpg";
-  return "png";
-}
-
-export default function Onboarding() {
+function Onboarding() {
   const navigate = useNavigate();
   const { user, memberships, loading, refresh, setActiveOrgId, signOut, isPlatformAdmin, isAgent } = useAuth();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [companyName, setCompanyName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#ff5a2a");
-  const [secondaryColor, setSecondaryColor] = useState("#241812");
-  const [brand, setBrand] = useState<BrandScan | null>(null);
-  const [manualLogo, setManualLogo] = useState<File | null>(null);
-  const [manualLogoPreview, setManualLogoPreview] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [companyCreated, setCompanyCreated] = useState(false);
-  const isDesignPreview = import.meta.env.DEV && window.location.pathname === "/onboarding-preview";
+  const isPreview = import.meta.env.DEV && window.location.pathname === "/onboarding-preview";
+  const draftKey = `fasttract-ava-onboarding-${user?.id || "preview"}`;
+  const [started, setStarted] = useState(false);
+  const [consentMic, setConsentMic] = useState(false);
+  const [consentMemory, setConsentMemory] = useState(false);
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<AnswerMap>({});
+  const [input, setInput] = useState("");
+  const [assistantState, setAssistantState] = useState<AssistantState>("idle");
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [brand, setBrand] = useState<BrandScan>(emptyBrand);
+  const [saving, setSaving] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const current = QUESTIONS[step];
+  const prompt = reviewing
+    ? `Here’s what I understood. FastTract is being set up for ${answers.businessName || "your business"}, a ${answers.businessType || "business"} specializing in ${answers.specialty || "your work"} and serving ${answers.location || "your area"}. Did I get that right?`
+    : current?.prompt(answers) || "";
+  const progress = Math.round(((step + (reviewing ? 1 : 0)) / (QUESTIONS.length + 1)) * 100);
 
   useEffect(() => {
-    if (isDesignPreview) return;
+    if (isPreview) return;
     if (loading) return;
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-    if (memberships.length > 0 && !companyCreated) {
-      navigate("/app", { replace: true });
-      return;
-    }
+    if (!user) return void navigate("/login", { replace: true });
+    if (memberships.length > 0) return void navigate("/app", { replace: true });
     if (isPlatformAdmin) navigate("/admin", { replace: true });
     else if (isAgent) navigate("/agent", { replace: true });
-  }, [user, loading, memberships, isPlatformAdmin, isAgent, companyCreated, navigate, isDesignPreview]);
+  }, [user, loading, memberships, isPlatformAdmin, isAgent, navigate, isPreview]);
 
-  useEffect(() => () => {
-    if (manualLogoPreview) URL.revokeObjectURL(manualLogoPreview);
-  }, [manualLogoPreview]);
+  useEffect(() => {
+    const saved = localStorage.getItem(draftKey);
+    if (!saved) return;
+    try {
+      const draft = JSON.parse(saved);
+      setAnswers(draft.answers || {});
+      setStep(Math.min(draft.step || 0, QUESTIONS.length - 1));
+      setStarted(Boolean(draft.started));
+      setConsentMemory(Boolean(draft.consentMemory));
+      setBrand(draft.brand || emptyBrand);
+    } catch { localStorage.removeItem(draftKey); }
+  }, [draftKey]);
 
-  const scanWebsite = async () => {
-    if (!website.trim()) return;
-    setScanning(true);
-    const { data, error } = await supabase.functions.invoke<BrandScan>("crawl-brand", {
-      body: { website: website.trim() },
-    });
-    setScanning(false);
-    if (error || !data) {
-      toast({
-        title: "We could not read that website",
-        description: "You can keep going and upload a logo or choose colors manually.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setBrand(data);
-    setWebsite(data.website);
-    setCompanyName((current) => current || data.companyName);
-    setPrimaryColor(data.primaryColor);
-    setSecondaryColor(data.secondaryColor);
-    toast({ title: "Brand found", description: "Review the logo and colors before creating your workspace." });
+  useEffect(() => {
+    if (!started || !consentMemory) return;
+    localStorage.setItem(draftKey, JSON.stringify({ answers, step, started, consentMemory, brand }));
+  }, [answers, step, started, consentMemory, brand, draftKey]);
+
+  useEffect(() => {
+    if (started) window.scrollTo({ top: 0, behavior: "auto" });
+  }, [started]);
+
+  const speak = (text: string) => {
+    if (muted || !("speechSynthesis" in window)) return setAssistantState("idle");
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.94;
+    utterance.pitch = 1.02;
+    const voices = window.speechSynthesis.getVoices();
+    utterance.voice = voices.find((voice) => /samantha|jenny|aria|female/i.test(voice.name)) || voices[0] || null;
+    utterance.onstart = () => setAssistantState("speaking");
+    utterance.onend = () => setAssistantState("idle");
+    utterance.onerror = () => setAssistantState("idle");
+    window.speechSynthesis.speak(utterance);
   };
 
-  const chooseLogo = (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "Logo is too large", description: "Choose an image under 2MB.", variant: "destructive" });
-      return;
+  useEffect(() => {
+    if (!started || paused) return;
+    const timer = window.setTimeout(() => speak(prompt), 250);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, reviewing, started, paused]);
+
+  const scanBrand = async (website: string) => {
+    const normalized = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+    const { data, error } = await supabase.functions.invoke<BrandScan>("crawl-brand", { body: { website: normalized } });
+    if (!error && data) {
+      setBrand(data);
+      if (!answers.businessName && data.companyName) setAnswers((old) => ({ ...old, businessName: data.companyName }));
+      toast({ title: "I found your brand", description: "I’ll use the approved logo and colors in your workspace." });
     }
-    if (manualLogoPreview) URL.revokeObjectURL(manualLogoPreview);
-    setManualLogo(file);
-    setManualLogoPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const submitAnswer = async (value = input) => {
+    const clean = value.trim();
+    if (!clean && !current?.optional) return;
+    setAssistantState("thinking");
+    const nextAnswers = { ...answers, [current.id]: clean || "Skipped" };
+    setAnswers(nextAnswers);
+    setInput("");
+    if (current.id === "website" && clean) void scanBrand(clean);
+    window.setTimeout(() => {
+      setAssistantState("idle");
+      if (step === QUESTIONS.length - 1) setReviewing(true);
+      else setStep((value) => value + 1);
+    }, 420);
+  };
+
+  const startListening = () => {
+    if (!consentMic) return;
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Recognition) {
+      toast({ title: "Voice input is not supported here", description: "You can continue by typing." });
+      return;
+    }
+    window.speechSynthesis?.cancel();
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onstart = () => setAssistantState("listening");
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results).map((result: any) => result[0].transcript).join("");
+      setInput(transcript);
+    };
+    recognition.onend = () => setAssistantState("idle");
+    recognition.onerror = () => setAssistantState("idle");
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const stopListening = () => recognitionRef.current?.stop();
+
+  const createWorkspace = async () => {
+    if (isPreview) {
+      toast({ title: "Preview complete", description: "Your personalized four-part workspace is ready." });
+      return navigate("/app");
+    }
     if (!user) return;
-    setSubmitting(true);
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .insert({
-        name: companyName,
-        owner_id: user.id,
-        website: website || null,
-        brand_color: primaryColor,
-        brand_color_secondary: secondaryColor,
-      })
-      .select()
-      .single();
-    if (orgError || !org) {
-      setSubmitting(false);
-      return toast({ title: "Could not create company", description: orgError?.message, variant: "destructive" });
+    setSaving(true);
+    const ein = answers.ein?.replace(/\D/g, "").slice(-4);
+    const businessProfile = {
+      onboarding_version: 2,
+      assistant: { name: "Ava", labeled_as_ai: true, memory_consent: consentMemory },
+      business: {
+        type: answers.businessType, specialty: answers.specialty, location: answers.location,
+        stage: answers.stage, team: answers.team, contact_channels: answers.contact,
+        structure: answers.structure,
+      },
+      priorities: { time_drain: answers.timeDrain, worry: answers.worry, first_value: answers.firstValue },
+      setup: { preferred_connection: answers.connections, preferred_import: answers.imports, first_win: answers.firstWin },
+      workspace: ["Home", "Work", "Money", "Business"],
+    };
+    const { data: org, error } = await supabase.from("organizations").insert({
+      name: answers.businessName,
+      legal_name: answers.legalName === "Skipped" ? null : answers.legalName,
+      owner_id: user.id,
+      website: answers.website === "Skipped" ? null : (brand.website || answers.website),
+      address: answers.location,
+      tax_id: ein ? `***-**-${ein}` : null,
+      brand_color: brand.primaryColor,
+      brand_color_secondary: brand.secondaryColor,
+      business_profile: businessProfile,
+    }).select().single();
+    if (error || !org) {
+      setSaving(false);
+      return toast({ title: "I couldn’t create the workspace", description: error?.message, variant: "destructive" });
     }
-    const { error: memberError } = await supabase
-      .from("organization_members")
-      .insert({ organization_id: org.id, user_id: user.id, role: "owner" });
+    const { error: memberError } = await supabase.from("organization_members").insert({
+      organization_id: org.id, user_id: user.id, role: "owner",
+    });
     if (memberError) {
-      setSubmitting(false);
-      return toast({ title: "Could not add you as owner", description: memberError.message, variant: "destructive" });
+      setSaving(false);
+      return toast({ title: "I couldn’t finish owner access", description: memberError.message, variant: "destructive" });
     }
-
-    let logoBlob: Blob | File | null = manualLogo;
-    let logoContentType = manualLogo?.type || "image/png";
-    if (!logoBlob && brand?.logo) {
-      logoContentType = brand.logo.contentType;
-      logoBlob = base64ToBlob(brand.logo.data, logoContentType);
+    if (brand.logo) {
+      const extension = brand.logo.contentType.includes("svg") ? "svg" : brand.logo.contentType.includes("webp") ? "webp" : brand.logo.contentType.includes("jpeg") ? "jpg" : "png";
+      const path = `${org.id}/logo-onboarding.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("branding").upload(
+        path, base64ToBlob(brand.logo.data, brand.logo.contentType),
+        { contentType: brand.logo.contentType, upsert: true },
+      );
+      if (!uploadError) await supabase.from("organizations").update({ logo_url: path }).eq("id", org.id);
     }
-    if (logoBlob) {
-      const logoPath = `${org.id}/logo-onboarding.${extensionFor(logoContentType)}`;
-      const { error: uploadError } = await supabase.storage.from("branding").upload(logoPath, logoBlob, {
-        contentType: logoContentType,
-        upsert: true,
-      });
-      if (!uploadError) await supabase.from("organizations").update({ logo_url: logoPath }).eq("id", org.id);
-    }
-
-    setSubmitting(false);
-    setCompanyCreated(true);
+    localStorage.removeItem(draftKey);
     setActiveOrgId(org.id);
     await refresh();
-    toast({ title: "Your workspace is ready", description: `${org.name} now has its own FastTract style.` });
-    navigate("/pricing?onboarding=complete", { replace: true });
+    setSaving(false);
+    toast({ title: `${org.name} is ready`, description: `Ava will help you: ${answers.firstWin}.` });
+    navigate("/app?welcome=ava", { replace: true });
   };
 
-  const logoPreview = manualLogoPreview || (brand?.logo ? `data:${brand.logo.contentType};base64,${brand.logo.data}` : null);
+  const statusLabel = useMemo(() => ({
+    idle: "Ready", listening: "Listening", thinking: "Thinking", speaking: "Speaking", muted: "Muted",
+  }[assistantState]), [assistantState]);
+
+  if (!started) {
+    return (
+      <main className="relative min-h-[100dvh] overflow-hidden bg-[#100b08] text-white">
+        <img src="/ava-onboarding.png" alt="Ava, your FastTract AI assistant" className="absolute inset-0 h-full w-full object-cover object-[50%_22%] opacity-80 md:left-auto md:right-0 md:w-[62%] md:object-[50%_20%]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#100b08]/10 via-[#100b08]/25 to-[#100b08] md:bg-gradient-to-r md:from-[#100b08]/90 md:via-[#100b08]/55 md:to-transparent" />
+        <div className="relative flex min-h-[100dvh] items-end px-3 pb-3 pt-[38dvh] md:items-center md:px-14 md:py-12">
+          <section className="w-full max-w-xl rounded-[26px] border border-white/15 bg-[#17100c]/90 p-5 shadow-2xl backdrop-blur-xl md:p-9">
+            <div className="mb-3 flex items-center justify-between md:mb-5">
+              <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-100">
+                <Sparkles className="h-3.5 w-3.5" /> AVA · FASTTRACT AI
+              </span>
+              {!isPreview && <button className="text-xs text-white/65 hover:text-white" onClick={signOut}>Sign out</button>}
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">Meet the AI that will help run your business.</h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. We’ll set up FastTract together through a simple conversation, and you can change anything later.</p>
+            <div className="mt-4 space-y-3 rounded-2xl bg-white/[0.06] p-3.5 md:mt-6 md:p-4">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
+                <input type="checkbox" checked={consentMic} onChange={(e) => setConsentMic(e.target.checked)} className="mt-0.5 h-5 w-5 accent-orange-500" />
+                <span><strong className="block text-white">Allow microphone when I tap it</strong>It never turns on by itself. Camera is not required.</span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
+                <input type="checkbox" checked={consentMemory} onChange={(e) => setConsentMemory(e.target.checked)} className="mt-0.5 h-5 w-5 accent-orange-500" />
+                <span><strong className="block text-white">Remember my approved answers</strong>Save progress and personalize future help. You can clear it later.</span>
+              </label>
+            </div>
+            <Button size="lg" className="mt-4 h-13 w-full rounded-2xl bg-orange-500 text-base font-semibold text-[#100b08] hover:bg-orange-400 md:mt-5 md:h-14" onClick={() => { setStarted(true); speak(INTRO); }}>
+              Yes, let’s begin <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+            <button className="mt-4 w-full text-center text-sm text-white/60 hover:text-white" onClick={() => { setStarted(true); setMuted(true); }}>Continue with text only</button>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-dark">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5">
-        <Logo />
-        <Button variant="ghost" size="sm" onClick={async () => { await signOut(); navigate("/login"); }}>Sign out</Button>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 pb-16 pt-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Personalize your workspace</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Make FastTract look like your company.</h1>
-          <p className="mt-3 text-muted-foreground">Enter your website and we’ll find your public logo and brand colors. You approve everything before it becomes your dashboard style.</p>
+    <main className="relative min-h-[100dvh] overflow-hidden bg-[#100b08] text-white">
+      <div className="absolute inset-x-0 top-0 z-30 h-1 bg-white/10"><div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
+      <header className="absolute inset-x-0 top-1 z-30 flex items-center justify-between px-4 py-4 md:px-8">
+        <div>
+          <p className="text-sm font-semibold">FastTract</p>
+          <p className="text-[11px] text-white/55">{progress}% personalized</p>
         </div>
+        <div className="flex items-center gap-1">
+          <button aria-label={paused ? "Resume" : "Pause and finish later"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setPaused(!paused)}>
+            {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+          </button>
+          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); window.speechSynthesis?.cancel(); }}>
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+          <button aria-label="Minimize Ava" className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setMinimized(!minimized)}>
+            <ChevronDown className={`h-4 w-4 transition-transform ${minimized ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </header>
 
-        <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
-            <section>
-              <div className="mb-4 flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary"><Globe2 className="h-4 w-4" /></span>
-                <div><h2 className="font-semibold">Find your brand</h2><p className="text-xs text-muted-foreground">We only scan public pages and images.</p></div>
+      <div className={`relative mx-auto grid min-h-[100dvh] max-w-[1500px] transition-all md:grid-cols-[minmax(340px,1.1fr)_minmax(420px,.9fr)] ${minimized ? "grid-rows-[120px_1fr] md:grid-cols-[180px_1fr]" : ""}`}>
+        <section className={`relative overflow-hidden ${minimized ? "h-[120px] md:h-full" : "h-[46dvh] md:h-[100dvh]"}`}>
+          <img src="/ava-onboarding.png" alt="Ava, your FastTract AI assistant" className={`h-full w-full object-cover transition-transform duration-700 ${assistantState === "speaking" ? "scale-[1.025]" : "scale-100"} ${minimized ? "object-[50%_23%]" : "object-[50%_18%]"}`} />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#100b08] md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-[#100b08]" />
+          <div className="absolute bottom-5 left-5 flex items-center gap-3 rounded-full border border-white/15 bg-black/45 px-4 py-2 backdrop-blur-md">
+            <span className={`h-2.5 w-2.5 rounded-full ${assistantState === "listening" ? "animate-pulse bg-emerald-400" : assistantState === "speaking" ? "animate-pulse bg-orange-500" : "bg-white/60"}`} />
+            <div><p className="text-sm font-semibold">Ava <span className="font-normal text-white/55">· AI</span></p><p className="text-[10px] uppercase tracking-[.16em] text-white/60">{statusLabel}</p></div>
+            {assistantState === "speaking" && <div className="ml-2 flex h-5 items-center gap-0.5">{[8,14,20,11,17,7].map((h, i) => <span key={i} className="ava-wave w-0.5 rounded-full bg-orange-500" style={{ height: h, animationDelay: `${i * 90}ms` }} />)}</div>}
+          </div>
+        </section>
+
+        <section className="relative z-10 flex min-h-[54dvh] flex-col justify-end bg-[#100b08] px-5 pb-6 pt-5 md:min-h-[100dvh] md:justify-center md:px-12 md:py-24">
+          {paused ? (
+            <div className="mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-white/[0.05] p-7 text-center">
+              <Pause className="mx-auto h-9 w-9 text-orange-500" />
+              <h2 className="mt-4 text-2xl font-semibold">We’ll pick up right here.</h2>
+              <p className="mt-2 text-white/65">{consentMemory ? "Your approved answers are saved on this device." : "Turn on memory if you want your progress saved after you leave."}</p>
+              <Button className="mt-6 h-12 rounded-xl bg-orange-500 text-[#100b08] hover:bg-orange-400" onClick={() => setPaused(false)}><Play className="mr-2 h-4 w-4" />Resume conversation</Button>
+            </div>
+          ) : reviewing ? (
+            <div className="mx-auto w-full max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Your approval</p>
+              <h2 className="mt-3 text-2xl font-semibold leading-tight md:text-4xl">{prompt}</h2>
+              <div className="mt-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm">
+                {[["Business", answers.businessName], ["Type", answers.businessType], ["Specialty", answers.specialty], ["Serves", answers.location], ["Priority", answers.firstValue], ["First win", answers.firstWin], ["EIN", answers.ein && answers.ein !== "Skipped" ? `•••• ${answers.ein.replace(/\D/g, "").slice(-4)}` : "Not added"]].map(([label, value]) => (
+                  <div key={label} className="flex gap-4 border-b border-white/[0.07] py-2 last:border-0"><span className="w-20 shrink-0 text-white/45">{label}</span><span>{value || "Not provided"}</span></div>
+                ))}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Input
-                  type="url"
-                  value={website}
-                  onChange={(event) => setWebsite(event.target.value)}
-                  placeholder="https://yourcompany.com"
-                  aria-label="Company website"
-                />
-                <Button type="button" variant="outline" onClick={scanWebsite} disabled={scanning || !website.trim()} className="shrink-0">
-                  {scanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanSearch className="mr-2 h-4 w-4" />}
-                  {scanning ? "Scanning…" : "Find my brand"}
+              <div className="mt-5 flex gap-3">
+                <Button variant="outline" className="h-13 flex-1 border-white/15 bg-transparent text-white hover:bg-white/10" onClick={() => { setReviewing(false); setStep(0); }}><RotateCcw className="mr-2 h-4 w-4" />Correct an answer</Button>
+                <Button className="h-13 flex-[1.35] bg-orange-500 font-semibold text-[#100b08] hover:bg-orange-400" onClick={createWorkspace} disabled={saving}>
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{saving ? "Building workspace…" : "Approve & build it"}
                 </Button>
               </div>
-            </section>
-
-            <section className="border-t border-border pt-6">
-              <div className="mb-4 flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary"><Building2 className="h-4 w-4" /></span>
-                <div><h2 className="font-semibold">Company details</h2><p className="text-xs text-muted-foreground">This begins your agent’s knowledge base.</p></div>
-              </div>
-              <Label htmlFor="company">Company name</Label>
-              <Input id="company" required value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Acme Services" className="mt-2" />
-            </section>
-
-            <section className="border-t border-border pt-6">
-              <div className="mb-4 flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary"><Palette className="h-4 w-4" /></span>
-                <div><h2 className="font-semibold">Logo and colors</h2><p className="text-xs text-muted-foreground">Adjust anything the scan did not get right.</p></div>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-[140px_1fr]">
-                <div>
-                  <button type="button" onClick={() => fileRef.current?.click()} className="flex h-28 w-full items-center justify-center rounded-xl border border-dashed border-border bg-background/50 p-3 hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    {logoPreview ? <img src={logoPreview} alt="Detected company logo" className="max-h-20 max-w-full object-contain" /> : <span className="text-center text-xs text-muted-foreground"><Upload className="mx-auto mb-2 h-5 w-5" />Upload logo</span>}
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) chooseLogo(file); }} />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="text-xs">Primary color</Label>
-                    <div className="mt-2 flex gap-2"><input type="color" value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="h-10 w-12 rounded border border-border bg-transparent" /><Input value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="font-mono uppercase" /></div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Secondary color</Label>
-                    <div className="mt-2 flex gap-2"><input type="color" value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="h-10 w-12 rounded border border-border bg-transparent" /><Input value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="font-mono uppercase" /></div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <Button type="submit" size="lg" className="w-full" disabled={submitting || !companyName.trim()}>
-              {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating your workspace…</> : "Use this brand & continue"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">You can change the logo, colors, and company details later.</p>
-          </div>
-
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Dashboard preview</p>
-            <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-2xl" style={{ "--preview-brand": primaryColor } as React.CSSProperties}>
-              <div className="flex items-center gap-3 border-b border-border p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card p-1">{logoPreview ? <img src={logoPreview} alt="" className="max-h-8 max-w-8 object-contain" /> : <Building2 className="h-5 w-5" style={{ color: primaryColor }} />}</div>
-                <div><p className="font-semibold">{companyName || "Your company"}</p><p className="text-xs text-muted-foreground">FastTract workspace</p></div>
-              </div>
-              <div className="grid grid-cols-[96px_1fr]">
-                <div className="space-y-3 border-r border-border p-3 text-xs text-muted-foreground">
-                  {["Today", "Customers", "Operations", "Business"].map((item, index) => <div key={item} className="rounded-md px-2 py-2" style={index === 0 ? { color: primaryColor, backgroundColor: `${primaryColor}18` } : undefined}>{item}</div>)}
-                </div>
-                <div className="p-4">
-                  <p className="text-lg font-semibold">Your day</p>
-                  <div className="mt-4 rounded-lg border border-border p-3">
-                    <p className="text-xs font-medium">Agent ready 24/7</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">Ask FastTract to handle anything.</p>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {[1, 2, 3].map((item) => <div key={item} className="h-8 rounded-md bg-card" />)}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 border-t border-border p-3 text-xs text-muted-foreground"><Check className="h-3.5 w-3.5" style={{ color: primaryColor }} />Your colors will be applied automatically</div>
+              <p className="mt-4 flex items-center justify-center gap-2 text-xs text-white/45"><ShieldCheck className="h-3.5 w-3.5" />Nothing important is sent, filed, paid, or changed without your approval.</p>
             </div>
-            <div className="mt-4 rounded-xl border border-border bg-card/70 p-4 text-xs leading-relaxed text-muted-foreground">
-              FastTract saves the approved brand—not the website page. Private pages, passwords, and customer data are never requested.
+          ) : (
+            <div className="mx-auto w-full max-w-xl">
+              {current.sensitiveNote && <div className="mb-4 flex gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm text-amber-50/80"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />{current.sensitiveNote}</div>}
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Ava is asking</p>
+              <h1 className="mt-3 text-2xl font-semibold leading-tight md:text-4xl">{prompt}</h1>
+              <p aria-live="polite" className="mt-3 min-h-5 text-sm text-white/55">{assistantState === "listening" ? `“${input || "I’m listening…"}”` : assistantState === "thinking" ? "Got it — I’m organizing that now." : "Answer naturally. You can change anything before it’s saved."}</p>
+
+              {current.choices ? (
+                <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                  {current.choices.map((choice) => <button key={choice} onClick={() => submitAnswer(choice)} className="min-h-12 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-left text-sm font-medium transition hover:border-orange-500/60 hover:bg-orange-500/10 focus:outline-none focus:ring-2 focus:ring-orange-500">{choice}</button>)}
+                </div>
+              ) : (
+                <form className="mt-6 flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] p-2 focus-within:border-orange-500/60" onSubmit={(e) => { e.preventDefault(); submitAnswer(); }}>
+                  <Input autoFocus value={input} onChange={(e) => setInput(e.target.value)} placeholder={current.placeholder} className="h-12 flex-1 border-0 bg-transparent text-base text-white placeholder:text-white/35 focus-visible:ring-0" />
+                  <Button type="submit" aria-label="Send answer" size="icon" className="h-12 w-12 rounded-xl bg-orange-500 text-[#100b08] hover:bg-orange-400" disabled={!input.trim() && !current.optional}><Send className="h-5 w-5" /></Button>
+                </form>
+              )}
+
+              <div className="mt-5 flex items-center justify-center gap-4">
+                <button disabled={!consentMic} onClick={assistantState === "listening" ? stopListening : startListening} className={`grid h-16 w-16 place-items-center rounded-full shadow-xl transition disabled:cursor-not-allowed disabled:opacity-35 ${assistantState === "listening" ? "bg-red-400 text-white ring-8 ring-red-400/15" : "bg-orange-500 text-[#100b08] hover:scale-105"}`} aria-label={assistantState === "listening" ? "Stop listening" : "Answer by voice"}>
+                  {assistantState === "listening" ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                </button>
+                <p className="max-w-32 text-xs text-white/45">{consentMic ? "Tap to answer by voice" : "Microphone is off. Type to continue."}</p>
+              </div>
+
+              <footer className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4 text-sm">
+                <button disabled={step === 0} onClick={() => { setStep((value) => Math.max(0, value - 1)); setInput(answers[QUESTIONS[Math.max(0, step - 1)].id] || ""); }} className="flex min-h-11 items-center gap-2 text-white/55 hover:text-white disabled:opacity-25"><ArrowLeft className="h-4 w-4" />Back</button>
+                {current.optional && <button onClick={() => submitAnswer("")} className="min-h-11 px-3 text-white/55 hover:text-white">Skip for now</button>}
+              </footer>
             </div>
-          </aside>
-        </form>
-      </main>
-    </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
+
+export default Onboarding;

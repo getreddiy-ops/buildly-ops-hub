@@ -137,3 +137,17 @@
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .shadow-card { box-shadow: var(--shadow-card); }
 }
+
+@keyframes ava-wave {
+  0%, 100% { transform: scaleY(.45); opacity: .55; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.ava-wave {
+  animation: ava-wave .72s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ava-wave { animation: none; }
+}
