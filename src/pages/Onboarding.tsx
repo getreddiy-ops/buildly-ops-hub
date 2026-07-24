@@ -85,6 +85,7 @@ function Onboarding() {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [input, setInput] = useState("");
   const [assistantState, setAssistantState] = useState<AssistantState>("idle");
+  const [viseme, setViseme] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -92,6 +93,9 @@ function Onboarding() {
   const [saving, setSaving] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const talkTimerRef = useRef<number | null>(null);
+  const speechFallbackRef = useRef<number | null>(null);
+  const speechRunRef = useRef(0);
 
   const current = QUESTIONS[step];
   const prompt = reviewing
@@ -132,17 +136,43 @@ function Onboarding() {
 
   const speak = (text: string) => {
     if (muted || !("speechSynthesis" in window)) return setAssistantState("idle");
+    const run = ++speechRunRef.current;
     window.speechSynthesis.cancel();
+    if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
+    if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.94;
     utterance.pitch = 1.02;
     const voices = window.speechSynthesis.getVoices();
     utterance.voice = voices.find((voice) => /samantha|jenny|aria|female/i.test(voice.name)) || voices[0] || null;
-    utterance.onstart = () => setAssistantState("speaking");
-    utterance.onend = () => setAssistantState("idle");
-    utterance.onerror = () => setAssistantState("idle");
+    setAssistantState("speaking");
+    setViseme(1);
+    let frame = 1;
+    talkTimerRef.current = window.setInterval(() => {
+      frame = frame === 1 ? 2 : Math.random() > 0.32 ? 1 : 0;
+      setViseme(frame);
+    }, 135);
+    const finishSpeaking = () => {
+      if (speechRunRef.current !== run) return;
+      if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
+      if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
+      talkTimerRef.current = null;
+      speechFallbackRef.current = null;
+      setViseme(0);
+      setAssistantState("idle");
+    };
+    utterance.onboundary = () => setViseme((frame) => frame === 1 ? 2 : 1);
+    utterance.onend = finishSpeaking;
+    utterance.onerror = finishSpeaking;
+    speechFallbackRef.current = window.setTimeout(finishSpeaking, Math.min(10500, Math.max(2600, text.length * 52)));
     window.speechSynthesis.speak(utterance);
   };
+
+  useEffect(() => () => {
+    if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
+    if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
+    window.speechSynthesis?.cancel();
+  }, []);
 
   useEffect(() => {
     if (!started || paused) return;
@@ -322,7 +352,21 @@ function Onboarding() {
 
       <div className={`relative mx-auto grid min-h-[100dvh] max-w-[1500px] transition-all md:grid-cols-[minmax(340px,1.1fr)_minmax(420px,.9fr)] ${minimized ? "grid-rows-[120px_1fr] md:grid-cols-[180px_1fr]" : ""}`}>
         <section className={`relative overflow-hidden ${minimized ? "h-[120px] md:h-full" : "h-[46dvh] md:h-[100dvh]"}`}>
-          <img src="/ava-onboarding.png" alt="Ava, your FastTract AI assistant" className={`h-full w-full object-cover transition-transform duration-700 ${assistantState === "speaking" ? "scale-[1.025]" : "scale-100"} ${minimized ? "object-[50%_23%]" : "object-[50%_18%]"}`} />
+          <div className={`relative h-full w-full overflow-hidden transition-transform duration-700 ${assistantState === "speaking" ? "scale-[1.018]" : "scale-100"}`}>
+            {[
+              "/ava-onboarding.png",
+              "/ava-viseme-oh.png",
+              "/ava-viseme-ee.png",
+            ].map((src, index) => (
+              <img
+                key={src}
+                src={src}
+                alt={index === 0 ? "Ava, your FastTract AI assistant" : ""}
+                aria-hidden={index === 0 ? undefined : true}
+                className={`absolute inset-0 h-full w-full object-cover ${minimized ? "object-[50%_23%]" : "object-[50%_18%]"} ${viseme === index ? "opacity-100" : "opacity-0"}`}
+              />
+            ))}
+          </div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#100b08] md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-[#100b08]" />
           <div className="absolute bottom-5 left-5 flex items-center gap-3 rounded-full border border-white/15 bg-black/45 px-4 py-2 backdrop-blur-md">
             <span className={`h-2.5 w-2.5 rounded-full ${assistantState === "listening" ? "animate-pulse bg-emerald-400" : assistantState === "speaking" ? "animate-pulse bg-orange-500" : "bg-white/60"}`} />
