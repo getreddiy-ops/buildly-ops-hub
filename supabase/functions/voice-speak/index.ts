@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "jsr:@supabase/server@^1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,8 +8,9 @@ const corsHeaders = {
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "JBFqnCBsd6RMkjVDRZzb";
 
-export default {
-  fetch: withSupabase({ auth: "user" }, async (req) => {
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
     try {
       if (!ELEVENLABS_API_KEY) {
         return Response.json({ error: "ElevenLabs voice is not configured." }, {
@@ -74,5 +74,4 @@ export default {
         error: error instanceof Error ? error.message : "ElevenLabs voice failed.",
       }, { status: 500, headers: corsHeaders });
     }
-  }),
-};
+});
