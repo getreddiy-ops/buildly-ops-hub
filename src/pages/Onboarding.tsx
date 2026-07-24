@@ -80,8 +80,8 @@ async function getBestBrowserVoice() {
     });
   }
   const preferred = [
-    /Microsoft Ava.*Natural/i, /Microsoft Jenny.*Natural/i, /Microsoft Aria.*Natural/i,
-    /Google US English/i, /Samantha/i, /Microsoft Zira/i, /Microsoft Sonia/i,
+    /Microsoft Zira/i, /Microsoft Ava.*Natural/i, /Microsoft Jenny.*Natural/i,
+    /Microsoft Aria.*Natural/i, /Google US English/i, /Samantha/i, /Microsoft Sonia/i,
     /Microsoft Libby/i, /Ava/i, /Emma/i, /Jenny/i, /Aria/i,
   ];
   for (const pattern of preferred) {
@@ -124,7 +124,6 @@ function Onboarding() {
   const talkTimerRef = useRef<number | null>(null);
   const speechFallbackRef = useRef<number | null>(null);
   const speechRunRef = useRef(0);
-  const premiumAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const current = QUESTIONS[step];
   const prompt = reviewing
@@ -167,8 +166,6 @@ function Onboarding() {
     if (muted) return setAssistantState("idle");
     const run = ++speechRunRef.current;
     window.speechSynthesis.cancel();
-    premiumAudioRef.current?.pause();
-    premiumAudioRef.current = null;
     if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
     setAssistantState("speaking");
@@ -189,10 +186,11 @@ function Onboarding() {
     };
     speechFallbackRef.current = window.setTimeout(finishSpeaking, Math.min(16000, Math.max(3500, text.length * 68)));
 
-    const speakWithDeviceFallback = async () => {
+    const speakWithComputerVoice = async () => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.98;
-      utterance.pitch = 0.96;
+      utterance.lang = "en-US";
+      utterance.rate = 0.92;
+      utterance.pitch = 1.04;
       utterance.volume = 0.92;
       utterance.voice = await getBestBrowserVoice();
       if (speechRunRef.current !== run) return;
@@ -202,30 +200,12 @@ function Onboarding() {
       window.speechSynthesis.speak(utterance);
     };
 
-    void (async () => {
-      if (user) {
-        try {
-          const { data, error } = await supabase.functions.invoke("voice-speak", {
-            body: { text, voice: "coral" },
-          });
-          if (!error && data?.audio && speechRunRef.current === run) {
-            const audio = new Audio(`data:${data.mime || "audio/mpeg"};base64,${data.audio}`);
-            premiumAudioRef.current = audio;
-            audio.onended = finishSpeaking;
-            audio.onerror = () => void speakWithDeviceFallback();
-            await audio.play();
-            return;
-          }
-        } catch { /* use the best available device voice */ }
-      }
-      await speakWithDeviceFallback();
-    })();
+    void speakWithComputerVoice();
   };
 
   useEffect(() => () => {
     if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
-    premiumAudioRef.current?.pause();
     window.speechSynthesis?.cancel();
   }, []);
 
@@ -396,7 +376,7 @@ function Onboarding() {
           <button aria-label={paused ? "Resume" : "Pause and finish later"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setPaused(!paused)}>
             {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
           </button>
-          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); premiumAudioRef.current?.pause(); window.speechSynthesis?.cancel(); }}>
+          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); window.speechSynthesis?.cancel(); }}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           <button aria-label="Minimize Ava" className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setMinimized(!minimized)}>
