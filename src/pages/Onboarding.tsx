@@ -66,6 +66,34 @@ const emptyBrand: BrandScan = {
   companyName: "", website: "", primaryColor: "#ff5a2a", secondaryColor: "#241812", logo: null,
 };
 
+async function getBestBrowserVoice() {
+  if (!("speechSynthesis" in window)) return null;
+  const getVoices = () => window.speechSynthesis.getVoices();
+  let voices = getVoices();
+  if (!voices.length) {
+    voices = await new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      const timer = window.setTimeout(() => resolve(getVoices()), 700);
+      window.speechSynthesis.addEventListener("voiceschanged", () => {
+        window.clearTimeout(timer);
+        resolve(getVoices());
+      }, { once: true });
+    });
+  }
+  const preferred = [
+    /Microsoft Ava.*Natural/i, /Microsoft Jenny.*Natural/i, /Microsoft Aria.*Natural/i,
+    /Google US English/i, /Samantha/i, /Microsoft Zira/i, /Microsoft Sonia/i,
+    /Microsoft Libby/i, /Ava/i, /Emma/i, /Jenny/i, /Aria/i,
+  ];
+  for (const pattern of preferred) {
+    const match = voices.find((voice) => pattern.test(voice.name));
+    if (match) return match;
+  }
+  return voices.find((voice) => voice.lang.toLowerCase().startsWith("en-us"))
+    || voices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
+    || voices[0]
+    || null;
+}
+
 function base64ToBlob(data: string, contentType: string) {
   const binary = atob(data);
   const bytes = new Uint8Array(binary.length);
@@ -96,6 +124,7 @@ function Onboarding() {
   const talkTimerRef = useRef<number | null>(null);
   const speechFallbackRef = useRef<number | null>(null);
   const speechRunRef = useRef(0);
+  const premiumAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const current = QUESTIONS[step];
   const prompt = reviewing
@@ -135,16 +164,13 @@ function Onboarding() {
   }, [started]);
 
   const speak = (text: string) => {
-    if (muted || !("speechSynthesis" in window)) return setAssistantState("idle");
+    if (muted) return setAssistantState("idle");
     const run = ++speechRunRef.current;
     window.speechSynthesis.cancel();
+    premiumAudioRef.current?.pause();
+    premiumAudioRef.current = null;
     if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.94;
-    utterance.pitch = 1.02;
-    const voices = window.speechSynthesis.getVoices();
-    utterance.voice = voices.find((voice) => /samantha|jenny|aria|female/i.test(voice.name)) || voices[0] || null;
     setAssistantState("speaking");
     setViseme(1);
     let frame = 1;
@@ -161,16 +187,45 @@ function Onboarding() {
       setViseme(0);
       setAssistantState("idle");
     };
-    utterance.onboundary = () => setViseme((frame) => frame === 1 ? 2 : 1);
-    utterance.onend = finishSpeaking;
-    utterance.onerror = finishSpeaking;
-    speechFallbackRef.current = window.setTimeout(finishSpeaking, Math.min(10500, Math.max(2600, text.length * 52)));
-    window.speechSynthesis.speak(utterance);
+    speechFallbackRef.current = window.setTimeout(finishSpeaking, Math.min(16000, Math.max(3500, text.length * 68)));
+
+    const speakWithDeviceFallback = async () => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.98;
+      utterance.pitch = 0.96;
+      utterance.volume = 0.92;
+      utterance.voice = await getBestBrowserVoice();
+      if (speechRunRef.current !== run) return;
+      utterance.onboundary = () => setViseme((frame) => frame === 1 ? 2 : 1);
+      utterance.onend = finishSpeaking;
+      utterance.onerror = finishSpeaking;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    void (async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase.functions.invoke("voice-speak", {
+            body: { text, voice: "coral" },
+          });
+          if (!error && data?.audio && speechRunRef.current === run) {
+            const audio = new Audio(`data:${data.mime || "audio/mpeg"};base64,${data.audio}`);
+            premiumAudioRef.current = audio;
+            audio.onended = finishSpeaking;
+            audio.onerror = () => void speakWithDeviceFallback();
+            await audio.play();
+            return;
+          }
+        } catch { /* use the best available device voice */ }
+      }
+      await speakWithDeviceFallback();
+    })();
   };
 
   useEffect(() => () => {
     if (talkTimerRef.current) window.clearInterval(talkTimerRef.current);
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
+    premiumAudioRef.current?.pause();
     window.speechSynthesis?.cancel();
   }, []);
 
@@ -341,7 +396,7 @@ function Onboarding() {
           <button aria-label={paused ? "Resume" : "Pause and finish later"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setPaused(!paused)}>
             {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
           </button>
-          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); window.speechSynthesis?.cancel(); }}>
+          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); premiumAudioRef.current?.pause(); window.speechSynthesis?.cancel(); }}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           <button aria-label="Minimize Ava" className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setMinimized(!minimized)}>

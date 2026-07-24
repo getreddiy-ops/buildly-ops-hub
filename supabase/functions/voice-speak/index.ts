@@ -1,89 +1,70 @@
-// Text-to-speech via Lovable AI Gateway (OpenAI-compatible).
-// Accepts JSON { text, voice? }; returns { audio: base64 mp3 }.
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { requireAuthedUser } from "../_shared/require-user.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { withSupabase } from "jsr:@supabase/server@^1";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
-  }
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-  const auth = requireAuthedUser(req);
-  if (!auth.ok) return auth.response;
-
-  try {
-    const { text, voice } = await req.json() as { text?: string; voice?: string };
-    const input = (text ?? "").trim();
-    if (!input) {
-      return new Response(JSON.stringify({ error: "text required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    // Hard cap to keep responses fast; client should chunk longer text.
-    const capped = input.length > 3000 ? input.slice(0, 3000) : input;
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-4o-mini-tts",
-        input: capped,
-        voice: voice || "alloy",
-        response_format: "mp3",
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      const status = res.status === 429 || res.status === 402 ? res.status : 500;
-      return new Response(JSON.stringify({ error: `TTS failed: ${txt}` }), {
-        status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const buf = new Uint8Array(await res.arrayBuffer());
-    // base64 encode
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < buf.length; i += chunk) {
-      binary += String.fromCharCode(...buf.subarray(i, i + chunk));
-    }
-    const b64 = btoa(binary);
-
-    // Track per-org AI usage
+export default {
+  fetch: withSupabase({ auth: "user" }, async (req) => {
     try {
-      const {
-        logAiUsage, estimateTtsCostUsd, getServiceClient,
-        getUserIdFromAuth, resolvePrimaryOrgId,
-      } = await import("../_shared/ai-usage.ts");
-      const admin = getServiceClient();
-      const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
-      const orgId = uid ? await resolvePrimaryOrgId(admin, uid) : null;
-      await logAiUsage(admin, {
-        organizationId: orgId,
-        userId: uid,
-        functionName: "voice-speak",
-        model: "openai/gpt-4o-mini-tts",
-        estimatedCostUsd: estimateTtsCostUsd(capped.length),
-        metadata: { chars: capped.length, voice: voice || "alloy" },
-      });
-    } catch (_) { /* ignore */ }
+      if (!LOVABLE_API_KEY) {
+        return Response.json({ error: "Neural voice is not configured." }, {
+          status: 503,
+          headers: corsHeaders,
+        });
+      }
 
-    return new Response(JSON.stringify({ audio: b64, mime: "audio/mpeg" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
+      const { text, voice } = await req.json() as { text?: string; voice?: string };
+      const input = (text ?? "").trim().slice(0, 3000);
+      if (!input) {
+        return Response.json({ error: "text required" }, {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o-mini-tts",
+          input,
+          voice: voice || "coral",
+          instructions: "Speak as Ava, a warm, confident business specialist. Sound natural, calm, friendly, and conversational. Avoid exaggerated enthusiasm, announcer delivery, and robotic pacing.",
+          response_format: "mp3",
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => "");
+        return Response.json({ error: `Neural voice failed: ${message}` }, {
+          status: response.status === 402 || response.status === 429 ? response.status : 500,
+          headers: corsHeaders,
+        });
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = "";
+      for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+      }
+
+      return Response.json({
+        audio: btoa(binary),
+        mime: "audio/mpeg",
+        voice: voice || "coral",
+      }, { headers: corsHeaders });
+    } catch (error) {
+      return Response.json({
+        error: error instanceof Error ? error.message : "Neural voice failed.",
+      }, { status: 500, headers: corsHeaders });
+    }
+  }),
+};
