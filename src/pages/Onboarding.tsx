@@ -66,34 +66,6 @@ const emptyBrand: BrandScan = {
   companyName: "", website: "", primaryColor: "#ff5a2a", secondaryColor: "#241812", logo: null,
 };
 
-async function getBestBrowserVoice() {
-  if (!("speechSynthesis" in window)) return null;
-  const getVoices = () => window.speechSynthesis.getVoices();
-  let voices = getVoices();
-  if (!voices.length) {
-    voices = await new Promise<SpeechSynthesisVoice[]>((resolve) => {
-      const timer = window.setTimeout(() => resolve(getVoices()), 700);
-      window.speechSynthesis.addEventListener("voiceschanged", () => {
-        window.clearTimeout(timer);
-        resolve(getVoices());
-      }, { once: true });
-    });
-  }
-  const preferred = [
-    /Microsoft Zira/i, /Microsoft Ava.*Natural/i, /Microsoft Jenny.*Natural/i,
-    /Microsoft Aria.*Natural/i, /Google US English/i, /Samantha/i, /Microsoft Sonia/i,
-    /Microsoft Libby/i, /Ava/i, /Emma/i, /Jenny/i, /Aria/i,
-  ];
-  for (const pattern of preferred) {
-    const match = voices.find((voice) => pattern.test(voice.name));
-    if (match) return match;
-  }
-  return voices.find((voice) => voice.lang.toLowerCase().startsWith("en-us"))
-    || voices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
-    || voices[0]
-    || null;
-}
-
 function base64ToBlob(data: string, contentType: string) {
   const binary = atob(data);
   const bytes = new Uint8Array(binary.length);
@@ -122,6 +94,7 @@ function Onboarding() {
   const recognitionRef = useRef<any>(null);
   const speechFallbackRef = useRef<number | null>(null);
   const speechRunRef = useRef(0);
+  const speechAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const current = QUESTIONS[step];
   const prompt = reviewing
@@ -160,11 +133,19 @@ function Onboarding() {
     if (started) window.scrollTo({ top: 0, behavior: "auto" });
   }, [started]);
 
-  const speak = (text: string) => {
-    if (muted) return setAssistantState("idle");
-    const run = ++speechRunRef.current;
-    window.speechSynthesis.cancel();
+  const stopSpeaking = () => {
+    speechRunRef.current += 1;
+    speechAudioRef.current?.pause();
+    speechAudioRef.current = null;
     if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
+    speechFallbackRef.current = null;
+    window.speechSynthesis?.cancel();
+  };
+
+  const speak = async (text: string) => {
+    if (muted) return setAssistantState("idle");
+    stopSpeaking();
+    const run = ++speechRunRef.current;
     setAssistantState("speaking");
     const finishSpeaking = () => {
       if (speechRunRef.current !== run) return;
@@ -180,24 +161,34 @@ function Onboarding() {
       utterance.rate = 0.92;
       utterance.pitch = 1.04;
       utterance.volume = 0.92;
-      utterance.voice = await getBestBrowserVoice();
       if (speechRunRef.current !== run) return;
       utterance.onend = finishSpeaking;
       utterance.onerror = finishSpeaking;
       window.speechSynthesis.speak(utterance);
     };
 
-    void speakWithComputerVoice();
+    try {
+      const { data, error } = await supabase.functions.invoke("voice-speak", { body: { text } });
+      if (error || !data?.audio) throw error || new Error(data?.error || "No audio returned");
+      if (speechRunRef.current !== run) return;
+      const audio = new Audio(`data:${data.mime || "audio/mpeg"};base64,${data.audio}`);
+      speechAudioRef.current = audio;
+      audio.onended = finishSpeaking;
+      audio.onerror = () => void speakWithComputerVoice();
+      await audio.play();
+    } catch {
+      if (speechRunRef.current === run) void speakWithComputerVoice();
+    }
   };
 
   useEffect(() => () => {
-    if (speechFallbackRef.current) window.clearTimeout(speechFallbackRef.current);
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!started || paused) return;
-    const timer = window.setTimeout(() => speak(prompt), 250);
+    const timer = window.setTimeout(() => void speak(prompt), 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, reviewing, started, paused]);
@@ -234,7 +225,7 @@ function Onboarding() {
       toast({ title: "Voice input is not supported here", description: "You can continue by typing." });
       return;
     }
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
     const recognition = new Recognition();
     recognition.lang = "en-US";
     recognition.interimResults = true;
@@ -345,7 +336,7 @@ function Onboarding() {
                 <span><strong className="block text-white">Remember my approved answers</strong>Save progress and personalize future help. You can clear it later.</span>
               </label>
             </div>
-            <Button size="lg" className="mt-4 h-13 w-full rounded-2xl bg-orange-500 text-base font-semibold text-[#100b08] hover:bg-orange-400 md:mt-5 md:h-14" onClick={() => { setStarted(true); speak(INTRO); }}>
+            <Button size="lg" className="mt-4 h-13 w-full rounded-2xl bg-orange-500 text-base font-semibold text-[#100b08] hover:bg-orange-400 md:mt-5 md:h-14" onClick={() => { setStarted(true); void speak(INTRO); }}>
               Yes, let’s begin <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
             <button className="mt-4 w-full text-center text-sm text-white/60 hover:text-white" onClick={() => { setStarted(true); setMuted(true); }}>Continue with text only</button>
@@ -367,7 +358,7 @@ function Onboarding() {
           <button aria-label={paused ? "Resume" : "Pause and finish later"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setPaused(!paused)}>
             {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
           </button>
-          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); window.speechSynthesis?.cancel(); }}>
+          <button aria-label={muted ? "Unmute Ava" : "Mute Ava"} className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => { setMuted(!muted); stopSpeaking(); }}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           <button aria-label="Minimize Ava" className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50" onClick={() => setMinimized(!minimized)}>
