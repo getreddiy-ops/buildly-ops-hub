@@ -4,30 +4,30 @@ import { SEO } from "@/components/SEO";
 import { Phone, Camera, Users, FileText, Receipt, Calendar, Clock, Bot } from "lucide-react";
 
 const features = [
-  { icon: Phone, title: "AI Phone Answering for Contractors", to: "/ai-phone-agent", desc: "An AI receptionist answers every missed call, captures lead details, and books appointments 24/7." },
-  { icon: Camera, title: "AI Photo Estimating", to: "/ai-photo-estimator", desc: "Customers or crews upload photos. AI drafts a rough estimate using your unit pricing." },
-  { icon: Users, title: "Contractor CRM", to: "/contractor-crm", desc: "Every lead, customer, call, text, and job history in one record." },
-  { icon: FileText, title: "Estimates & Proposals", to: "/estimate-software", desc: "Branded proposals with e-signature, converted to jobs in one click." },
-  { icon: Receipt, title: "Invoices & Payments", to: "/invoice-software", desc: "Deposit, progress, and final invoices with online payment links." },
-  { icon: Calendar, title: "Job Scheduling", to: "/features", desc: "Crew and sub scheduling across every active job." },
-  { icon: Clock, title: "Crew Time Tracking", to: "/features", desc: "GPS-verified clock-in, boss-approved hours, and job-costed payroll." },
-  { icon: Bot, title: "AI Command Chat", to: "/features", desc: "Run the whole business by typing or talking — AI fills forms, drafts estimates, and creates jobs while you confirm before it writes." },
+  { icon: Bot, title: "Your Personal AI Assistant", to: "/signup", desc: "Talk naturally with Ava. She learns your approved business context and helps you handle the work without hunting through menus." },
+  { icon: Phone, title: "24/7 Phone Assistant", to: "/ai-phone-agent", desc: "Answer missed calls, capture customer details, and prepare follow-up around the clock." },
+  { icon: Users, title: "Customers & Follow-up", to: "/contractor-crm", desc: "Keep leads, customers, calls, messages, and next steps together in one record." },
+  { icon: FileText, title: "Estimates & Proposals", to: "/estimate-software", desc: "Create clear, branded proposals and request approval before anything is sent." },
+  { icon: Receipt, title: "Money & Payments", to: "/invoice-software", desc: "Organize income, expenses, invoices, payments, tax reserves, and reports." },
+  { icon: Calendar, title: "Scheduling & Reminders", to: "/signup", desc: "Coordinate appointments, work, follow-ups, and the personal details you do not want to forget." },
+  { icon: Clock, title: "Work Tracking", to: "/signup", desc: "Track time, jobs, projects, and costs with workflows tailored to your business." },
+  { icon: Camera, title: "Website & Brand Setup", to: "/signup", desc: "Share your website and Ava can pull in your logo and colors, then suggest a stronger web presence." },
 ];
 
 export default function Features() {
   return (
     <MarketingShell>
       <SEO
-        title="Features | Contractor Software for Estimating, CRM, Jobs & Invoicing — FastTract"
-        description="See every feature in FastTract: AI phone answering, AI photo estimating, voice-driven AI form filling, contractor CRM, estimates, invoices, job scheduling, crew time tracking, and an AI command chat."
+        title="Features | Your Personal AI Business Assistant — FastTract"
+        description="Meet Ava and explore FastTract’s four connected areas: Home, Work, Money, and Business—personalized for the way your company operates."
         path="/features"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-          Every tool a contractor needs — in one app.
+          One AI assistant for the whole business.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          FastTract is the AI-powered operating system for contractors. Answer calls, capture leads, estimate from photos and voice, schedule crews, track time, send invoices, and collect payments.
+          Ava helps you manage customers, work, money, and company operations through one simple conversation. Contractor workflows are included, but FastTract adapts to any kind of business.
         </p>
         <CTARow />
       </section>

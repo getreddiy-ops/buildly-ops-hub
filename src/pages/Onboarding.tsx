@@ -454,7 +454,17 @@ function Onboarding() {
                 </span>
               </div>
               <div className="mt-5 flex gap-3">
-                <Button variant="outline" className="h-13 flex-1 border-white/15 bg-transparent text-white hover:bg-white/10" onClick={() => { setReviewing(false); setStep(0); }}><RotateCcw className="mr-2 h-4 w-4" />Correct an answer</Button>
+                <Button
+                  variant="outline"
+                  className="h-13 flex-1 border-white/15 bg-transparent text-white hover:bg-white/10"
+                  onClick={() => {
+                    setReviewing(false);
+                    setStep(0);
+                    setInput(answers.businessName || "");
+                  }}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />Correct an answer
+                </Button>
                 <Button className="h-13 flex-[1.35] bg-orange-500 font-semibold text-[#100b08] hover:bg-orange-400" onClick={createWorkspace} disabled={saving}>
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{saving ? "Creating your login…" : "Create my workspace"}
                 </Button>

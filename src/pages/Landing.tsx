@@ -44,16 +44,16 @@ const estimateLines = [
 ];
 
 const capabilities = [
-  { icon: Phone, title: "Never lose the lead", text: "Capture calls and job details while you are on site." },
-  { icon: FileText, title: "Estimate with confidence", text: "Turn scope, dimensions, rates, and materials into a clean draft." },
-  { icon: ClipboardCheck, title: "Stay in control", text: "Review every AI-assisted estimate before it reaches a customer." },
-  { icon: Receipt, title: "Keep the job moving", text: "Convert approved work into contracts, jobs, and invoices." },
+  { icon: Bot, title: "Home", text: "Ask Ava what needs attention and get a clear, personalized business overview." },
+  { icon: Users2, title: "Work", text: "Keep leads, customers, follow-ups, scheduling, jobs, and invoices moving." },
+  { icon: Receipt, title: "Money", text: "Understand income, expenses, payments, reports, and tax reserves in plain English." },
+  { icon: ClipboardCheck, title: "Business", text: "Organize your company profile, team, documents, integrations, and settings." },
 ];
 
 const faqItems = [
-  { q: "What is FastTract?", a: "FastTract helps contractors capture leads, create professional estimates, and carry approved work through contracts, scheduling, and invoicing." },
-  { q: "Which trades is it built for?", a: "FastTract is especially useful for concrete and remodeling contractors, with estimating support for roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction." },
-  { q: "Does AI send estimates automatically?", a: "No. AI-assisted estimates are drafts. You review and approve the scope, quantities, rates, and customer-facing language before sending." },
+  { q: "What is FastTract?", a: "FastTract is an AI-powered operating system for small businesses. Your personal assistant, Ava, helps organize customers, work, money, follow-up, documents, scheduling, and everyday business details." },
+  { q: "What kinds of businesses can use it?", a: "FastTract adapts to the company it meets during onboarding. Contractors have purpose-built estimating and job tools, while the same Home, Work, Money, and Business foundation supports service, retail, professional, and local businesses." },
+  { q: "Can Ava take actions for me?", a: "Yes, but important actions remain under your control. Ava prepares the work and asks for approval before sending, filing, paying, or changing anything important." },
   { q: "What does the trial include?", a: "You can start a 7-day trial on any plan. A card is required, but you are not charged until the trial ends. Cancel anytime." },
 ];
 
@@ -63,7 +63,7 @@ const softwareSchema = {
   name: "FastTract",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
-  description: "Contractor lead capture, AI-assisted estimating, job management, contracts, and invoicing.",
+  description: "A personal AI business assistant for customers, work, money, follow-up, scheduling, documents, and daily operations.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "FastTract" },
   url: "https://fasttract.org/",
@@ -132,8 +132,8 @@ export default function Landing() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract | Capture Leads and Send Contractor Estimates Faster"
-        description="FastTract helps concrete and remodeling contractors capture leads, build professional AI-assisted estimates, and move approved work from proposal to invoice."
+        title="FastTract | Your Personal AI Business Assistant"
+        description="Meet Ava, the personal AI assistant that learns your business and helps manage customers, work, money, follow-up, scheduling, documents, and everyday operations."
         path="/"
         jsonLd={softwareSchema}
       />
@@ -141,13 +141,13 @@ export default function Landing() {
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-20 lg:pt-20">
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" /> Built for concrete and remodeling contractors
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> One personal AI assistant for your whole business
           </div>
           <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Capture the lead. <span className="text-gradient-primary">Send the estimate faster.</span>
+            Run your business. <span className="text-gradient-primary">Let Ava handle the busywork.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            FastTract turns calls and job details into professional, contractor-approved estimates—then keeps the customer, job, contract, and invoice connected.
+            FastTract gives every business a personal AI assistant that learns how you work, keeps customers and money organized, answers questions, follows up, and helps get everyday work done.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
@@ -161,9 +161,9 @@ export default function Landing() {
       <section className="border-y border-border bg-background/40">
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-3 sm:px-6 lg:px-8">
           {[
-            [ShieldCheck, "AI drafts it. You approve it.", "Nothing customer-facing leaves without contractor review."],
-            [Users2, "One customer record", "Keep the call, estimate, files, job, and balance together."],
-            [Bot, "Built around real work", "Use your rates, markup, tax settings, and trade-specific scope."],
+            [ShieldCheck, "Ava prepares it. You approve it.", "Important work is never sent, filed, paid, or changed without your approval."],
+            [Users2, "One connected business", "Keep customers, conversations, files, work, money, and follow-up together."],
+            [Bot, "Learns how you work", "Ava starts with five onboarding answers and builds approved knowledge over time."],
           ].map(([Icon, title, text]) => {
             const TrustIcon = Icon as typeof ShieldCheck;
             return (
@@ -179,10 +179,10 @@ export default function Landing() {
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">A proposal customers can understand</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Real scope. Clear numbers. Your approval.</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">From a conversation to finished work</p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Tell Ava what you need. Review the result.</h2>
             <p className="mt-4 text-muted-foreground">
-              FastTract organizes labor, materials, supplies, markup, tax, and scope into a clean draft. You make the final call before it is sent.
+              Ava uses your approved business knowledge to prepare the next useful action. For a contractor, that may be a complete estimate. For another business, it may be customer follow-up, scheduling, an invoice, or a money summary.
             </p>
             <ul className="mt-6 space-y-3 text-sm">
               {["Use your private labor and material rates", "Review quantities, exclusions, and payment terms", "Convert an approved estimate into the next job step"].map((text) => (
@@ -207,8 +207,8 @@ export default function Landing() {
       <section className="border-y border-border bg-background/40">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Win the estimate. Keep the whole job organized.</h2>
-            <p className="mt-4 text-muted-foreground">Start with the work that wins revenue, then carry it forward without re-entering the same information.</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Four simple areas. Everything else fits underneath.</h2>
+            <p className="mt-4 text-muted-foreground">The dashboard stays approachable while Ava works across the whole company with you.</p>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {capabilities.map((item) => (
@@ -242,8 +242,8 @@ export default function Landing() {
 
       <section className="border-y border-border bg-primary/5">
         <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold">Your next estimate can be the organized one.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">Capture the lead, build a professional draft, review it, and send it while the job is still warm.</p>
+          <h2 className="text-3xl font-bold">You do not have to run the business alone.</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">Meet Ava, answer five quick questions, and start with a workspace that already understands the basics of your company.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
             <Button size="lg" variant="outline" asChild><Link to="/demo">See FastTract in action</Link></Button>

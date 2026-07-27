@@ -65,7 +65,7 @@ const steps: Step[] = [
     icon: FileSignature,
     duration: 5600,
     user: "Turn it into a contract and send it to Sarah.",
-    ai: "Generated a customer-facing contract with scope, exclusions, payment terms (30% deposit / 70% on completion), and Oregon lien language. Emailed to sarah@example.com.",
+    ai: "Generated a customer-facing contract with scope, exclusions, payment terms (30% deposit / 70% on completion), and Oregon lien language. It is ready for your approval before sending.",
     card: {
       title: "Contract sent — awaiting signature",
       lines: [
@@ -119,7 +119,7 @@ const steps: Step[] = [
     icon: Receipt,
     duration: 6000,
     user: "The job is finished. Send the final invoice.",
-    ai: "Generated invoice INV-2081 for $10,432 with deposit credit applied. Sent to Sarah with a pay-online link.",
+    ai: "Generated invoice INV-2081 for $10,432 with deposit credit applied. It is ready for your approval before sending Sarah the pay-online link.",
     card: {
       title: "Invoice INV-2081",
       lines: [
@@ -217,8 +217,8 @@ export default function Demo() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract Live Demo — See the AI Contractor Operating System in Action"
-        description="Watch FastTract turn a phone call into a lead, AI estimate, contract, material list, schedule, and invoice — all in one continuous flow."
+        title="FastTract Live Demo — See Ava Run a Business Workflow"
+        description="Watch Ava turn a customer call into organized work, documents, scheduling, and payment—while keeping the owner in control."
         path="/demo"
       />
 
@@ -228,10 +228,10 @@ export default function Demo() {
             <Sparkles className="h-3.5 w-3.5" /> Live Interactive Demo
           </div>
           <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-            Watch a real job go from <span className="text-gradient-primary">first call to paid</span>
+            Watch Ava turn a request into <span className="text-gradient-primary">finished work</span>
           </h1>
           <p className="mt-4 text-muted-foreground">
-            One continuous take — no signup required.
+            This contractor example shows the same conversational workflow FastTract adapts for any business.
           </p>
         </div>
       </section>

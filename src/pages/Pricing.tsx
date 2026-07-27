@@ -20,7 +20,7 @@ type PlanDef = {
 const PLANS: PlanDef[] = [
   {
     tier: "base",
-    tagline: "Run your contracting business end-to-end.",
+    tagline: "Run your business from one organized workspace.",
     features: [
       "Leads, customers & estimates",
       "Jobs, scheduling & crew management",
@@ -101,7 +101,7 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Pricing — FastTract"
-        description="Simple monthly plans for contractors. Base $69, Plus $169 (adds AI assistant with voice form filling), Premium $269 (adds AI phone answering). Cancel anytime."
+        description="Simple monthly FastTract plans for small businesses. Base includes core operations, Plus adds Ava, and Premium adds AI phone answering."
         path="/pricing"
         jsonLd={productLd}
       />
@@ -111,7 +111,7 @@ export default function Pricing() {
       </header>
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your crew.</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your business.</h1>
           <p className="mt-3 text-muted-foreground">Try any plan free for 7 days. Monthly billing per company. Cancel anytime.</p>
           <p className="mt-1 text-xs text-muted-foreground">Card required · No charge until the trial ends</p>
         </div>
