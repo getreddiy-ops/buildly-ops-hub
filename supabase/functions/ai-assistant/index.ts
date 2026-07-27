@@ -408,11 +408,23 @@ Deno.serve(async (req) => {
     const bpText = Object.keys(bp).length
       ? `\n\nBusiness profile (treat as authoritative facts about this business):\n${JSON.stringify(bp, null, 2)}`
       : "";
+    const { data: approvedKnowledge } = await admin
+      .from("ai_knowledge_entries")
+      .select("knowledge_key, content")
+      .eq("organization_id", organizationId)
+      .eq("approved", true)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    const knowledgeText = approvedKnowledge?.length
+      ? `\n\nOwner-approved AI memory (use only for this active organization):\n${
+        approvedKnowledge.map((entry) => `- ${entry.knowledge_key}: ${entry.content}`).join("\n")
+      }`
+      : "";
     const jurisdictionText = jurisdictionPromptBlock(
       (orgRow?.address as string | null) ?? null,
       (bp.service_area as string | null) ?? null,
     );
-    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${jurisdictionText}\n\n${TRADE_KNOWLEDGE_PROMPT}`;
+    const sys = `${SYSTEM}${orgName || orgRow?.name ? `\n\nActive organization: ${orgName ?? orgRow?.name}.` : ""}${bpText}${knowledgeText}${jurisdictionText}\n\n${TRADE_KNOWLEDGE_PROMPT}`;
 
     const payload = {
       model: USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",

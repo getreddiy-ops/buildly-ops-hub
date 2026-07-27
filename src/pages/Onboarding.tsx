@@ -274,6 +274,38 @@ function Onboarding() {
       setSaving(false);
       return toast({ title: "I couldn’t finish owner access", description: memberError.message, variant: "destructive" });
     }
+    if (consentMemory) {
+      const website = answers.website === "Skipped" ? "No website provided" : (brand.website || answers.website);
+      const knowledgeEntries = [
+        { knowledge_key: "business.name", content: answers.businessName },
+        { knowledge_key: "business.industry", content: answers.industry },
+        { knowledge_key: "business.phone", content: answers.phone },
+        { knowledge_key: "business.website", content: website },
+        { knowledge_key: "owner.preferred_name", content: answers.userName },
+      ].map((entry) => ({
+        ...entry,
+        organization_id: org.id,
+        user_id: user.id,
+        source: "onboarding_v3",
+        approved: true,
+        metadata: {
+          captured_at: new Date().toISOString(),
+          consent: "conversational_memory",
+          onboarding_version: 3,
+        },
+      }));
+      const { error: knowledgeError } = await supabase
+        .from("ai_knowledge_entries")
+        .upsert(knowledgeEntries, { onConflict: "organization_id,source,knowledge_key" });
+      if (knowledgeError) {
+        setSaving(false);
+        return toast({
+          title: "Your workspace was created, but Ava’s memory needs attention",
+          description: knowledgeError.message,
+          variant: "destructive",
+        });
+      }
+    }
     if (brand.logo) {
       const extension = brand.logo.contentType.includes("svg") ? "svg" : brand.logo.contentType.includes("webp") ? "webp" : brand.logo.contentType.includes("jpeg") ? "jpg" : "png";
       const path = `${org.id}/logo-onboarding.${extension}`;
@@ -327,7 +359,7 @@ function Onboarding() {
               </label>
               <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
                 <input type="checkbox" checked={consentMemory} onChange={(e) => setConsentMemory(e.target.checked)} className="mt-0.5 h-5 w-5 accent-orange-500" />
-                <span><strong className="block text-white">Remember my approved answers</strong>Save progress and personalize future help. You can clear it later.</span>
+                <span><strong className="block text-white">Remember my approved answers</strong>Securely save them to your company’s private AI memory so Ava can personalize future help. You can clear them later.</span>
               </label>
             </div>
             <Button size="lg" className="mt-4 h-13 w-full rounded-2xl bg-orange-500 text-base font-semibold text-[#100b08] hover:bg-orange-400 md:mt-5 md:h-14" onClick={() => { setStarted(true); void speak(INTRO); }}>
@@ -412,6 +444,14 @@ function Onboarding() {
                 {answers.website === "Skipped"
                   ? "Your SaaS login and workspace will be ready now. Add a website later and Ava can review it."
                   : "I’ll use the site’s logo and colors, then suggest a cleaner, higher-converting version after you enter the workspace."}
+              </div>
+              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/65">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                <span>
+                  {consentMemory
+                    ? "After you approve, these five answers will be saved to this company’s private AI memory so Ava can use them in future conversations."
+                    : "AI memory is off. Your workspace will still be created, but Ava will not save these answers as conversational memory."}
+                </span>
               </div>
               <div className="mt-5 flex gap-3">
                 <Button variant="outline" className="h-13 flex-1 border-white/15 bg-transparent text-white hover:bg-white/10" onClick={() => { setReviewing(false); setStep(0); }}><RotateCcw className="mr-2 h-4 w-4" />Correct an answer</Button>

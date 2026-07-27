@@ -966,6 +966,53 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_knowledge_entries: {
+        Row: {
+          approved: boolean
+          content: string
+          created_at: string
+          id: string
+          knowledge_key: string
+          metadata: Json
+          organization_id: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          content: string
+          created_at?: string
+          id?: string
+          knowledge_key: string
+          metadata?: Json
+          organization_id: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          knowledge_key?: string
+          metadata?: Json
+          organization_id?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phone_assistants: {
         Row: {
           capabilities: Json
