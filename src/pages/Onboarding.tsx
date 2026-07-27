@@ -29,38 +29,14 @@ type Question = {
 };
 
 const QUESTIONS: Question[] = [
-  { id: "businessType", prompt: () => "What type of business do you run?", placeholder: "For example, landscaping or accounting" },
   { id: "businessName", prompt: () => "What is your business name?", placeholder: "Your company name" },
-  { id: "specialty", prompt: ({ businessName }) => `What does ${businessName || "your business"} specialize in?`, placeholder: "Tell me in your own words" },
-  { id: "location", prompt: () => "Where is your business located, and what areas do you serve?", placeholder: "City, state, and service area" },
-  { id: "website", prompt: () => "Do you have a website? If so, what is its address?", placeholder: "yourcompany.com", optional: true },
-  { id: "stage", prompt: () => "Are you already operating, or are you starting something new?", choices: ["Already operating", "Starting something new"] },
-  { id: "team", prompt: () => "Do you work alone, or do you have employees or subcontractors?", choices: ["I work alone", "Employees", "Subcontractors", "Employees and subcontractors"] },
-  { id: "contact", prompt: () => "How do customers currently find and contact you?", placeholder: "For example, referrals, Google, phone, or social media" },
-  { id: "timeDrain", prompt: () => "What takes up the most time in your business right now?", placeholder: "The busywork you want off your plate" },
-  { id: "worry", prompt: () => "What are you most worried about right now?", choices: ["Getting paid", "Tracking expenses", "Taxes", "Finding customers", "Scheduling work", "Something else"] },
-  { id: "firstValue", prompt: () => "What would make FastTract immediately valuable to you?", placeholder: "The first result you want Ava to help deliver" },
-  {
-    id: "legalName",
-    prompt: () => "What is the legal name of the business?",
-    placeholder: "Legal business name",
-    optional: true,
-    sensitiveNote: "I use this only to organize official records correctly. You can skip it and add it later.",
-  },
-  { id: "structure", prompt: () => "How is the business structured?", choices: ["Sole proprietor", "LLC", "Partnership", "S corporation", "C corporation", "Not sure yet"], optional: true },
-  {
-    id: "ein",
-    prompt: () => "Would you like to add the last four digits of your EIN now?",
-    placeholder: "Last 4 digits only",
-    optional: true,
-    sensitiveNote: "This helps match tax records. I will mask it, and I will not save it until you approve your summary.",
-  },
-  { id: "connections", prompt: () => "Which financial connection would help most first?", choices: ["Business checking", "Business savings", "Business credit card", "Payment processor", "Skip for now"], optional: true },
-  { id: "imports", prompt: () => "What would you like me to import first?", choices: ["Accounting system", "Bank transactions", "Spreadsheet", "Customer list", "Website profile", "Calendar or email", "Skip for now"], optional: true },
-  { id: "firstWin", prompt: () => "Let’s finish with one useful result. What should we do first?", choices: ["Create my first customer", "Build an estimate", "Send an invoice", "Review transactions", "Set up tax reserves", "Connect my calendar"] },
+  { id: "industry", prompt: ({ businessName }) => `What industry is ${businessName || "your business"} in?`, placeholder: "For example, roofing, landscaping, or accounting" },
+  { id: "phone", prompt: () => "What is the best business phone number?", placeholder: "(555) 555-0123" },
+  { id: "website", prompt: () => "What is your website address?", placeholder: "yourcompany.com", optional: true },
+  { id: "userName", prompt: () => "Last question—what should I call you?", placeholder: "Your preferred name" },
 ];
 
-const INTRO = "Hi, I’m Ava, your FastTract AI assistant. I’m here to help you run your business, stay organized, understand your money, and handle the busywork. We’ll set everything up together through a simple conversation. You can talk to me naturally, and you can change anything later. Ready to begin?";
+const INTRO = "Hi, I’m Ava, your FastTract AI assistant. I only need five quick answers to create your business workspace and finish setting up your login. If you share a website, I’ll also pull in your brand and prepare ideas for improving it. Ready?";
 
 const emptyBrand: BrandScan = {
   companyName: "", website: "", primaryColor: "#ff5a2a", secondaryColor: "#241812", logo: null,
@@ -98,9 +74,9 @@ function Onboarding() {
 
   const current = QUESTIONS[step];
   const prompt = reviewing
-    ? `Here’s what I understood. FastTract is being set up for ${answers.businessName || "your business"}, a ${answers.businessType || "business"} specializing in ${answers.specialty || "your work"} and serving ${answers.location || "your area"}. Did I get that right?`
+    ? `Thanks, ${answers.userName || "there"}. I have everything I need to create the FastTract login and workspace for ${answers.businessName || "your business"}. Does this look right?`
     : current?.prompt(answers) || "";
-  const progress = Math.round(((step + (reviewing ? 1 : 0)) / (QUESTIONS.length + 1)) * 100);
+  const progress = Math.round(((reviewing ? QUESTIONS.length : step + 1) / QUESTIONS.length) * 100);
 
   useEffect(() => {
     if (isPreview) return;
@@ -116,6 +92,10 @@ function Onboarding() {
     if (!saved) return;
     try {
       const draft = JSON.parse(saved);
+      if (draft.version !== 3) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
       setAnswers(draft.answers || {});
       setStep(Math.min(draft.step || 0, QUESTIONS.length - 1));
       setStarted(Boolean(draft.started));
@@ -126,7 +106,7 @@ function Onboarding() {
 
   useEffect(() => {
     if (!started || !consentMemory) return;
-    localStorage.setItem(draftKey, JSON.stringify({ answers, step, started, consentMemory, brand }));
+    localStorage.setItem(draftKey, JSON.stringify({ version: 3, answers, step, started, consentMemory, brand }));
   }, [answers, step, started, consentMemory, brand, draftKey]);
 
   useEffect(() => {
@@ -250,26 +230,35 @@ function Onboarding() {
     }
     if (!user) return;
     setSaving(true);
-    const ein = answers.ein?.replace(/\D/g, "").slice(-4);
     const businessProfile = {
-      onboarding_version: 2,
+      onboarding_version: 3,
       assistant: { name: "Ava", labeled_as_ai: true, memory_consent: consentMemory },
-      business: {
-        type: answers.businessType, specialty: answers.specialty, location: answers.location,
-        stage: answers.stage, team: answers.team, contact_channels: answers.contact,
-        structure: answers.structure,
+      business: { industry: answers.industry },
+      website_review: {
+        source_website: answers.website === "Skipped" ? null : (brand.website || answers.website),
+        brand_crawled: Boolean(brand.website),
+        refresh_recommendation_requested: answers.website !== "Skipped",
+        status: answers.website === "Skipped" ? "waiting_for_website" : "ready_to_review",
       },
-      priorities: { time_drain: answers.timeDrain, worry: answers.worry, first_value: answers.firstValue },
-      setup: { preferred_connection: answers.connections, preferred_import: answers.imports, first_win: answers.firstWin },
+      setup: { intro_complete: true, login_ready: true, question_count: 5 },
       workspace: ["Home", "Work", "Money", "Business"],
     };
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.id,
+      email: user.email,
+      full_name: answers.userName,
+      phone: answers.phone,
+      updated_at: new Date().toISOString(),
+    });
+    if (profileError) {
+      setSaving(false);
+      return toast({ title: "I couldn’t finish your login profile", description: profileError.message, variant: "destructive" });
+    }
     const { data: org, error } = await supabase.from("organizations").insert({
       name: answers.businessName,
-      legal_name: answers.legalName === "Skipped" ? null : answers.legalName,
       owner_id: user.id,
       website: answers.website === "Skipped" ? null : (brand.website || answers.website),
-      address: answers.location,
-      tax_id: ein ? `***-**-${ein}` : null,
+      phone: answers.phone,
       brand_color: brand.primaryColor,
       brand_color_secondary: brand.secondaryColor,
       business_profile: businessProfile,
@@ -298,8 +287,13 @@ function Onboarding() {
     setActiveOrgId(org.id);
     await refresh();
     setSaving(false);
-    toast({ title: `${org.name} is ready`, description: `Ava will help you: ${answers.firstWin}.` });
-    navigate("/app?welcome=ava", { replace: true });
+    toast({
+      title: `Welcome, ${answers.userName}`,
+      description: answers.website === "Skipped"
+        ? `${org.name} is ready. Add a website anytime for a free brand review.`
+        : `${org.name} is ready. Ava is preparing website improvement ideas.`,
+    });
+    navigate("/app?welcome=ava&websiteReview=ready", { replace: true });
   };
 
   const statusLabel = useMemo(() => ({
@@ -325,7 +319,7 @@ function Onboarding() {
               {!isPreview && <button className="text-xs text-white/65 hover:text-white" onClick={signOut}>Sign out</button>}
             </div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">Let’s set up your business through a conversation.</h1>
-            <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. We’ll set up FastTract together through a simple conversation, and you can change anything later.</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. Five quick questions and your FastTract workspace is ready. If you have a website, I’ll use it to match your brand and suggest improvements.</p>
             <div className="mt-4 space-y-3 rounded-2xl bg-white/[0.06] p-3.5 md:mt-6 md:p-4">
               <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
                 <input type="checkbox" checked={consentMic} onChange={(e) => setConsentMic(e.target.checked)} className="mt-0.5 h-5 w-5 accent-orange-500" />
@@ -406,17 +400,23 @@ function Onboarding() {
             </div>
           ) : reviewing ? (
             <div className="mx-auto w-full max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Your approval</p>
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Five answers · your approval</p>
               <h2 className="mt-3 text-2xl font-semibold leading-tight md:text-4xl">{prompt}</h2>
               <div className="mt-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm">
-                {[["Business", answers.businessName], ["Type", answers.businessType], ["Specialty", answers.specialty], ["Serves", answers.location], ["Priority", answers.firstValue], ["First win", answers.firstWin], ["EIN", answers.ein && answers.ein !== "Skipped" ? `•••• ${answers.ein.replace(/\D/g, "").slice(-4)}` : "Not added"]].map(([label, value]) => (
+                {[["Business", answers.businessName], ["Industry", answers.industry], ["Phone", answers.phone], ["Website", answers.website], ["Your name", answers.userName]].map(([label, value]) => (
                   <div key={label} className="flex gap-4 border-b border-white/[0.07] py-2 last:border-0"><span className="w-20 shrink-0 text-white/45">{label}</span><span>{value || "Not provided"}</span></div>
                 ))}
+              </div>
+              <div className="mt-3 rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] p-4 text-sm text-orange-50/80">
+                <strong className="block text-orange-200">{brand.website ? "Website brand found" : answers.website === "Skipped" ? "Website can wait" : "Website review queued"}</strong>
+                {answers.website === "Skipped"
+                  ? "Your SaaS login and workspace will be ready now. Add a website later and Ava can review it."
+                  : "I’ll use the site’s logo and colors, then suggest a cleaner, higher-converting version after you enter the workspace."}
               </div>
               <div className="mt-5 flex gap-3">
                 <Button variant="outline" className="h-13 flex-1 border-white/15 bg-transparent text-white hover:bg-white/10" onClick={() => { setReviewing(false); setStep(0); }}><RotateCcw className="mr-2 h-4 w-4" />Correct an answer</Button>
                 <Button className="h-13 flex-[1.35] bg-orange-500 font-semibold text-[#100b08] hover:bg-orange-400" onClick={createWorkspace} disabled={saving}>
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{saving ? "Building workspace…" : "Approve & build it"}
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{saving ? "Creating your login…" : "Create my workspace"}
                 </Button>
               </div>
               <p className="mt-4 flex items-center justify-center gap-2 text-xs text-white/45"><ShieldCheck className="h-3.5 w-3.5" />Nothing important is sent, filed, paid, or changed without your approval.</p>
@@ -434,7 +434,16 @@ function Onboarding() {
                 </div>
               ) : (
                 <form className="mt-6 flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] p-2 focus-within:border-orange-500/60" onSubmit={(e) => { e.preventDefault(); submitAnswer(); }}>
-                  <Input autoFocus value={input} onChange={(e) => setInput(e.target.value)} placeholder={current.placeholder} className="h-12 flex-1 border-0 bg-transparent text-base text-white placeholder:text-white/35 focus-visible:ring-0" />
+                  <Input
+                    autoFocus
+                    type={current.id === "phone" ? "tel" : "text"}
+                    inputMode={current.id === "website" ? "url" : undefined}
+                    autoComplete={current.id === "phone" ? "tel" : current.id === "website" ? "url" : current.id === "userName" ? "name" : "organization"}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={current.placeholder}
+                    className="h-12 flex-1 border-0 bg-transparent text-base text-white placeholder:text-white/35 focus-visible:ring-0"
+                  />
                   <Button type="submit" aria-label="Send answer" size="icon" className="h-12 w-12 rounded-xl bg-orange-500 text-[#100b08] hover:bg-orange-400" disabled={!input.trim() && !current.optional}><Send className="h-5 w-5" /></Button>
                 </form>
               )}
