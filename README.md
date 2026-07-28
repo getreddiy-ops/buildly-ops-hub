@@ -1,8 +1,7 @@
 # FastTract
 
-FastTract is a contractor operating system covering lead intake, customers,
-estimates, contracts, jobs, crews, time tracking, invoices, and AI-assisted
-office workflows.
+FastTract is a personal AI business operating system covering customers, work,
+money, company operations, and AI-assisted everyday workflows.
 
 ## Revenue funnel
 
@@ -21,6 +20,12 @@ npm run test
 npm run lint
 npm run build
 ```
+
+## Android and iPhone
+
+Native packaging is configured with Capacitor. See
+[MOBILE_RELEASE.md](./MOBILE_RELEASE.md) for build, signing, device-test, and
+store-submission requirements.
 
 Do not commit Supabase service-role keys, Paddle secrets, Twilio credentials, or
 other production secrets. Public client tokens belong only in the documented

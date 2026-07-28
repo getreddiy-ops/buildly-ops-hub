@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FastTract</string>
+    <string name="title_activity_main">FastTract</string>
+    <string name="package_name">org.fasttract.app</string>
+    <string name="custom_url_scheme">org.fasttract.app</string>
+</resources>
