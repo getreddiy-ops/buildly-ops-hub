@@ -2,115 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FastTract design system — warm sunset palette.
-   Light, warm cream surfaces with vivid ember/coral primary and amber accents.
+/* FastTract design system — evergreen and silver palette.
+   Deep, dependable contractor green with brushed-silver neutral surfaces.
    All colors are HSL. Use semantic tokens, never hard-coded colors in components. */
 
 @layer base {
   :root {
-    /* Warm cream background, deep espresso text */
-    --background: 32 45% 97%;
-    --foreground: 18 35% 12%;
+    /* Silver-mist background, evergreen-charcoal text */
+    --background: 210 12% 96%;
+    --foreground: 155 28% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 18 35% 12%;
+    --card-foreground: 155 28% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 18 35% 12%;
+    --popover-foreground: 155 28% 11%;
 
-    /* Vivid ember/orange primary */
-    --primary: 16 92% 54%;
-    --primary-foreground: 40 50% 98%;
+    /* Dependable evergreen primary */
+    --primary: 145 63% 28%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 32 40% 92%;
-    --secondary-foreground: 18 35% 12%;
+    /* Brushed-silver secondary surfaces */
+    --secondary: 210 10% 90%;
+    --secondary-foreground: 155 28% 14%;
 
-    --muted: 32 30% 93%;
-    --muted-foreground: 22 18% 42%;
+    --muted: 210 12% 92%;
+    --muted-foreground: 155 10% 38%;
 
-    /* Warm amber accent */
-    --accent: 38 95% 90%;
-    --accent-foreground: 22 80% 30%;
+    /* Soft green accent for selected and highlighted states */
+    --accent: 145 30% 89%;
+    --accent-foreground: 145 52% 22%;
 
-    --destructive: 0 78% 55%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 60% 42%;
+    --success: 145 63% 32%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 95% 52%;
-    --warning-foreground: 18 35% 12%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 155 28% 11%;
 
-    --border: 28 30% 86%;
-    --input: 28 30% 86%;
-    --ring: 16 92% 54%;
+    --border: 210 10% 82%;
+    --input: 210 10% 82%;
+    --ring: 145 63% 28%;
 
     --radius: 0.625rem;
 
-    --sidebar-background: 20 35% 10%;
-    --sidebar-foreground: 32 35% 92%;
-    --sidebar-primary: 16 92% 58%;
-    --sidebar-primary-foreground: 40 50% 98%;
-    --sidebar-accent: 20 30% 16%;
-    --sidebar-accent-foreground: 40 50% 98%;
-    --sidebar-border: 20 30% 18%;
-    --sidebar-ring: 16 92% 58%;
+    --sidebar-background: 155 28% 11%;
+    --sidebar-foreground: 210 14% 92%;
+    --sidebar-primary: 145 58% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 155 24% 17%;
+    --sidebar-accent-foreground: 210 14% 96%;
+    --sidebar-border: 155 18% 22%;
+    --sidebar-ring: 145 58% 42%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(16 92% 56%), hsl(38 95% 56%));
-    --gradient-dark: linear-gradient(135deg, hsl(20 35% 12%), hsl(18 40% 6%));
-    --shadow-elevated: 0 20px 60px -20px hsl(16 92% 50% / 0.35);
-    --shadow-card: 0 1px 3px hsl(20 40% 20% / 0.08), 0 1px 2px hsl(20 40% 20% / 0.04);
+    --gradient-primary: linear-gradient(135deg, hsl(150 58% 22%), hsl(145 63% 34%));
+    --gradient-dark: linear-gradient(135deg, hsl(155 30% 13%), hsl(210 8% 22%));
+    --shadow-elevated: 0 20px 60px -20px hsl(145 63% 24% / 0.32);
+    --shadow-card: 0 1px 3px hsl(155 20% 15% / 0.10), 0 1px 2px hsl(210 10% 20% / 0.06);
   }
 
   .dark {
-    /* Deep warm espresso, not cold black */
-    --background: 18 35% 7%;
-    --foreground: 38 40% 94%;
+    /* Deep evergreen-black with cool silver text */
+    --background: 155 24% 7%;
+    --foreground: 210 14% 92%;
 
-    --card: 20 30% 11%;
-    --card-foreground: 38 40% 94%;
+    --card: 155 20% 11%;
+    --card-foreground: 210 14% 92%;
 
-    --popover: 20 30% 11%;
-    --popover-foreground: 38 40% 94%;
+    --popover: 155 20% 11%;
+    --popover-foreground: 210 14% 92%;
 
-    --primary: 16 95% 58%;
-    --primary-foreground: 18 35% 7%;
+    --primary: 145 58% 46%;
+    --primary-foreground: 155 28% 7%;
 
-    --secondary: 20 25% 18%;
-    --secondary-foreground: 38 40% 94%;
+    --secondary: 210 8% 18%;
+    --secondary-foreground: 210 14% 92%;
 
-    --muted: 20 22% 15%;
-    --muted-foreground: 32 18% 68%;
+    --muted: 155 14% 15%;
+    --muted-foreground: 210 9% 68%;
 
-    --accent: 22 70% 22%;
-    --accent-foreground: 38 95% 80%;
+    --accent: 145 32% 20%;
+    --accent-foreground: 145 48% 80%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 68% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 60% 48%;
-    --success-foreground: 0 0% 100%;
+    --success: 145 58% 48%;
+    --success-foreground: 155 28% 7%;
 
-    --warning: 38 95% 56%;
-    --warning-foreground: 18 35% 7%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 155 28% 7%;
 
-    --border: 20 25% 20%;
-    --input: 20 25% 20%;
-    --ring: 16 95% 58%;
+    --border: 155 12% 22%;
+    --input: 155 12% 22%;
+    --ring: 145 58% 46%;
 
-    --sidebar-background: 18 40% 5%;
-    --sidebar-foreground: 38 35% 92%;
-    --sidebar-primary: 16 95% 60%;
-    --sidebar-primary-foreground: 18 35% 7%;
-    --sidebar-accent: 20 30% 13%;
-    --sidebar-accent-foreground: 38 40% 94%;
-    --sidebar-border: 20 30% 15%;
-    --sidebar-ring: 16 95% 60%;
+    --sidebar-background: 155 28% 5%;
+    --sidebar-foreground: 210 14% 92%;
+    --sidebar-primary: 145 58% 48%;
+    --sidebar-primary-foreground: 155 28% 7%;
+    --sidebar-accent: 155 22% 13%;
+    --sidebar-accent-foreground: 210 14% 96%;
+    --sidebar-border: 155 18% 16%;
+    --sidebar-ring: 145 58% 48%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(16 95% 58%), hsl(38 95% 58%));
-    --gradient-dark: linear-gradient(180deg, hsl(20 35% 8%), hsl(18 40% 4%));
-    --shadow-elevated: 0 20px 60px -20px hsl(16 95% 55% / 0.45);
-    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.4), 0 1px 2px hsl(0 0% 0% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(150 55% 30%), hsl(145 58% 48%));
+    --gradient-dark: linear-gradient(180deg, hsl(155 26% 9%), hsl(210 8% 5%));
+    --shadow-elevated: 0 20px 60px -20px hsl(145 58% 38% / 0.38);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.42), 0 1px 2px hsl(0 0% 0% / 0.24);
   }
 }
 
