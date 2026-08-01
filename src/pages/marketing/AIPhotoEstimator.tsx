@@ -41,7 +41,9 @@ export default function AIPhotoEstimator() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-10 text-center sm:px-6 lg:px-8">
-        <Button size="lg" asChild><Link to="/signup">Try AI Estimate Lab</Link></Button>
+        <Button size="lg" asChild>
+          <Link to="/login?next=%2Fapp%2Fassistant">Try AI Estimate Lab</Link>
+        </Button>
       </section>
 
       <FAQ

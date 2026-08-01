@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TIERS, type Tier } from "@/lib/tiers";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Gates UI behind a minimum subscription tier.
@@ -18,8 +19,14 @@ export function PaywallGate({
   feature: string;
   requires?: Tier;
 }) {
+  const { isPlatformAdmin } = useAuth();
   const { isActive, tier, loading } = useSubscription();
   if (loading) return null;
+
+  // Platform owners need to be able to validate paid features without creating
+  // a customer subscription for their own support account. The edge function
+  // independently verifies this role before granting the same bypass.
+  if (isPlatformAdmin) return <>{children}</>;
 
   const order: Tier[] = ["base", "plus", "premium"];
   const meets = isActive && tier && order.indexOf(tier) >= order.indexOf(requires);
