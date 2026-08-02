@@ -24,11 +24,9 @@ export default function FieldCrew() {
     if (!activeOrg) return;
     let cancelled = false;
     const load = async () => {
-      // teammates
+      // teammates (names only — contact details stay admin-only)
       const { data: roster } = await supabase
-        .from("organization_members")
-        .select("user_id, profiles:user_id(full_name)")
-        .eq("organization_id", activeOrg.organization_id);
+        .rpc("get_org_roster", { _org_id: activeOrg.organization_id });
 
       // open time entries
       const { data: open } = await supabase
@@ -44,7 +42,7 @@ export default function FieldCrew() {
         const e = byUser.get(r.user_id);
         return {
           user_id: r.user_id,
-          full_name: r.profiles?.full_name ?? null,
+          full_name: r.full_name ?? null,
           clocked_in: !!e,
           job_title: e?.jobs?.title ?? null,
           job_address: e?.jobs?.address ?? null,

@@ -80,8 +80,13 @@ export default function Crew() {
     const userIds = (mems ?? []).map((m: any) => m.user_id);
     let profs: any[] = [];
     if (userIds.length > 0) {
-      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
-      profs = data ?? [];
+      if (isAdmin) {
+        const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+        profs = data ?? [];
+      } else {
+        const { data } = await supabase.rpc("get_org_roster", { _org_id: activeOrg.organization_id });
+        profs = (data ?? []).map((r: any) => ({ id: r.user_id, full_name: r.full_name, email: null }));
+      }
     }
     setMembers(((mems ?? []) as any[]).map((m) => {
       const p = profs.find((x) => x.id === m.user_id);
