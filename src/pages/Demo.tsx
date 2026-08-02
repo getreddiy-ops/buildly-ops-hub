@@ -1,458 +1,835 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { SEO } from "@/components/SEO";
+import { cn } from "@/lib/utils";
 import {
-  Bot, Phone, FileText, FileSignature, Package, Receipt,
-  Calendar, MapPin, Send, Play, Pause, CheckCircle2, ArrowRight, Sparkles,
-  Volume2,
+  Bot, Phone, FileText, Package, Receipt, Calendar, MapPin, Play, Pause,
+  CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, Users, Camera, Mic,
+  ShieldCheck, TrendingUp, Clock, Home, Sparkles, PhoneIncoming, CircleDollarSign,
 } from "lucide-react";
 
-type Line = { label: string; value: string };
-type Step = {
+/* ────────────────────────────────────────────────────────────────
+   All data below is fictional sample data for demonstration only.
+   ──────────────────────────────────────────────────────────────── */
+
+type Chapter = {
   key: string;
-  tag: string;
+  label: string;
+  title: string;
+  caption: string;
+  badge?: "Premium" | "Plus";
   icon: typeof Bot;
-  duration: number; // ms
-  user: string;
-  ai: string;
-  card: { title: string; lines: Line[]; total?: string };
+  duration: number;
+  screen: (p: { progress: number; reduced: boolean }) => JSX.Element;
 };
 
-const steps: Step[] = [
+/* ── small shared UI primitives (simulated FastTract mobile UI) ── */
+
+function StatusBar() {
+  return (
+    <div className="flex items-center justify-between px-5 pt-2 text-[10px] font-medium text-foreground/70">
+      <span>9:41</span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-3 rounded-[2px] bg-foreground/40" />
+        <span className="inline-block h-2 w-4 rounded-[2px] border border-foreground/40" />
+      </span>
+    </div>
+  );
+}
+
+function AppBar({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div className="border-b border-border/70 px-4 pb-3 pt-2">
+      <div className="text-[15px] font-semibold leading-tight">{title}</div>
+      {sub ? <div className="text-[11px] text-muted-foreground">{sub}</div> : null}
+    </div>
+  );
+}
+
+function TabBar({ active }: { active: string }) {
+  const tabs = [
+    { key: "home", icon: Home, label: "Today" },
+    { key: "jobs", icon: Calendar, label: "Jobs" },
+    { key: "docs", icon: FileText, label: "Docs" },
+    { key: "ai", icon: Bot, label: "Ava" },
+  ];
+  return (
+    <div className="grid grid-cols-4 border-t border-border/70 bg-card/80 px-2 pb-4 pt-2">
+      {tabs.map((t) => (
+        <div key={t.key} className="flex flex-col items-center gap-1">
+          <t.icon className={cn("h-4 w-4", active === t.key ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-[9px]", active === t.key ? "text-primary" : "text-muted-foreground")}>{t.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Pill({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "primary" | "success" }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+        tone === "primary" && "bg-primary/15 text-primary",
+        tone === "success" && "bg-success/15 text-success",
+        tone === "muted" && "bg-muted text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ReviewNote() {
+  return (
+    <div className="mx-4 mb-3 mt-auto flex items-start gap-2 rounded-lg border border-border/70 bg-muted/50 p-2">
+      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-success" />
+      <p className="text-[10px] leading-snug text-muted-foreground">
+        You review and approve before anything is sent.
+      </p>
+    </div>
+  );
+}
+
+function countUp(target: number, progress: number, reduced: boolean) {
+  if (reduced) return target;
+  const eased = Math.min(1, progress / 0.6);
+  return Math.round(target * eased);
+}
+
+function Waveform({ reduced }: { reduced: boolean }) {
+  return (
+    <div className="flex h-8 items-end justify-center gap-1" aria-hidden="true">
+      {Array.from({ length: 14 }).map((_, i) => (
+        <span
+          key={i}
+          className={cn("w-1 rounded-full bg-primary", !reduced && "ft-wave-bar")}
+          style={{ height: `${12 + ((i * 7) % 20)}px`, animationDelay: `${i * 70}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Row({ label, value, tone }: { label: string; value: string; tone?: "success" | "primary" }) {
+  return (
+    <div className="flex items-center justify-between border-b border-border/50 py-1.5 last:border-0">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "text-[11px] font-semibold",
+          tone === "success" && "text-success",
+          tone === "primary" && "text-primary",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Screen({ children, active = "home" }: { children: React.ReactNode; active?: string }) {
+  return (
+    <div className="flex h-full flex-col">
+      <StatusBar />
+      {children}
+      <TabBar active={active} />
+    </div>
+  );
+}
+
+function Stagger({ i, reduced, children }: { i: number; reduced: boolean; children: React.ReactNode }) {
+  return (
+    <div className={reduced ? undefined : "ft-rise"} style={reduced ? undefined : { animationDelay: `${i * 110}ms` }}>
+      {children}
+    </div>
+  );
+}
+
+/* ── chapters ── */
+
+const chapters: Chapter[] = [
   {
-    key: "lead",
-    tag: "Lead Capture",
-    icon: Phone,
-    duration: 5200,
-    user: "New call: Sarah Miller wants a 20x40 concrete driveway in Portland, OR.",
-    ai: "Got it — created a new lead for Sarah Miller with a driveway replacement job in Portland, OR. Marked source as Phone.",
-    card: {
-      title: "Lead — Sarah Miller",
-      lines: [
-        { label: "Job Type", value: "Driveway Replacement" },
-        { label: "Location", value: "Portland, OR" },
-        { label: "Source", value: "Inbound Call" },
-        { label: "Status", value: "New" },
-      ],
-    },
-  },
-  {
-    key: "estimate",
-    tag: "AI Estimate",
-    icon: FileText,
-    duration: 6800,
-    user: "Build an estimate for a 20x40 concrete slab, 4 inch thickness with rebar.",
-    ai: "Drafted an itemized estimate — 800 sq ft slab, includes excavation, base rock, forms, #4 rebar 18\" O.C., placement, finish, saw cuts, cleanup, plus 8% misc supplies.",
-    card: {
-      title: "Estimate #ES-1042",
-      lines: [
-        { label: "Excavation & Prep", value: "$1,850" },
-        { label: "Base Rock", value: "$620" },
-        { label: "Forms & Layout", value: "$980" },
-        { label: "Rebar / Reinforcement", value: "$540" },
-        { label: "Concrete Placement", value: "$3,420" },
-        { label: "Finish Work", value: "$1,260" },
-        { label: "Misc. Supplies & Tax", value: "$1,762" },
-      ],
-      total: "$10,432",
-    },
-  },
-  {
-    key: "contract",
-    tag: "Contract",
-    icon: FileSignature,
-    duration: 5600,
-    user: "Turn it into a contract and send it to Sarah.",
-    ai: "Generated a customer-facing contract with scope, exclusions, payment terms (30% deposit / 70% on completion), and Oregon lien language. Emailed to sarah@example.com.",
-    card: {
-      title: "Contract sent — awaiting signature",
-      lines: [
-        { label: "Deposit", value: "$3,130 (30%)" },
-        { label: "Balance on Completion", value: "$7,302" },
-        { label: "Start Window", value: "2 weeks" },
-        { label: "Warranty", value: "1 year workmanship" },
-      ],
-    },
-  },
-  {
-    key: "materials",
-    tag: "Material List",
-    icon: Package,
-    duration: 6200,
-    user: "Make me a material list I can hand to the yard.",
-    ai: "Built a pickup-ready list. Quantities include a 10% waste factor on rebar and forms.",
-    card: {
-      title: "Material List — Driveway",
-      lines: [
-        { label: "Concrete (4\" @ 800 sf)", value: "9.9 cy" },
-        { label: "3/4\" Base Rock", value: "6 tons" },
-        { label: "#4 Rebar (20 ft)", value: "42 sticks" },
-        { label: "Rebar Tie Wire", value: "1 roll" },
-        { label: "2x4 Form Boards", value: "22 pcs" },
-        { label: "Form Stakes", value: "60 pcs" },
-        { label: "Curing Compound", value: "2 gal" },
-      ],
-    },
-  },
-  {
-    key: "schedule",
-    tag: "Schedule",
-    icon: Calendar,
-    duration: 5200,
-    user: "Schedule the crew for next Thursday at 8am.",
-    ai: "Booked the job on the calendar and notified the crew. Weather looks clear.",
-    card: {
-      title: "Scheduled — Thu 8:00 AM",
-      lines: [
-        { label: "Crew", value: "Miguel, Diego, Tyler" },
-        { label: "Estimated Duration", value: "1.5 days" },
-        { label: "Weather", value: "Clear, 68°F" },
-        { label: "Site", value: "Portland, OR" },
-      ],
-    },
-  },
-  {
-    key: "invoice",
-    tag: "Invoice",
-    icon: Receipt,
+    key: "today",
+    label: "Today",
+    title: "Your day at a glance",
+    caption: "The Today dashboard opens with new leads, active jobs, estimates awaiting your review, and invoices outstanding.",
+    icon: Home,
     duration: 6000,
-    user: "The job is finished. Send the final invoice.",
-    ai: "Generated invoice INV-2081 for $10,432 with deposit credit applied. Sent to Sarah with a pay-online link.",
-    card: {
-      title: "Invoice INV-2081",
-      lines: [
-        { label: "Subtotal", value: "$10,432" },
-        { label: "Deposit Applied", value: "-$3,130" },
-        { label: "Balance Due", value: "$7,302" },
-        { label: "Status", value: "Sent" },
-      ],
-      total: "$7,302",
-    },
+    screen: ({ progress, reduced }) => (
+      <Screen active="home">
+        <AppBar title="Today" sub="Rivera Concrete & Flatwork" />
+        <div className="space-y-3 px-4 py-3">
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "New leads", value: 4, icon: Users },
+              { label: "Active jobs", value: 6, icon: Calendar },
+              { label: "Estimates out", value: 3, icon: FileText },
+              { label: "Invoices due", value: 2, icon: Receipt },
+            ].map((s, i) => (
+              <Stagger key={s.label} i={i} reduced={reduced}>
+                <div className="rounded-xl border border-border/70 bg-card p-3">
+                  <s.icon className="mb-1.5 h-3.5 w-3.5 text-primary" />
+                  <div className="text-xl font-bold tabular-nums">{countUp(s.value, progress, reduced)}</div>
+                  <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                </div>
+              </Stagger>
+            ))}
+          </div>
+          <Stagger i={4} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-2 text-[11px] font-semibold">Next up</div>
+              <Row label="8:00 AM · Maple St. driveway pour" value="Crew A" />
+              <Row label="11:30 AM · Site visit, Oak Ridge" value="You" />
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "phone",
+    label: "AI Phone",
+    title: "AI answers the calls you miss",
+    badge: "Premium",
+    caption: "An incoming call is answered, captured as a lead, and summarized with the appointment the caller requested — nothing is booked until you confirm.",
+    icon: PhoneIncoming,
+    duration: 7000,
+    screen: ({ reduced }) => (
+      <Screen active="home">
+        <AppBar title="AI Phone Agent" sub="Premium" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3">
+              <div className="flex items-center gap-2">
+                <span className={cn("flex h-8 w-8 items-center justify-center rounded-full bg-primary/20", !reduced && "ft-float")}>
+                  <Phone className="h-4 w-4 text-primary" />
+                </span>
+                <div>
+                  <div className="text-[12px] font-semibold">Incoming call answered</div>
+                  <div className="text-[10px] text-muted-foreground">Duration 1:24 · Sample call</div>
+                </div>
+              </div>
+              <div className="mt-2"><Waveform reduced={reduced} /></div>
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold">Call summary</span>
+                <Pill tone="primary">New lead</Pill>
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                "Dana Whitfield" asked about replacing a cracked 20 × 40 driveway. Wants a quote this week and mentioned a spring budget.
+              </p>
+              <div className="mt-2">
+                <Row label="Requested visit" value="Thu 9:00 AM" />
+                <Row label="Trade" value="Concrete flatwork" />
+                <Row label="Status" value="Awaiting your confirm" tone="primary" />
+              </div>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "leads",
+    label: "Leads & CRM",
+    title: "Every lead becomes a real record",
+    caption: "Leads move through your pipeline with contact details, notes, and a follow-up you can set in one tap.",
+    icon: Users,
+    duration: 6500,
+    screen: ({ reduced }) => (
+      <Screen active="home">
+        <AppBar title="Leads" sub="Pipeline · 4 new" />
+        <div className="space-y-2 px-4 py-3">
+          {[
+            { name: "Dana Whitfield", stage: "New", note: "Driveway replacement" },
+            { name: "Marcus Bell", stage: "Contacted", note: "Patio + steps" },
+            { name: "Priya Raman", stage: "Quoted", note: "Shop slab, 900 sf" },
+          ].map((l, i) => (
+            <Stagger key={l.name} i={i} reduced={reduced}>
+              <div className={cn("rounded-xl border bg-card p-3", i === 0 ? "border-primary/50" : "border-border/70")}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold">{l.name}</span>
+                  <Pill tone={i === 0 ? "primary" : "muted"}>{l.stage}</Pill>
+                </div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{l.note}</div>
+              </div>
+            </Stagger>
+          ))}
+          <Stagger i={3} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-1 text-[11px] font-semibold">Notes & follow-up</div>
+              <p className="text-[10px] text-muted-foreground">Left voicemail. Reminder set for Wed 4:00 PM.</p>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "estimator",
+    label: "AI Estimator",
+    title: "Speak it or shoot it",
+    caption: "Describe the job out loud or add a site photo. Ava prepares a draft using your own pricing — it is a draft, not a quote.",
+    icon: Camera,
+    duration: 7000,
+    screen: ({ reduced }) => (
+      <Screen active="ai">
+        <AppBar title="AI Estimator" sub="Draft mode" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Mic className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[11px] font-semibold">Listening…</span>
+              </div>
+              <Waveform reduced={reduced} />
+              <p className="mt-2 rounded-lg bg-muted/60 p-2 text-[11px] leading-snug">
+                "Price a 20 by 40 driveway, four inch slab with rebar, tear-out included."
+              </p>
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold">Site photo attached</span>
+                <Pill>1 image</Pill>
+              </div>
+              <div className="h-16 rounded-lg bg-gradient-to-br from-muted to-muted/40" aria-hidden="true" />
+            </div>
+          </Stagger>
+          <Stagger i={2} reduced={reduced}>
+            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[11px] font-semibold">Ava is preparing a draft estimate</span>
+              </div>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "review",
+    label: "Review",
+    title: "You approve every number",
+    caption: "Line items, materials and labor, and your margin are laid out. Nothing reaches the customer until you tap approve.",
+    icon: FileText,
+    duration: 7500,
+    screen: ({ progress, reduced }) => (
+      <Screen active="docs">
+        <AppBar title="Estimate ES-1042" sub="Draft · Dana Whitfield" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <Row label="Tear-out & haul off" value="$1,850" />
+              <Row label="Base rock & compaction" value="$620" />
+              <Row label="Forms, rebar, labor" value="$4,940" />
+              <Row label="Concrete placement & finish" value="$1,260" />
+              <Row label="Misc. supplies & tax" value="$1,762" />
+              <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                <span className="text-[11px] font-semibold">Total</span>
+                <span className="text-[15px] font-bold tabular-nums text-primary">
+                  ${countUp(10432, progress, reduced).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { k: "Materials", v: "$4,180" },
+                { k: "Labor", v: "$3,900" },
+                { k: "Margin", v: "22%" },
+              ].map((m) => (
+                <div key={m.k} className="rounded-lg border border-border/70 bg-card p-2 text-center">
+                  <div className="text-[11px] font-bold">{m.v}</div>
+                  <div className="text-[9px] text-muted-foreground">{m.k}</div>
+                </div>
+              ))}
+            </div>
+          </Stagger>
+          <Stagger i={2} reduced={reduced}>
+            <div className="flex gap-2">
+              <div className="flex-1 rounded-lg border border-border/70 py-2 text-center text-[11px] font-semibold text-muted-foreground">Edit</div>
+              <div className={cn("relative flex-1 rounded-lg bg-primary py-2 text-center text-[11px] font-semibold text-primary-foreground", !reduced && "ft-float")}>
+                Approve & send
+              </div>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "accepted",
+    label: "Accepted",
+    title: "Accepted estimate becomes a job",
+    caption: "When the customer accepts your approved estimate, FastTract creates the scheduled job for you.",
+    icon: CheckCircle2,
+    duration: 6000,
+    screen: ({ reduced }) => (
+      <Screen active="docs">
+        <AppBar title="ES-1042" sub="Accepted by customer" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-success/40 bg-success/10 p-3 text-center">
+              <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-success" />
+              <div className="text-[12px] font-semibold">Estimate accepted</div>
+              <div className="text-[10px] text-muted-foreground">Signed Mar 12 · $10,432</div>
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold">Job JB-2210 created</span>
+                <Pill tone="success">Scheduled</Pill>
+              </div>
+              <Row label="Start" value="Thu 8:00 AM" />
+              <Row label="Duration" value="1.5 days" />
+              <Row label="Deposit due" value="$3,130" />
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "jobs",
+    label: "Jobs & Crew",
+    title: "Schedule, assign, and follow the work",
+    caption: "Assign crews, watch status change, and see field updates come in from the jobsite.",
+    icon: Calendar,
+    duration: 6500,
+    screen: ({ reduced }) => (
+      <Screen active="jobs">
+        <AppBar title="Jobs" sub="This week" />
+        <div className="space-y-2 px-4 py-3">
+          {[
+            { id: "JB-2210", name: "Maple St. driveway", crew: "Crew A · 3", status: "In progress", tone: "primary" as const },
+            { id: "JB-2207", name: "Oak Ridge patio", crew: "Crew B · 2", status: "Scheduled", tone: "muted" as const },
+            { id: "JB-2199", name: "Shop slab pour", crew: "Crew A · 3", status: "Complete", tone: "success" as const },
+          ].map((j, i) => (
+            <Stagger key={j.id} i={i} reduced={reduced}>
+              <div className="rounded-xl border border-border/70 bg-card p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold">{j.name}</span>
+                  <Pill tone={j.tone}>{j.status}</Pill>
+                </div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{j.id} · {j.crew}</div>
+              </div>
+            </Stagger>
+          ))}
+          <Stagger i={3} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-1 text-[11px] font-semibold">Field update</div>
+              <p className="text-[10px] text-muted-foreground">Crew A: "Forms set, pour on schedule." · 2 photos added</p>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "time",
+    label: "Time & GPS",
+    title: "GPS-verified hours you approve",
+    caption: "Crews clock in on site with location verification. Hours land in your approval queue — you sign off before payroll.",
+    icon: MapPin,
+    duration: 7000,
+    screen: ({ reduced }) => (
+      <Screen active="jobs">
+        <AppBar title="Time approvals" sub="3 entries pending" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-success/40 bg-success/10 p-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-success" />
+                <div>
+                  <div className="text-[12px] font-semibold">Clock-in verified on site</div>
+                  <div className="text-[10px] text-muted-foreground">Maple St. jobsite · within 40 ft</div>
+                </div>
+              </div>
+            </div>
+          </Stagger>
+          {[
+            { n: "Miguel R.", h: "8.25 hrs" },
+            { n: "Tyler B.", h: "7.75 hrs" },
+            { n: "Devon K.", h: "8.00 hrs" },
+          ].map((c, i) => (
+            <Stagger key={c.n} i={i + 1} reduced={reduced}>
+              <div className="flex items-center justify-between rounded-xl border border-border/70 bg-card p-3">
+                <div>
+                  <div className="text-[12px] font-semibold">{c.n}</div>
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{c.h} · JB-2210</div>
+                </div>
+                <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">Approve</span>
+              </div>
+            </Stagger>
+          ))}
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "costing",
+    label: "Job costs",
+    title: "Materials, costs, and real profit",
+    caption: "Material purchases and approved labor roll into a live profit snapshot for each job.",
+    icon: Package,
+    duration: 6500,
+    screen: ({ progress, reduced }) => (
+      <Screen active="jobs">
+        <AppBar title="JB-2210 costs" sub="Maple St. driveway" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold"><Package className="h-3.5 w-3.5 text-primary" />Materials</div>
+              <Row label="Concrete · 9.9 cy" value="$1,940" />
+              <Row label="Base rock · 6 tons" value="$610" />
+              <Row label="Rebar & forms" value="$1,630" />
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="rounded-xl border border-border/70 bg-card p-3">
+              <Row label="Approved labor" value="$3,760" />
+              <Row label="Total cost" value="$7,940" />
+              <Row label="Contract value" value="$10,432" />
+              <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                <span className="flex items-center gap-1 text-[11px] font-semibold"><TrendingUp className="h-3.5 w-3.5 text-success" />Profit</span>
+                <span className="text-[15px] font-bold tabular-nums text-success">
+                  ${countUp(2492, progress, reduced).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "invoices",
+    label: "Invoices",
+    title: "Invoice and track what's paid",
+    caption: "Send the invoice you approved, then watch deposits, balances, and payment status update.",
+    icon: Receipt,
+    duration: 6500,
+    screen: ({ reduced }) => (
+      <Screen active="docs">
+        <AppBar title="Invoices" sub="2 outstanding" />
+        <div className="space-y-2 px-4 py-3">
+          {[
+            { id: "IN-3081", who: "Dana W. · Deposit", amt: "$3,130", st: "Paid", tone: "success" as const },
+            { id: "IN-3082", who: "Dana W. · Balance", amt: "$7,302", st: "Sent", tone: "primary" as const },
+            { id: "IN-3077", who: "Priya R. · Shop slab", amt: "$4,120", st: "Overdue", tone: "muted" as const },
+          ].map((iv, i) => (
+            <Stagger key={iv.id} i={i} reduced={reduced}>
+              <div className="flex items-center justify-between rounded-xl border border-border/70 bg-card p-3">
+                <div>
+                  <div className="text-[12px] font-semibold">{iv.id}</div>
+                  <div className="text-[10px] text-muted-foreground">{iv.who}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[12px] font-bold tabular-nums">{iv.amt}</div>
+                  <Pill tone={iv.tone}>{iv.st}</Pill>
+                </div>
+              </div>
+            </Stagger>
+          ))}
+          <Stagger i={3} reduced={reduced}>
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-card p-3">
+              <CircleDollarSign className="h-4 w-4 text-success" />
+              <span className="text-[10px] text-muted-foreground">Payment received · deposit cleared</span>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "assistant",
+    label: "AI Assistant",
+    title: "Voice-to-form admin help",
+    badge: "Plus",
+    caption: "Tell Ava what you need. Every action arrives as a draft with a confirm step — Ava never sends or charges on its own.",
+    icon: Bot,
+    duration: 7000,
+    screen: ({ reduced }) => (
+      <Screen active="ai">
+        <AppBar title="Ava" sub="AI admin assistant · Plus" />
+        <div className="space-y-3 px-4 py-3">
+          <Stagger i={0} reduced={reduced}>
+            <div className="ml-8 rounded-2xl rounded-br-sm bg-primary/15 p-2.5 text-[11px]">
+              "Add Dana's second driveway apron to the job and draft a change order."
+            </div>
+          </Stagger>
+          <Stagger i={1} reduced={reduced}>
+            <div className="mr-8 rounded-2xl rounded-bl-sm border border-border/70 bg-card p-2.5 text-[11px] text-muted-foreground">
+              I drafted a change order for a 10 × 12 apron. Review the numbers and confirm to apply.
+            </div>
+          </Stagger>
+          <Stagger i={2} reduced={reduced}>
+            <div className="rounded-xl border border-primary/40 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold">Draft change order</span>
+                <Pill tone="primary">Needs confirm</Pill>
+              </div>
+              <Row label="Apron 10 × 12" value="$1,480" />
+              <Row label="New contract total" value="$11,912" />
+              <div className="mt-2 flex gap-2">
+                <div className="flex-1 rounded-lg border border-border/70 py-1.5 text-center text-[10px] font-semibold text-muted-foreground">Discard</div>
+                <div className="flex-1 rounded-lg bg-primary py-1.5 text-center text-[10px] font-semibold text-primary-foreground">Confirm</div>
+              </div>
+            </div>
+          </Stagger>
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
+  },
+  {
+    key: "recap",
+    label: "Recap",
+    title: "First call to final invoice",
+    caption: "That's the whole loop — captured, estimated, approved, scheduled, tracked, costed, and paid. You stay in control at every step.",
+    icon: Sparkles,
+    duration: 9000,
+    screen: ({ reduced }) => (
+      <Screen active="home">
+        <AppBar title="The full loop" sub="FastTract" />
+        <div className="space-y-1.5 px-4 py-3">
+          {[
+            "Call answered, lead captured",
+            "Estimate drafted from voice or photo",
+            "You reviewed and approved it",
+            "Accepted estimate became a job",
+            "Crew scheduled, GPS hours approved",
+            "Costs tracked, profit visible",
+            "Invoice sent, payment received",
+          ].map((t, i) => (
+            <Stagger key={t} i={i} reduced={reduced}>
+              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2.5 py-2">
+                <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-success" />
+                <span className="text-[11px]">{t}</span>
+              </div>
+            </Stagger>
+          ))}
+        </div>
+        <ReviewNote />
+      </Screen>
+    ),
   },
 ];
 
-const TOTAL_MS = steps.reduce((s, x) => s + x.duration, 0);
-
-function useTypewriter(text: string, speed = 18, active = true) {
-  const [out, setOut] = useState("");
-  useEffect(() => {
-    if (!active) { setOut(text); return; }
-    setOut("");
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setOut(text.slice(0, i));
-      if (i >= text.length) clearInterval(id);
-    }, speed);
-    return () => clearInterval(id);
-  }, [text, speed, active]);
-  return out;
-}
+/* ── page ── */
 
 export default function Demo() {
-  const [elapsed, setElapsed] = useState(0); // ms into full timeline
+  const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const rafRef = useRef<number | null>(null);
-  const lastTs = useRef<number | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+  const startRef = useRef<number>(0);
+  const rafRef = useRef<number>();
+  const touchRef = useRef<number | null>(null);
 
+  const reduced = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  );
+
+  const chapter = chapters[index];
+
+  const goto = useCallback((i: number, keepPlaying = false) => {
+    setIndex(((i % chapters.length) + chapters.length) % chapters.length);
+    setProgress(0);
+    startRef.current = performance.now();
+    if (!keepPlaying) setPlaying(false);
+  }, []);
+
+  // auto-advance loop
   useEffect(() => {
-    if (!playing) { lastTs.current = null; return; }
-    const tick = (ts: number) => {
-      if (lastTs.current == null) lastTs.current = ts;
-      const dt = ts - lastTs.current;
-      lastTs.current = ts;
-      setElapsed((e) => (e + dt >= TOTAL_MS ? 0 : e + dt));
+    if (!playing) return;
+    startRef.current = performance.now() - progress * chapter.duration;
+    const tick = (now: number) => {
+      const p = (now - startRef.current) / chapter.duration;
+      if (p >= 1) {
+        setProgress(0);
+        setIndex((i) => (i + 1) % chapters.length);
+        startRef.current = now;
+      } else {
+        setProgress(p);
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [playing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, index, chapter.duration]);
 
-  // Compute current step + progress within step
-  const { i, stepElapsed } = useMemo(() => {
-    let acc = 0;
-    for (let idx = 0; idx < steps.length; idx++) {
-      if (elapsed < acc + steps[idx].duration) {
-        return { i: idx, stepElapsed: elapsed - acc };
-      }
-      acc += steps[idx].duration;
-    }
-    return { i: steps.length - 1, stepElapsed: steps[steps.length - 1].duration };
-  }, [elapsed]);
-
-  const step = steps[i];
-  const progress = elapsed / TOTAL_MS;
-
-  // Phases inside a step: user typing (0-25%), thinking (25-40%), AI typing (40-80%), card reveal (60-100%)
-  const p = stepElapsed / step.duration;
-  const userDone = p > 0.28;
-  const thinking = p > 0.25 && p < 0.42;
-  const aiActive = p > 0.42;
-  const cardActive = p > 0.58;
-  const cardProgress = Math.min(1, Math.max(0, (p - 0.58) / 0.35));
-  const visibleLines = Math.ceil(cardProgress * step.card.lines.length);
-  const showTotal = p > 0.9 && !!step.card.total;
-
-  const userText = useTypewriter(step.user, 22, p < 0.28);
-  const aiText = useTypewriter(step.ai, 14, aiActive && p < 0.85);
-
-  // Timeline of past turns for scroll feel
-  const history = steps.slice(0, i);
-
-  // Auto-scroll chat
+  // pause when tab hidden
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [i, visibleLines, aiText.length, userText.length]);
+    const onVis = () => { if (document.hidden) setPlaying(false); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
-  const jumpTo = (idx: number) => {
-    let acc = 0;
-    for (let k = 0; k < idx; k++) acc += steps[k].duration;
-    setElapsed(acc + 10);
-  };
+  // arrow keys
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); goto(index + 1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); goto(index - 1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goto, index]);
+
+  const Screenshot = chapter.screen;
 
   return (
     <MarketingShell>
       <SEO
-        title="FastTract Live Demo — See the AI Contractor Operating System in Action"
-        description="Watch FastTract turn a phone call into a lead, AI estimate, contract, material list, schedule, and invoice — all in one continuous flow."
+        title="FastTract Phone Demo | See the Contractor App in Action"
+        description="Take a guided 60-second tour of the FastTract contractor app on a phone: AI phone answering, leads, AI estimating, approvals, scheduling, GPS time tracking, job costs, and invoices."
         path="/demo"
       />
 
-      <section className="mx-auto max-w-6xl px-4 pt-12 pb-6 sm:px-6 lg:px-8 lg:pt-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Live Interactive Demo
-          </div>
-          <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-            Watch a real job go from <span className="text-gradient-primary">first call to paid</span>
-          </h1>
-          <p className="mt-4 text-muted-foreground">
-            One continuous take — no signup required.
-          </p>
-        </div>
+      <section className="mx-auto max-w-6xl px-4 pt-12 pb-6 text-center sm:px-6 lg:px-8">
+        <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+          The FastTract phone demo
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+          A guided walkthrough of a real contractor workday — from the first missed call to the paid invoice. Sample data only. You review and approve before anything is sent.
+        </p>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-        {/* Player frame */}
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-          {/* Video-style top chrome */}
-          <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-4 py-2.5 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-              </div>
-              <div className="ml-3 text-[11px] uppercase tracking-wider text-muted-foreground">
-                FastTract · Recorded Session
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                </span>
-                LIVE
-              </span>
-              <span>·</span>
-              <span>{Math.floor(elapsed / 1000).toString().padStart(2, "0")}s / {Math.floor(TOTAL_MS / 1000)}s</span>
-            </div>
-          </div>
-
-          {/* Stage */}
-          <div className="relative grid gap-0 md:grid-cols-2 bg-gradient-to-br from-background/40 via-background to-background/60">
-            {/* Ambient grid */}
-            <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground))_1px,transparent_1px)] [background-size:32px_32px]" />
-
-            {/* Chat panel */}
-            <div className="relative flex flex-col p-5 md:border-r border-border/60 min-h-[480px]">
-              <div className="mb-3 flex items-center justify-between border-b border-border/50 pb-3">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-primary" />
-                  <div className="text-xs font-semibold tracking-wide">FastTract Assistant</div>
+      <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+          {/* PHONE */}
+          <div className="mx-auto w-full max-w-[330px] sm:max-w-[360px]">
+            <div
+              className="relative mx-auto aspect-[390/844] w-full rounded-[2.6rem] border-[10px] border-[hsl(220_28%_14%)] bg-background shadow-elevated"
+              onTouchStart={(e) => { touchRef.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                if (touchRef.current == null) return;
+                const dx = e.changedTouches[0].clientX - touchRef.current;
+                if (Math.abs(dx) > 45) goto(index + (dx < 0 ? 1 : -1));
+                touchRef.current = null;
+              }}
+            >
+              <div className="absolute left-1/2 top-0 z-10 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-[hsl(220_28%_14%)]" aria-hidden="true" />
+              <div className="h-full w-full overflow-hidden rounded-[1.9rem] bg-background">
+                <div key={chapter.key} className="h-full">
+                  <Screenshot progress={progress} reduced={reduced} />
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <MapPin className="h-3 w-3" /> Portland, OR
-                </div>
-              </div>
-
-              <div ref={scrollRef} className="flex-1 space-y-3 overflow-hidden pr-1">
-                {history.map((s) => (
-                  <div key={s.key} className="space-y-2 opacity-60 transition-opacity">
-                    <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-primary/10 border border-primary/20 px-3 py-2 text-sm">
-                      {s.user}
-                    </div>
-                    <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-background/60 border border-border px-3 py-2 text-sm text-muted-foreground">
-                      {s.ai}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Active turn */}
-                <div key={step.key} className="space-y-2 animate-fade-in">
-                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-primary/15 border border-primary/30 px-3 py-2 text-sm">
-                    {userText}
-                    {!userDone && <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-primary animate-pulse" />}
-                  </div>
-
-                  {(thinking || aiActive) && (
-                    <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-background/60 border border-border px-3 py-2 text-sm text-muted-foreground">
-                      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        <Bot className="h-3 w-3" /> Assistant
-                      </div>
-                      {thinking && !aiActive ? (
-                        <div className="flex gap-1 py-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.2s]" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.1s]" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" />
-                        </div>
-                      ) : (
-                        <>
-                          {aiText}
-                          {aiActive && aiText.length < step.ai.length && (
-                            <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-primary/70 animate-pulse" />
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground">
-                <Send className="h-3.5 w-3.5" />
-                <span className="flex-1 truncate">Type or speak the next step…</span>
-                <Volume2 className="h-3.5 w-3.5 text-primary/70" />
               </div>
             </div>
 
-            {/* Result card */}
-            <div className="relative flex flex-col p-5 min-h-[480px]">
-              <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                <div className="flex items-center gap-2">
-                  <step.icon className="h-4 w-4 text-primary" />
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{step.tag}</div>
-                </div>
-                <div className="text-xs font-medium text-foreground">{step.card.title}</div>
-              </div>
-
-              <div className="relative mt-4 flex-1 rounded-xl border border-border bg-background/40 overflow-hidden">
-                {!cardActive ? (
-                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                      Generating {step.tag.toLowerCase()}…
-                    </div>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-border/70">
-                    {step.card.lines.slice(0, visibleLines).map((l, idx) => (
-                      <li
-                        key={l.label}
-                        className="flex items-center justify-between px-4 py-2.5 text-sm animate-fade-in"
-                        style={{ animationDelay: `${idx * 40}ms` }}
-                      >
-                        <span className="text-foreground">{l.label}</span>
-                        <span className="font-mono text-muted-foreground">{l.value}</span>
-                      </li>
-                    ))}
-                    {showTotal && step.card.total && (
-                      <li className="flex items-center justify-between bg-primary/10 px-4 py-3 animate-fade-in">
-                        <span className="text-base font-bold">Total</span>
-                        <span className="font-mono text-lg font-bold text-primary">{step.card.total}</span>
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </div>
-
-              {cardProgress > 0.9 && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  Auto-saved to Sarah Miller's job record
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Scrubber / timeline */}
-          <div className="border-t border-border/60 bg-background/70 px-4 py-3 backdrop-blur">
-            <div className="mb-2 flex items-center gap-3">
-              <button
-                onClick={() => setPlaying((p) => !p)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90"
-                aria-label={playing ? "Pause" : "Play"}
+            {/* CONTROLS */}
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Previous chapter" onClick={() => goto(index - 1)}>
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                size="lg"
+                className="h-11 min-w-[7.5rem]"
+                aria-label={playing ? "Pause demo" : "Play demo"}
+                onClick={() => { startRef.current = performance.now() - progress * chapter.duration; setPlaying((p) => !p); }}
               >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-0.5" />}
-              </button>
-              <div className="relative flex-1 h-1.5 rounded-full bg-border overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/80 to-primary"
-                  style={{ width: `${progress * 100}%` }}
-                />
-                {steps.map((_, idx) => {
-                  const acc = steps.slice(0, idx).reduce((s, x) => s + x.duration, 0);
+                {playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                {playing ? "Pause" : "Play"}
+              </Button>
+              <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Next chapter" onClick={() => goto(index + 1)}>
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11"
+                aria-label="Restart demo from the beginning"
+                onClick={() => { goto(0, true); setPlaying(true); }}
+              >
+                <RotateCcw className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* CAPTION + CHAPTERS */}
+          <div>
+            <div aria-live="polite" className="rounded-2xl border border-border bg-card/70 p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
+                  <chapter.icon className="h-3.5 w-3.5" />
+                  Chapter {index + 1} of {chapters.length}
+                </span>
+                {chapter.badge ? (
+                  <span className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                    {chapter.badge}
+                  </span>
+                ) : null}
+              </div>
+              <h2 className="mt-3 text-xl font-semibold sm:text-2xl">{chapter.title}</h2>
+              <p className="mt-2 text-sm text-muted-foreground sm:text-base">{chapter.caption}</p>
+              <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                FastTract drafts the work. You review and approve before anything is sent, scheduled, or billed.
+              </p>
+            </div>
+
+            {/* progress rail */}
+            <div className="mt-6">
+              <h3 className="mb-3 text-sm font-semibold">Chapters</h3>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {chapters.map((c, i) => {
+                  const done = i < index;
+                  const active = i === index;
                   return (
-                    <span
-                      key={idx}
-                      className="absolute top-1/2 h-2 w-[2px] -translate-y-1/2 bg-background/80"
-                      style={{ left: `${(acc / TOTAL_MS) * 100}%` }}
-                    />
+                    <button
+                      key={c.key}
+                      onClick={() => goto(i)}
+                      aria-current={active ? "true" : undefined}
+                      className={cn(
+                        "group flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                      )}
+                    >
+                      <c.icon className={cn("h-3.5 w-3.5 flex-shrink-0", active ? "text-primary" : done ? "text-success" : "")} />
+                      <span className="flex-1 truncate font-medium">{c.label}</span>
+                      {c.badge ? <span className="text-[10px] uppercase tracking-wide">{c.badge}</span> : null}
+                      <span className="h-1 w-8 overflow-hidden rounded-full bg-border">
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{ width: active ? `${Math.round(progress * 100)}%` : done ? "100%" : "0%" }}
+                        />
+                      </span>
+                    </button>
                   );
                 })}
               </div>
-              <div className="text-[11px] tabular-nums text-muted-foreground">
-                {Math.floor(elapsed / 1000).toString().padStart(2, "0")}:
-                {Math.floor((elapsed % 1000) / 10).toString().padStart(2, "0")}
+            </div>
+
+            <div className="mt-8 rounded-2xl border border-border bg-card/70 p-5">
+              <h3 className="text-lg font-semibold">Ready to run your jobs this way?</h3>
+              <p className="mt-1 text-sm text-muted-foreground">7-day free trial · Plans $69, $169, and $269 per month · Cancel anytime.</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button size="lg" className="ft-cta" asChild><Link to="/signup">Start Your 7-Day Free Trial</Link></Button>
+                <Button size="lg" variant="outline" className="ft-cta" asChild><Link to="/pricing">View Pricing</Link></Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {steps.map((s, idx) => (
-                <button
-                  key={s.key}
-                  onClick={() => jumpTo(idx)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
-                    idx === i
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : idx < i
-                      ? "border-primary/40 bg-primary/10 text-foreground"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <s.icon className="h-3 w-3" />
-                  {s.tag}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" asChild><Link to="/signup">Start Free Trial</Link></Button>
-          <Button size="lg" variant="outline" asChild><Link to="/contact">Book a Live Walkthrough</Link></Button>
-        </div>
-      </section>
-
-      <section className="border-t border-border bg-background/40">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Ready to run your business this way?
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Start a free trial — no credit card required for the first 7 days. Cancel anytime.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link to="/signup">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link to="/contact">Book a Live Walkthrough</Link>
-            </Button>
           </div>
         </div>
       </section>

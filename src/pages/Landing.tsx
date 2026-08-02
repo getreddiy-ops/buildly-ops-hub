@@ -173,7 +173,7 @@ export default function Landing() {
               </ul>
               <div className="ft-rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "340ms" }}>
                 <PrimaryCTA label="Start Your 7-Day Free Trial" />
-                <SecondaryCTA />
+                <SecondaryCTA label="Watch the Phone Demo" />
               </div>
               <p className="ft-rise mt-4 text-sm text-muted-foreground" style={{ animationDelay: "400ms" }}>
                 7-day free trial · Plans from $69/mo · Cancel anytime
