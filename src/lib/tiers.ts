@@ -1,5 +1,5 @@
 // Single source of truth for FastTract subscription tiers.
-// price_id values come from Paddle (created via create_product).
+// price_id values are logical identifiers shared with Stripe (STRIPE_PRICE_* env vars).
 
 export type Tier = "base" | "plus" | "premium";
 
