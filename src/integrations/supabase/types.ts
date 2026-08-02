@@ -1587,6 +1587,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_org_roster: {
+        Args: { _org_id: string }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_org_tax_id: { Args: { _org_id: string }; Returns: string }
       has_active_org_subscription: {
         Args: { check_env?: string; org_id: string }
