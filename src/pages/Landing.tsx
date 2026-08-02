@@ -5,11 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SEO } from "@/components/SEO";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { FAQ } from "@/components/marketing/FAQ";
+import { HeroVideo } from "@/components/marketing/HeroVideo";
+import { Reveal } from "@/components/marketing/Reveal";
 import {
   ArrowRight, Phone, FileText, FileSignature, Package, Users2, Wrench,
   Receipt, LayoutDashboard, PhoneMissed, Timer, FolderKanban, Bot,
-  ClipboardList, Calendar, Truck, DollarSign, CheckCircle2, MapPin,
-  Zap, Building2,
+  ClipboardList, DollarSign, CheckCircle2, Building2,
 } from "lucide-react";
 
 const painPoints = [
@@ -104,58 +105,16 @@ const softwareSchema = {
   url: "https://fasttract.org/",
 };
 
-function DashboardMockup() {
-  const cards = [
-    { icon: Zap, tag: "New Lead", title: "Driveway replacement — Portland, OR", tone: "text-primary" },
-    { icon: FileText, tag: "AI Estimate", title: "Ready for review", tone: "text-primary" },
-    { icon: FileSignature, tag: "Contract", title: "Generated & sent", tone: "text-primary" },
-    { icon: Package, tag: "Material List", title: "Created for pickup", tone: "text-primary" },
-    { icon: Receipt, tag: "Invoice", title: "Pending — $8,432", tone: "text-primary" },
-    { icon: Calendar, tag: "Job Status", title: "Scheduled — Thu 8:00 AM", tone: "text-primary" },
-  ];
-  return (
-    <div className="relative rounded-2xl border border-border bg-card/80 p-4 shadow-2xl backdrop-blur">
-      <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
-          <div className="text-xs font-semibold tracking-wide text-foreground">FastTract Dashboard</div>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-          <MapPin className="h-3 w-3" /> Portland, OR
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {cards.map((c) => (
-          <div key={c.tag} className="rounded-lg border border-border bg-background/60 p-3">
-            <div className="mb-2 flex items-center gap-1.5">
-              <c.icon className={`h-3.5 w-3.5 ${c.tone}`} />
-              <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{c.tag}</div>
-            </div>
-            <div className="text-sm font-semibold leading-snug text-foreground">{c.title}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
-        <div className="flex items-center gap-2 text-foreground">
-          <Bot className="h-4 w-4 text-primary" />
-          <span>AI Assistant ready</span>
-        </div>
-        <span className="text-muted-foreground">“Create an invoice for the Smith job”</span>
-      </div>
-    </div>
-  );
-}
-
 function PrimaryCTA({ label = "Start Free Trial" }: { label?: string }) {
   return (
-    <Button size="lg" asChild>
+    <Button size="lg" className="ft-cta" asChild>
       <Link to="/signup">{label}</Link>
     </Button>
   );
 }
 function SecondaryCTA({ label = "Watch Demo", to = "/demo" }: { label?: string; to?: string }) {
   return (
-    <Button size="lg" variant="outline" asChild>
+    <Button size="lg" variant="outline" className="ft-cta" asChild>
       <Link to={to}>{label}</Link>
     </Button>
   );
@@ -178,29 +137,72 @@ export default function Landing() {
       />
 
       {/* HERO */}
-      <section className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8 lg:pt-20">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Built by people who understand the jobsite
+      <section className="relative overflow-hidden">
+        {/* subtle background motion */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+          <div className="ft-aurora absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-primary/20 blur-3xl" />
+          <div className="ft-aurora absolute -right-24 top-32 h-[24rem] w-[24rem] rounded-full bg-accent-foreground/10 blur-3xl" style={{ animationDelay: "-6s" }} />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8 lg:pt-20">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <div className="ft-rise mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                Built by people who understand the jobsite
+              </div>
+              <h1 className="ft-rise text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl" style={{ animationDelay: "90ms" }}>
+                From first call to final invoice,{" "}
+                <span className="text-gradient-primary">FastTract keeps the whole job moving.</span>
+              </h1>
+              <p className="ft-rise mt-6 max-w-xl text-lg text-muted-foreground" style={{ animationDelay: "180ms" }}>
+                Answer every call, draft trade-specific estimates in minutes, turn approved estimates into contracts and material lists, and invoice the moment the work is done — from one contractor dashboard you control.
+              </p>
+              <ul className="ft-rise mt-6 grid max-w-xl gap-2 sm:grid-cols-2" style={{ animationDelay: "260ms" }}>
+                {[
+                  "Leads captured 24/7",
+                  "Estimates drafted in minutes",
+                  "Contracts + material lists in one click",
+                  "Invoices and balances tracked",
+                ].map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="ft-rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "340ms" }}>
+                <PrimaryCTA label="Start Your 7-Day Free Trial" />
+                <SecondaryCTA />
+              </div>
+              <p className="ft-rise mt-4 text-sm text-muted-foreground" style={{ animationDelay: "400ms" }}>
+                7-day free trial · Plans from $69/mo · Cancel anytime
+              </p>
+              <p className="ft-rise mt-3 max-w-xl text-sm text-muted-foreground" style={{ animationDelay: "440ms" }}>
+                Built for concrete, remodeling, roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction trades.
+              </p>
             </div>
-            <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Run Your Contracting Business From{" "}
-              <span className="text-gradient-primary">First Call to Final Invoice</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              FastTract uses AI to answer calls, capture leads, build estimates, create contracts, generate material lists, track jobs, and send invoices — all from one clean contractor dashboard.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <PrimaryCTA />
-              <SecondaryCTA />
+            <div className="ft-rise lg:pl-6" style={{ animationDelay: "220ms" }}>
+              <HeroVideo />
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  { icon: Phone, label: "Call answered", sub: "Lead captured" },
+                  { icon: FileText, label: "Estimate drafted", sub: "You review it" },
+                  { icon: Receipt, label: "Invoice sent", sub: "After approval" },
+                ].map((c, i) => (
+                  <div
+                    key={c.label}
+                    className="ft-float rounded-xl border border-border bg-card/80 p-3 backdrop-blur"
+                    style={{ animationDelay: `${i * 900}ms` }}
+                  >
+                    <c.icon className="mb-2 h-4 w-4 text-primary" />
+                    <div className="text-xs font-semibold text-foreground">{c.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{c.sub}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="mt-5 max-w-xl text-sm text-muted-foreground">
-              Built for concrete, remodeling, roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction trades.
-            </p>
           </div>
-          <div className="lg:pl-6"><DashboardMockup /></div>
         </div>
       </section>
 
@@ -211,14 +213,14 @@ export default function Landing() {
             Stop Losing Jobs to Missed Calls, Slow Estimates, and Messy Paperwork
           </h2>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {painPoints.map((p) => (
-              <div key={p.title} className="rounded-xl border border-border bg-card p-6">
+            {painPoints.map((p, i) => (
+              <Reveal key={p.title} delay={i * 90}><div className="rounded-xl border border-border bg-card p-6">
                 <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-primary/15 text-primary">
                   <p.icon className="h-5 w-5" />
                 </div>
                 <h3 className="text-lg font-semibold">{p.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
         </div>
@@ -236,14 +238,14 @@ export default function Landing() {
             </p>
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((f) => (
-              <div key={f.title} className="rounded-xl border border-border bg-card p-5">
+            {features.map((f, i) => (
+              <Reveal key={f.title} delay={i * 60}><div className="rounded-xl border border-border bg-card p-5">
                 <div className="mb-4 grid h-10 w-10 place-items-center rounded-md bg-accent text-accent-foreground">
                   <f.icon className="h-5 w-5" />
                 </div>
                 <h3 className="text-base font-semibold">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
@@ -297,7 +299,7 @@ export default function Landing() {
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
             {steps.map((s, i) => (
-              <div key={s.title} className="relative rounded-xl border border-border bg-card p-5">
+              <Reveal key={s.title} delay={i * 80}><div className="relative rounded-xl border border-border bg-card p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/15 text-primary">
                     <s.icon className="h-5 w-5" />
@@ -306,7 +308,7 @@ export default function Landing() {
                 </div>
                 <h3 className="text-base font-semibold">{s.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
         </div>
@@ -409,7 +411,7 @@ export default function Landing() {
                 <h3 className="text-xl font-bold">{t.name}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t.tagline}</p>
                 <div className="mt-6 text-lg font-semibold text-foreground">{t.price}</div>
-                <Button className="mt-6 w-full" size="lg" variant={t.variant} asChild>
+                <Button className="ft-cta mt-6 w-full" size="lg" variant={t.variant} asChild>
                   <Link to={t.to}>{t.cta}</Link>
                 </Button>
               </div>

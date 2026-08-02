@@ -46,7 +46,7 @@ const footerCols = [
 
 export function MarketingShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-dark text-foreground">
+    <div className="marketing-surface min-h-screen bg-gradient-dark text-foreground">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo to="/" />
         <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
