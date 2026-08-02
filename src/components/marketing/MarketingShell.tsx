@@ -8,6 +8,7 @@ const footerCols = [
     title: "Product",
     links: [
       { to: "/features", label: "Features" },
+      { to: "/demo", label: "Phone Demo" },
       { to: "/pricing", label: "Pricing" },
       { to: "/ai-photo-estimator", label: "AI Photo Estimator" },
       { to: "/ai-phone-agent", label: "AI Phone Agent" },
