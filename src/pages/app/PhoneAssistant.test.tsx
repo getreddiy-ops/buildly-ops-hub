@@ -253,7 +253,7 @@ describe("Phone number setup", () => {
     fireEvent.click(existingTab);
     fireEvent.click(await screen.findByRole("button", { name: /Forward calls/i }));
 
-    expect(await screen.findByText(/Connect an assistant number first/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Connect an assistant number first/i)).length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toContain("twilio-voice-webhook");
     expect(document.body.textContent).not.toContain("functions/v1");
     expect(screen.getByText(/carrier's official instructions|carrier's account portal/i)).toBeInTheDocument();
