@@ -56,7 +56,7 @@ function TabBar({ active }: { active: string }) {
     { key: "ai", icon: Bot, label: "Ava" },
   ];
   return (
-    <div className="mt-auto grid grid-cols-4 border-t border-border/70 bg-card/80 px-2 pb-4 pt-2">
+    <div className="grid grid-cols-4 border-t border-border/70 bg-card/80 px-2 pb-4 pt-2">
       {tabs.map((t) => (
         <div key={t.key} className="flex flex-col items-center gap-1">
           <t.icon className={cn("h-4 w-4", active === t.key ? "text-primary" : "text-muted-foreground")} />
@@ -84,7 +84,7 @@ function Pill({ children, tone = "muted" }: { children: React.ReactNode; tone?: 
 
 function ReviewNote() {
   return (
-    <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-border/70 bg-muted/50 p-2">
+    <div className="mx-4 mb-3 mt-auto flex items-start gap-2 rounded-lg border border-border/70 bg-muted/50 p-2">
       <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-success" />
       <p className="text-[10px] leading-snug text-muted-foreground">
         You review and approve before anything is sent.
