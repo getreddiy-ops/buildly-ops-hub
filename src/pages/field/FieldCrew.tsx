@@ -42,7 +42,7 @@ export default function FieldCrew() {
         const e = byUser.get(r.user_id);
         return {
           user_id: r.user_id,
-          full_name: r.profiles?.full_name ?? null,
+          full_name: r.full_name ?? null,
           clocked_in: !!e,
           job_title: e?.jobs?.title ?? null,
           job_address: e?.jobs?.address ?? null,
