@@ -361,6 +361,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // Platform admins bypass org-membership and subscription gates
+    const { data: adminRole } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "platform_admin")
+      .maybeSingle();
+    const isPlatformAdmin = !!adminRole;
     // Ensure caller is a member of the org they claim
     const { data: membership } = await admin
       .from("organization_members")
@@ -368,9 +376,10 @@ Deno.serve(async (req) => {
       .eq("user_id", userData.user.id)
       .eq("organization_id", organizationId)
       .maybeSingle();
-    if (!membership) {
+    if (!membership && !isPlatformAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
     // Check org has an active subscription in this environment, on Plus or Premium tier
     const { data: subRow } = await admin
       .from("subscriptions")
@@ -390,12 +399,13 @@ Deno.serve(async (req) => {
       subRow &&
       ((["active", "trialing", "past_due"].includes(subRow.status) && (!periodEnd || periodEnd > now)) ||
         (subRow.status === "canceled" && !!periodEnd && periodEnd > now));
-    if (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id)) {
+    if (!isPlatformAdmin && (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id))) {
       return new Response(
         JSON.stringify({ error: "Plus or Premium subscription required", code: "subscription_required" }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
     // --- End gate ---
 
     // Fetch business profile for context
