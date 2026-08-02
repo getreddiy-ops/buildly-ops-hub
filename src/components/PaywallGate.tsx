@@ -20,6 +20,8 @@ export function PaywallGate({
   requires?: Tier;
 }) {
   const { isActive, tier, loading } = useSubscription();
+  const { isPlatformAdmin } = useAuth();
+  if (isPlatformAdmin) return <>{children}</>;
   if (loading) return null;
 
   const order: Tier[] = ["base", "plus", "premium"];
