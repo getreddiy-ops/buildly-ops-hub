@@ -111,6 +111,47 @@ export type Database = {
           },
         ]
       }
+      billing_customers: {
+        Row: {
+          created_at: string
+          environment: string
+          id: string
+          organization_id: string
+          stripe_customer_id: string
+          trial_used: boolean
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          environment?: string
+          id?: string
+          organization_id: string
+          stripe_customer_id: string
+          trial_used?: boolean
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          environment?: string
+          id?: string
+          organization_id?: string
+          stripe_customer_id?: string
+          trial_used?: boolean
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           body: string | null
@@ -1243,6 +1284,24 @@ export type Database = {
           },
         ]
       }
+      stripe_webhook_events: {
+        Row: {
+          id: string
+          processed_at: string
+          type: string
+        }
+        Insert: {
+          id: string
+          processed_at?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          processed_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -1252,11 +1311,17 @@ export type Database = {
           environment: string
           id: string
           organization_id: string | null
-          paddle_customer_id: string
-          paddle_subscription_id: string
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
+          payment_status: string | null
           price_id: string
-          product_id: string
+          product_id: string | null
+          provider: string
           status: string
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          trial_end: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1268,11 +1333,17 @@ export type Database = {
           environment?: string
           id?: string
           organization_id?: string | null
-          paddle_customer_id: string
-          paddle_subscription_id: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          payment_status?: string | null
           price_id: string
-          product_id: string
+          product_id?: string | null
+          provider?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_end?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1284,11 +1355,17 @@ export type Database = {
           environment?: string
           id?: string
           organization_id?: string | null
-          paddle_customer_id?: string
-          paddle_subscription_id?: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          payment_status?: string | null
           price_id?: string
-          product_id?: string
+          product_id?: string | null
+          provider?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_end?: string | null
           updated_at?: string | null
           user_id?: string
         }

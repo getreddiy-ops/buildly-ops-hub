@@ -7,9 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { trackTrialStart } from "@/lib/gtag";
@@ -40,7 +39,7 @@ const PLAN_FEATURES: Record<Tier, string[]> = {
 export default function Billing() {
   const { user, activeOrg } = useAuth();
   const { subscription, isActive, isPastDue, isOwner, tier, loading, refetch } = useSubscription();
-  const { openCheckout, loading: checkoutLoading } = usePaddleCheckout();
+  const { openCheckout, loading: checkoutLoading } = useStripeCheckout();
   const [portalLoading, setPortalLoading] = useState(false);
   const [pendingTier, setPendingTier] = useState<Tier | null>(null);
   const [params, setParams] = useSearchParams();
@@ -65,11 +64,7 @@ export default function Billing() {
     }
     setPendingTier(target);
     try {
-      await openCheckout({
-        priceId: TIERS[target].priceId,
-        customerEmail: user?.email ?? undefined,
-        customData: { userId: user?.id ?? "", orgId: activeOrg.organization_id },
-      });
+      await openCheckout({ plan: target, organizationId: activeOrg.organization_id });
     } catch (e) {
       toast.error("Could not open checkout");
       console.error(e);
@@ -82,9 +77,15 @@ export default function Billing() {
     if (!activeOrg) return;
     setPortalLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("paddle-customer-portal", {
-        body: { organizationId: activeOrg.organization_id, environment: getPaddleEnvironment() },
-      });
+      const legacyPaddle = subscription?.provider !== "stripe" && !!subscription?.paddle_subscription_id;
+      const { data, error } = await supabase.functions.invoke(
+        legacyPaddle ? "paddle-customer-portal" : "stripe-portal",
+        {
+          body: legacyPaddle
+            ? { organizationId: activeOrg.organization_id, environment: subscription?.environment ?? "live" }
+            : { organizationId: activeOrg.organization_id },
+        },
+      );
       if (error || !data?.url) throw new Error(error?.message ?? "Failed to open portal");
       window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (e: any) {

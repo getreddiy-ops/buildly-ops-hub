@@ -3,7 +3,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { toast } from "sonner";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ const PLANS: PlanDef[] = [
 export default function Pricing() {
   const { user, activeOrg } = useAuth();
   const navigate = useNavigate();
-  const { openCheckout, loading } = usePaddleCheckout();
+  const { openCheckout, loading } = useStripeCheckout();
 
   const onCta = async (tier: Tier) => {
     if (!user) { navigate("/signup"); return; }
@@ -67,15 +67,9 @@ export default function Pricing() {
       return;
     }
     try {
-      await openCheckout({
-        priceId: TIERS[tier].priceId,
-        customerEmail: user.email ?? undefined,
-        customData: { userId: user.id, orgId: activeOrg.organization_id },
-        displayMode: "overlay",
-        successUrl: `${window.location.origin}/app/billing?checkout=success`,
-      });
+      await openCheckout({ plan: tier, organizationId: activeOrg.organization_id });
     } catch {
-      // usePaddleCheckout already surfaced a toast with the real message.
+      // useStripeCheckout already surfaced a toast with the real message.
     }
   };
 
