@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PhoneAssistantStatusCard } from "@/components/PhoneAssistantStatusCard";
 
 type StatKey = "won_leads" | "active_jobs" | "pending_estimates" | "unpaid_invoices" | "revenue_paid";
 type Stats = Record<StatKey, number>;
@@ -196,6 +197,8 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      <PhoneAssistantStatusCard />
 
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

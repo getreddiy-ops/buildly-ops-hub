@@ -1016,7 +1016,9 @@ export type Database = {
           enabled: boolean
           greeting: string
           id: string
+          number_source: string | null
           organization_id: string
+          setup_state: Json
           transfer_number: string | null
           twilio_phone_number: string | null
           twilio_phone_sid: string | null
@@ -1031,7 +1033,9 @@ export type Database = {
           enabled?: boolean
           greeting?: string
           id?: string
+          number_source?: string | null
           organization_id: string
+          setup_state?: Json
           transfer_number?: string | null
           twilio_phone_number?: string | null
           twilio_phone_sid?: string | null
@@ -1046,7 +1050,9 @@ export type Database = {
           enabled?: boolean
           greeting?: string
           id?: string
+          number_source?: string | null
           organization_id?: string
+          setup_state?: Json
           transfer_number?: string | null
           twilio_phone_number?: string | null
           twilio_phone_sid?: string | null
