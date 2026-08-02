@@ -399,12 +399,13 @@ Deno.serve(async (req) => {
       subRow &&
       ((["active", "trialing", "past_due"].includes(subRow.status) && (!periodEnd || periodEnd > now)) ||
         (subRow.status === "canceled" && !!periodEnd && periodEnd > now));
-    if (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id)) {
+    if (!isPlatformAdmin && (!subRow || !activeStatus || !ASSISTANT_PRICE_IDS.has(subRow.price_id))) {
       return new Response(
         JSON.stringify({ error: "Plus or Premium subscription required", code: "subscription_required" }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
     // --- End gate ---
 
     // Fetch business profile for context
