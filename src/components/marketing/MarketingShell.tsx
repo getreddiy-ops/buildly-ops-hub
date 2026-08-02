@@ -52,6 +52,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         <Logo to="/" />
         <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
           <Link to="/features" className="hover:text-foreground">Features</Link>
+          <Link to="/demo" className="hover:text-foreground">Demo</Link>
           <Link to="/ai-photo-estimator" className="hover:text-foreground">AI Estimator</Link>
           <Link to="/ai-phone-agent" className="hover:text-foreground">AI Phone</Link>
           <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
