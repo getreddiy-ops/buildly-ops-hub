@@ -5,11 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SEO } from "@/components/SEO";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { FAQ } from "@/components/marketing/FAQ";
+import { HeroVideo } from "@/components/marketing/HeroVideo";
+import { Reveal } from "@/components/marketing/Reveal";
 import {
   ArrowRight, Phone, FileText, FileSignature, Package, Users2, Wrench,
   Receipt, LayoutDashboard, PhoneMissed, Timer, FolderKanban, Bot,
-  ClipboardList, Calendar, Truck, DollarSign, CheckCircle2, MapPin,
-  Zap, Building2,
+  ClipboardList, DollarSign, CheckCircle2, Building2,
 } from "lucide-react";
 
 const painPoints = [
@@ -104,58 +105,16 @@ const softwareSchema = {
   url: "https://fasttract.org/",
 };
 
-function DashboardMockup() {
-  const cards = [
-    { icon: Zap, tag: "New Lead", title: "Driveway replacement — Portland, OR", tone: "text-primary" },
-    { icon: FileText, tag: "AI Estimate", title: "Ready for review", tone: "text-primary" },
-    { icon: FileSignature, tag: "Contract", title: "Generated & sent", tone: "text-primary" },
-    { icon: Package, tag: "Material List", title: "Created for pickup", tone: "text-primary" },
-    { icon: Receipt, tag: "Invoice", title: "Pending — $8,432", tone: "text-primary" },
-    { icon: Calendar, tag: "Job Status", title: "Scheduled — Thu 8:00 AM", tone: "text-primary" },
-  ];
-  return (
-    <div className="relative rounded-2xl border border-border bg-card/80 p-4 shadow-2xl backdrop-blur">
-      <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
-          <div className="text-xs font-semibold tracking-wide text-foreground">FastTract Dashboard</div>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-          <MapPin className="h-3 w-3" /> Portland, OR
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {cards.map((c) => (
-          <div key={c.tag} className="rounded-lg border border-border bg-background/60 p-3">
-            <div className="mb-2 flex items-center gap-1.5">
-              <c.icon className={`h-3.5 w-3.5 ${c.tone}`} />
-              <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{c.tag}</div>
-            </div>
-            <div className="text-sm font-semibold leading-snug text-foreground">{c.title}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
-        <div className="flex items-center gap-2 text-foreground">
-          <Bot className="h-4 w-4 text-primary" />
-          <span>AI Assistant ready</span>
-        </div>
-        <span className="text-muted-foreground">“Create an invoice for the Smith job”</span>
-      </div>
-    </div>
-  );
-}
-
 function PrimaryCTA({ label = "Start Free Trial" }: { label?: string }) {
   return (
-    <Button size="lg" asChild>
+    <Button size="lg" className="ft-cta" asChild>
       <Link to="/signup">{label}</Link>
     </Button>
   );
 }
 function SecondaryCTA({ label = "Watch Demo", to = "/demo" }: { label?: string; to?: string }) {
   return (
-    <Button size="lg" variant="outline" asChild>
+    <Button size="lg" variant="outline" className="ft-cta" asChild>
       <Link to={to}>{label}</Link>
     </Button>
   );
@@ -254,14 +213,14 @@ export default function Landing() {
             Stop Losing Jobs to Missed Calls, Slow Estimates, and Messy Paperwork
           </h2>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {painPoints.map((p) => (
-              <div key={p.title} className="rounded-xl border border-border bg-card p-6">
+            {painPoints.map((p, i) => (
+              <Reveal key={p.title} delay={i * 90}><div className="rounded-xl border border-border bg-card p-6">
                 <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-primary/15 text-primary">
                   <p.icon className="h-5 w-5" />
                 </div>
                 <h3 className="text-lg font-semibold">{p.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
         </div>
@@ -279,14 +238,14 @@ export default function Landing() {
             </p>
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((f) => (
-              <div key={f.title} className="rounded-xl border border-border bg-card p-5">
+            {features.map((f, i) => (
+              <Reveal key={f.title} delay={i * 60}><div className="rounded-xl border border-border bg-card p-5">
                 <div className="mb-4 grid h-10 w-10 place-items-center rounded-md bg-accent text-accent-foreground">
                   <f.icon className="h-5 w-5" />
                 </div>
                 <h3 className="text-base font-semibold">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
@@ -340,7 +299,7 @@ export default function Landing() {
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
             {steps.map((s, i) => (
-              <div key={s.title} className="relative rounded-xl border border-border bg-card p-5">
+              <Reveal key={s.title} delay={i * 80}><div className="relative rounded-xl border border-border bg-card p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/15 text-primary">
                     <s.icon className="h-5 w-5" />
@@ -349,7 +308,7 @@ export default function Landing() {
                 </div>
                 <h3 className="text-base font-semibold">{s.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-              </div>
+              </div></Reveal>
             ))}
           </div>
         </div>
@@ -452,7 +411,7 @@ export default function Landing() {
                 <h3 className="text-xl font-bold">{t.name}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t.tagline}</p>
                 <div className="mt-6 text-lg font-semibold text-foreground">{t.price}</div>
-                <Button className="mt-6 w-full" size="lg" variant={t.variant} asChild>
+                <Button className="ft-cta mt-6 w-full" size="lg" variant={t.variant} asChild>
                   <Link to={t.to}>{t.cta}</Link>
                 </Button>
               </div>
