@@ -248,7 +248,9 @@ describe("Phone number setup", () => {
 
   it("never presents a webhook URL as a call-forwarding destination", async () => {
     render(<PhoneAssistant />);
-    fireEvent.click(await screen.findByRole("tab", { name: /Use my current business number/i }));
+    const existingTab = await screen.findByRole("tab", { name: /Use my current business number/i });
+    fireEvent.mouseDown(existingTab);
+    fireEvent.click(existingTab);
     fireEvent.click(await screen.findByRole("button", { name: /Forward calls/i }));
 
     expect(await screen.findByText(/Connect an assistant number first/i)).toBeInTheDocument();
@@ -259,7 +261,9 @@ describe("Phone number setup", () => {
 
   it("verifies Twilio ownership by listing account numbers instead of accepting free text", async () => {
     render(<PhoneAssistant />);
-    fireEvent.click(await screen.findByRole("tab", { name: /Use my current business number/i }));
+    const existingTab = await screen.findByRole("tab", { name: /Use my current business number/i });
+    fireEvent.mouseDown(existingTab);
+    fireEvent.click(existingTab);
     fireEvent.click(await screen.findByRole("button", { name: /Connect an existing Twilio number/i }));
     fireEvent.click(await screen.findByRole("button", { name: /Load my Twilio numbers/i }));
 
@@ -270,7 +274,9 @@ describe("Phone number setup", () => {
 
   it("shows a porting checklist that does not promise an instant port", async () => {
     render(<PhoneAssistant />);
-    fireEvent.click(await screen.findByRole("tab", { name: /Use my current business number/i }));
+    const existingTab = await screen.findByRole("tab", { name: /Use my current business number/i });
+    fireEvent.mouseDown(existingTab);
+    fireEvent.click(existingTab);
     fireEvent.click(await screen.findByRole("button", { name: /Port an existing number/i }));
 
     expect(await screen.findByText(/It is not instant/i)).toBeInTheDocument();
