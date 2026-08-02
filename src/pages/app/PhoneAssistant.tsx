@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
-  Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Plus, Mic, MicOff,
+  Phone, PhoneIncoming, PhoneOff, Voicemail, Clock, Sparkles, Mic, MicOff,
   Loader2, CheckCircle2, AlertCircle, Copy, ArrowRight, ArrowLeft, ShieldCheck,
-  Search, Wand2, ExternalLink,
+  Search, Wand2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
