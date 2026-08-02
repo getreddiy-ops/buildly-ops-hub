@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/contexts/AuthContext";
 import { TIERS, type Tier } from "@/lib/tiers";
 
 /**
@@ -19,6 +20,8 @@ export function PaywallGate({
   requires?: Tier;
 }) {
   const { isActive, tier, loading } = useSubscription();
+  const { isPlatformAdmin } = useAuth();
+  if (isPlatformAdmin) return <>{children}</>;
   if (loading) return null;
 
   const order: Tier[] = ["base", "plus", "premium"];
