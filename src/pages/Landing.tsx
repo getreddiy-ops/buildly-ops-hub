@@ -178,29 +178,72 @@ export default function Landing() {
       />
 
       {/* HERO */}
-      <section className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8 lg:pt-20">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Built by people who understand the jobsite
+      <section className="relative overflow-hidden">
+        {/* subtle background motion */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+          <div className="ft-aurora absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-primary/20 blur-3xl" />
+          <div className="ft-aurora absolute -right-24 top-32 h-[24rem] w-[24rem] rounded-full bg-accent-foreground/10 blur-3xl" style={{ animationDelay: "-6s" }} />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8 lg:pt-20">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <div className="ft-rise mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                Built by people who understand the jobsite
+              </div>
+              <h1 className="ft-rise text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl" style={{ animationDelay: "90ms" }}>
+                From first call to final invoice,{" "}
+                <span className="text-gradient-primary">FastTract keeps the whole job moving.</span>
+              </h1>
+              <p className="ft-rise mt-6 max-w-xl text-lg text-muted-foreground" style={{ animationDelay: "180ms" }}>
+                Answer every call, draft trade-specific estimates in minutes, turn approved estimates into contracts and material lists, and invoice the moment the work is done — from one contractor dashboard you control.
+              </p>
+              <ul className="ft-rise mt-6 grid max-w-xl gap-2 sm:grid-cols-2" style={{ animationDelay: "260ms" }}>
+                {[
+                  "Leads captured 24/7",
+                  "Estimates drafted in minutes",
+                  "Contracts + material lists in one click",
+                  "Invoices and balances tracked",
+                ].map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="ft-rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "340ms" }}>
+                <PrimaryCTA label="Start Your 7-Day Free Trial" />
+                <SecondaryCTA />
+              </div>
+              <p className="ft-rise mt-4 text-sm text-muted-foreground" style={{ animationDelay: "400ms" }}>
+                7-day free trial · Plans from $69/mo · Cancel anytime
+              </p>
+              <p className="ft-rise mt-3 max-w-xl text-sm text-muted-foreground" style={{ animationDelay: "440ms" }}>
+                Built for concrete, remodeling, roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction trades.
+              </p>
             </div>
-            <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Run Your Contracting Business From{" "}
-              <span className="text-gradient-primary">First Call to Final Invoice</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              FastTract uses AI to answer calls, capture leads, build estimates, create contracts, generate material lists, track jobs, and send invoices — all from one clean contractor dashboard.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <PrimaryCTA />
-              <SecondaryCTA />
+            <div className="ft-rise lg:pl-6" style={{ animationDelay: "220ms" }}>
+              <HeroVideo />
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  { icon: Phone, label: "Call answered", sub: "Lead captured" },
+                  { icon: FileText, label: "Estimate drafted", sub: "You review it" },
+                  { icon: Receipt, label: "Invoice sent", sub: "After approval" },
+                ].map((c, i) => (
+                  <div
+                    key={c.label}
+                    className="ft-float rounded-xl border border-border bg-card/80 p-3 backdrop-blur"
+                    style={{ animationDelay: `${i * 900}ms` }}
+                  >
+                    <c.icon className="mb-2 h-4 w-4 text-primary" />
+                    <div className="text-xs font-semibold text-foreground">{c.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{c.sub}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="mt-5 max-w-xl text-sm text-muted-foreground">
-              Built for concrete, remodeling, roofing, landscaping, painting, excavation, electrical, plumbing, HVAC, and general construction trades.
-            </p>
           </div>
-          <div className="lg:pl-6"><DashboardMockup /></div>
         </div>
       </section>
 
