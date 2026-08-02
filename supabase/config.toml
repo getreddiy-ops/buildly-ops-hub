@@ -25,3 +25,9 @@ project_id = "fxfljmqpckujerawkwhq"
     verify_jwt = true
   [functions.voice-transcribe]
     verify_jwt = true
+  [functions.stripe-checkout]
+    verify_jwt = true
+  [functions.stripe-portal]
+    verify_jwt = true
+  [functions.stripe-webhook]
+    verify_jwt = false
