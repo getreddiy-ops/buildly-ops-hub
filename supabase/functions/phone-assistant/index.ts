@@ -1,18 +1,28 @@
 // Manage the org's phone assistant: load/save settings, create/update the
-// ElevenLabs Conversational AI agent. Requires Premium tier.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+// ElevenLabs Conversational AI agent. Requires Premium tier (platform admins bypass).
 import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  configurationMissing,
+  corsHeaders,
+  json,
+  missingSecrets,
+  requirePhoneAccess,
+} from "../_shared/phone-access.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY")!;
-const PREMIUM_PRICE_IDS = new Set(["contractor_os_premium_monthly", "contractor_os_premium"]);
+const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
+
+const DEFAULT_GREETING =
+  "Hi, you have reached our office. I can help schedule an estimate, take a message, or transfer you to a team member.";
+const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
+const DEFAULT_CAPABILITIES = {
+  book_estimates: true,
+  capture_leads: true,
+  transfer: true,
+  voicemail: true,
+  sms_followup: false,
+  faq: true,
+};
 
 type SettingsBody = {
   organization_id: string;
@@ -22,6 +32,7 @@ type SettingsBody = {
   greeting?: string;
   transfer_number?: string | null;
   capabilities?: Record<string, boolean>;
+  setup_state?: Record<string, unknown>;
 };
 
 function buildSystemPrompt(
@@ -89,7 +100,6 @@ function buildSystemPrompt(
   ].join("\n") + bpBlock + jurisdictionPromptBlock(orgAddress, bp?.service_area ?? null);
 }
 
-
 async function upsertAgent(opts: {
   agentId: string | null;
   name: string;
@@ -123,9 +133,7 @@ async function upsertAgent(opts: {
   return opts.agentId ?? data.agent_id;
 }
 
-// Best-effort: register the post-call webhook at the workspace level so
-// ElevenLabs POSTs conversation summaries to our edge function. Idempotent;
-// safe to call on every save. Failures are logged, not thrown.
+// Best-effort: register the post-call webhook at the workspace level. Idempotent.
 async function ensurePostCallWebhook() {
   const url = `${SUPABASE_URL}/functions/v1/elevenlabs-postcall`;
   try {
@@ -137,7 +145,7 @@ async function ensurePostCallWebhook() {
         webhooks: { post_call_webhook_url: url },
       }),
     });
-    if (!res.ok) console.warn("post-call webhook register failed", res.status, await res.text());
+    if (!res.ok) console.warn("post-call webhook register failed", res.status);
   } catch (e) {
     console.warn("post-call webhook register error", (e as Error).message);
   }
@@ -147,47 +155,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "unauthorized" }, 401);
-
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await userClient.auth.getUser();
-    const user = userData?.user;
-    if (!user) return json({ error: "unauthorized" }, 401);
-
     const body = (await req.json()) as SettingsBody;
     const orgId = body.organization_id;
-    if (!orgId) return json({ error: "organization_id required" }, 400);
     const environment = body.environment === "live" ? "live" : "sandbox";
 
-    // Org admin check
-    const { data: member } = await admin
-      .from("organization_members")
-      .select("role")
-      .eq("organization_id", orgId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!member || !["owner", "admin"].includes(member.role)) {
-      return json({ error: "forbidden: org admin required" }, 403);
-    }
+    const access = await requirePhoneAccess(req, orgId, environment);
+    if (!access.ok) return access.response;
+    const { admin } = access;
 
-    // Premium subscription check
-    const { data: sub } = await admin
-      .from("subscriptions")
-      .select("price_id, status, current_period_end")
-      .eq("organization_id", orgId)
-      .eq("environment", environment)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const active = sub && (["active", "trialing", "past_due"].includes(sub.status) || sub.status === "canceled") &&
-      (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now());
-    if (!active || !PREMIUM_PRICE_IDS.has(sub?.price_id)) {
-      return json({ error: "Premium subscription required" }, 402);
-    }
+    const missing = missingSecrets(["ELEVENLABS_API_KEY"]);
+    if (missing.length) return configurationMissing(missing);
 
     const { data: org } = await admin
       .from("organizations")
@@ -195,18 +172,47 @@ Deno.serve(async (req) => {
       .eq("id", orgId)
       .single();
 
-    const { data: existing } = await admin
+    // Idempotency guard: claim the row first so two concurrent "create" clicks
+    // cannot both create an ElevenLabs agent.
+    const { data: existingBefore } = await admin
       .from("phone_assistants")
       .select("*")
       .eq("organization_id", orgId)
       .maybeSingle();
 
+    let existing = existingBefore;
+    if (!existing) {
+      const { data: claimed } = await admin
+        .from("phone_assistants")
+        .insert({
+          organization_id: orgId,
+          enabled: body.enabled ?? true,
+          voice_id: body.voice_id ?? DEFAULT_VOICE,
+          greeting: body.greeting ?? DEFAULT_GREETING,
+          transfer_number: body.transfer_number || null,
+          capabilities: body.capabilities ?? DEFAULT_CAPABILITIES,
+        })
+        .select()
+        .maybeSingle();
+      if (claimed) {
+        existing = claimed;
+      } else {
+        // Lost the race — another request created it. Re-read.
+        const { data: reread } = await admin
+          .from("phone_assistants").select("*").eq("organization_id", orgId).maybeSingle();
+        existing = reread;
+      }
+    }
+
     const merged = {
       enabled: body.enabled ?? existing?.enabled ?? true,
-      voice_id: body.voice_id ?? existing?.voice_id ?? "EXAVITQu4vr4xnSDxMaL",
-      greeting: body.greeting ?? existing?.greeting ?? "",
+      voice_id: body.voice_id ?? existing?.voice_id ?? DEFAULT_VOICE,
+      greeting: body.greeting ?? existing?.greeting ?? DEFAULT_GREETING,
       transfer_number: body.transfer_number ?? existing?.transfer_number ?? null,
-      capabilities: body.capabilities ?? existing?.capabilities ?? {},
+      capabilities: body.capabilities ?? existing?.capabilities ?? DEFAULT_CAPABILITIES,
+      setup_state: body.setup_state
+        ? { ...(existing?.setup_state ?? {}), ...body.setup_state }
+        : (existing?.setup_state ?? {}),
     };
 
     const prompt = buildSystemPrompt(
@@ -238,17 +244,9 @@ Deno.serve(async (req) => {
 
     await ensurePostCallWebhook();
 
-
     return json({ assistant: saved });
   } catch (e) {
     console.error("phone-assistant error", e);
     return json({ error: (e as Error).message }, 500);
   }
 });
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
