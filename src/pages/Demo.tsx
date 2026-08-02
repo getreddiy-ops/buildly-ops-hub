@@ -93,7 +93,7 @@ function ReviewNote() {
   );
 }
 
-function useCountUp(target: number, progress: number, reduced: boolean) {
+function countUp(target: number, progress: number, reduced: boolean) {
   if (reduced) return target;
   const eased = Math.min(1, progress / 0.6);
   return Math.round(target * eased);
@@ -172,7 +172,7 @@ const chapters: Chapter[] = [
               <Stagger key={s.label} i={i} reduced={reduced}>
                 <div className="rounded-xl border border-border/70 bg-card p-3">
                   <s.icon className="mb-1.5 h-3.5 w-3.5 text-primary" />
-                  <div className="text-xl font-bold tabular-nums">{useCountUp(s.value, progress, reduced)}</div>
+                  <div className="text-xl font-bold tabular-nums">{countUp(s.value, progress, reduced)}</div>
                   <div className="text-[10px] text-muted-foreground">{s.label}</div>
                 </div>
               </Stagger>
@@ -340,7 +340,7 @@ const chapters: Chapter[] = [
               <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
                 <span className="text-[11px] font-semibold">Total</span>
                 <span className="text-[15px] font-bold tabular-nums text-primary">
-                  ${useCountUp(10432, progress, reduced).toLocaleString()}
+                  ${countUp(10432, progress, reduced).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -512,7 +512,7 @@ const chapters: Chapter[] = [
               <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
                 <span className="flex items-center gap-1 text-[11px] font-semibold"><TrendingUp className="h-3.5 w-3.5 text-success" />Profit</span>
                 <span className="text-[15px] font-bold tabular-nums text-success">
-                  ${useCountUp(2492, progress, reduced).toLocaleString()}
+                  ${countUp(2492, progress, reduced).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -660,8 +660,6 @@ export default function Demo() {
     startRef.current = performance.now();
     if (!keepPlaying) setPlaying(false);
   }, []);
-
-  const next = useCallback(() => goto(index + 1, true), [goto, index]);
 
   // auto-advance loop
   useEffect(() => {
