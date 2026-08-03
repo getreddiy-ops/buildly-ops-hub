@@ -544,10 +544,12 @@ function NumberSetup({
           <ExistingNumberGuide
             canEdit={canEdit}
             assistantNumber={assistant.twilio_phone_number}
+            forwardedFrom={(assistant.setup_state?.forwarded_from as string | undefined) ?? ""}
             callProvision={callProvision}
             reload={reload}
           />
         </TabsContent>
+
       </Tabs>
     </Card>
   );
