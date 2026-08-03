@@ -732,10 +732,11 @@ function NumberMarketplace({
 /* ------------------------------------------------------------------ */
 
 function ExistingNumberGuide({
-  canEdit, assistantNumber, callProvision, reload,
+  canEdit, assistantNumber, forwardedFrom, callProvision, reload,
 }: {
   canEdit: boolean;
   assistantNumber: string | null;
+  forwardedFrom?: string;
   callProvision: (payload: Record<string, unknown>) => Promise<any>;
   reload: () => Promise<void>;
 }) {
@@ -745,8 +746,8 @@ function ExistingNumberGuide({
     return (
       <div className="grid gap-3 sm:grid-cols-3">
         <PathCard
-          title="Forward calls"
-          body="Keep your carrier line and forward calls to a FastTract assistant number."
+          title="Keep my number, forward calls"
+          body="Recommended. Your number stays with your carrier — calls ring through to the assistant."
           onSelect={() => setPath("forward")}
         />
         <PathCard
@@ -768,7 +769,15 @@ function ExistingNumberGuide({
       <Button variant="ghost" size="sm" onClick={() => setPath(null)}>
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to options
       </Button>
-      {path === "forward" && <ForwardGuide assistantNumber={assistantNumber} />}
+      {path === "forward" && (
+        <ForwardGuide
+          assistantNumber={assistantNumber}
+          forwardedFrom={forwardedFrom}
+          canEdit={canEdit}
+          callProvision={callProvision}
+          reload={reload}
+        />
+      )}
       {path === "twilio" && (
         <ConnectTwilioGuide canEdit={canEdit} callProvision={callProvision} reload={reload} />
       )}
@@ -793,43 +802,122 @@ function PathCard({ title, body, onSelect }: { title: string; body: string; onSe
   );
 }
 
-function ForwardGuide({ assistantNumber }: { assistantNumber: string | null }) {
+function ForwardGuide({
+  assistantNumber, forwardedFrom = "", canEdit, callProvision, reload,
+}: {
+  assistantNumber: string | null;
+  forwardedFrom?: string;
+  canEdit: boolean;
+  callProvision: (payload: Record<string, unknown>) => Promise<any>;
+  reload: () => Promise<void>;
+}) {
+  const [businessNumber, setBusinessNumber] = useState(forwardedFrom);
+  const [saving, setSaving] = useState(false);
+  const validBusiness = /^\+[1-9]\d{6,14}$/.test(businessNumber.trim());
+
+  const saveBusinessNumber = async () => {
+    setSaving(true);
+    const data = await callProvision({
+      action: "save_setup",
+      number_source: "forwarded",
+      setup_state: { forwarded_from: businessNumber.trim() },
+    });
+    setSaving(false);
+    if (!data) return;
+    toast.success("Saved. Your business number stays yours — calls just ring through to the assistant.");
+    await reload();
+  };
+
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-base font-semibold">Forward your carrier line to the assistant</h3>
+      <div>
+        <h3 className="text-base font-semibold">Keep your number — forward calls to the assistant</h3>
+        <p className="text-muted-foreground">
+          You keep your existing business number and carrier. FastTract gives you a private assistant
+          number, and your carrier forwards incoming calls to it. Customers still see and dial your
+          original number.
+        </p>
+      </div>
+
       {!assistantNumber ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-          <div className="font-medium">Connect an assistant number first</div>
-          <p className="text-muted-foreground">
-            Call forwarding needs a real destination phone number. Use the “Get a new number” tab to
-            connect an assistant number, then come back here — that number becomes your forwarding
-            destination.
-          </p>
+        <div className="space-y-4">
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+            <div className="font-medium">Step 1 — get your forwarding destination</div>
+            <p className="text-muted-foreground">
+              Call forwarding needs a real destination number. Pick one below — it stays private and is
+              only used as the forwarding target. Your own number is never changed or transferred.
+            </p>
+          </div>
+          <NumberMarketplace canEdit={canEdit} callProvision={callProvision} reload={reload} />
         </div>
       ) : (
-        <div className="rounded-md border p-3">
-          <div className="text-xs text-muted-foreground">Forward your business line to</div>
-          <div className="font-mono text-lg">{assistantNumber}</div>
-        </div>
+        <>
+          <div className="rounded-md border p-3">
+            <div className="text-xs text-muted-foreground">Step 1 — forward your business line to</div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-lg">{assistantNumber}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  void navigator.clipboard.writeText(assistantNumber);
+                  toast.success("Assistant number copied");
+                }}
+                aria-label="Copy assistant number"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-md border p-3">
+            <Label htmlFor="forwarded-from" className="text-xs text-muted-foreground">
+              Step 2 — the business number you're forwarding from (optional, for your records)
+            </Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="forwarded-from"
+                value={businessNumber}
+                onChange={(e) => setBusinessNumber(e.target.value)}
+                placeholder="+15035550123"
+                disabled={!canEdit}
+              />
+              <Button
+                onClick={saveBusinessNumber}
+                disabled={!canEdit || saving || !validBusiness}
+              >
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+            {businessNumber.trim() && !validBusiness && (
+              <p className="text-xs text-destructive">Use E.164 format, e.g. +15035550123.</p>
+            )}
+          </div>
+        </>
       )}
-      <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
-        <li>Keep your existing carrier line active — forwarding stops working if the line is cancelled.</li>
-        <li>
-          Open your carrier's account portal or call their support and ask to set up call forwarding to
-          the assistant number above. Activation and deactivation codes differ by carrier, so follow your
-          carrier's official instructions rather than a generic code.
-        </li>
-        <li>
-          Choose the forwarding mode you want: <strong>unconditional</strong> (all calls go to the
-          assistant), or — where your carrier supports it — <strong>busy</strong>,{" "}
-          <strong>no-answer</strong>, or <strong>after-hours</strong> forwarding so the assistant only
-          picks up overflow.
-        </li>
-        <li>Test from a different phone: call your business number and confirm the assistant answers.</li>
-        <li>
-          To undo it, use your carrier's cancel-forwarding option in the same portal or support channel.
-        </li>
-      </ol>
+
+      <div>
+        <div className="mb-1 font-medium">Step 3 — turn on forwarding with your carrier</div>
+        <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+          <li>Keep your existing carrier line active — forwarding stops working if the line is cancelled.</li>
+          <li>
+            Open your carrier's account portal or call their support and ask to set up call forwarding to
+            the assistant number above. Activation and deactivation codes differ by carrier, so follow your
+            carrier's official instructions rather than a generic code.
+          </li>
+          <li>
+            Choose the forwarding mode you want: <strong>unconditional</strong> (all calls go to the
+            assistant), or — where your carrier supports it — <strong>busy</strong>,{" "}
+            <strong>no-answer</strong>, or <strong>after-hours</strong> forwarding so the assistant only
+            picks up overflow.
+          </li>
+          <li>Test from a different phone: call your business number and confirm the assistant answers.</li>
+          <li>
+            To undo it, use your carrier's cancel-forwarding option in the same portal or support channel.
+          </li>
+        </ol>
+      </div>
       <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
         Troubleshooting: if the call still rings your old line, forwarding was likely saved for a
         different mode (for example no-answer instead of unconditional). If the caller hears a carrier
@@ -838,6 +926,7 @@ function ForwardGuide({ assistantNumber }: { assistantNumber: string | null }) {
     </div>
   );
 }
+
 
 function ConnectTwilioGuide({
   canEdit, callProvision, reload,
