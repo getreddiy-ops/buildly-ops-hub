@@ -3,7 +3,7 @@
 // before using the service-role key for privileged operations.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { getPaddleClient, gatewayFetch, type PaddleEnv } from "../_shared/paddle.ts";
+import { getStripe } from "../_shared/stripe.ts";
 
 type Tier = "base" | "plus" | "premium";
 
@@ -22,8 +22,8 @@ type Action =
   | { type: "remove_member"; organization_id: string; user_id: string }
   | { type: "transfer_ownership"; organization_id: string; new_owner_user_id: string }
   | { type: "org_snapshot"; organization_id: string }
-  | { type: "list_transactions"; organization_id: string; environment?: PaddleEnv; per_page?: number }
-  | { type: "refund_transaction"; transaction_id: string; environment?: PaddleEnv; reason?: string; type_action?: "full" | "partial"; amount?: string; currency_code?: string }
+  | { type: "list_transactions"; organization_id: string; environment?: "sandbox" | "live"; per_page?: number }
+  | { type: "refund_transaction"; transaction_id: string; environment?: "sandbox" | "live"; reason?: string; type_action?: "full" | "partial"; amount?: string; currency_code?: string }
   | { type: "mark_invoice_paid"; invoice_id: string }
   | { type: "void_invoice"; invoice_id: string };
 
@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
       const { error } = await admin.from("subscriptions").upsert({
         paddle_subscription_id: compId,
         paddle_customer_id: `comp_customer_${body.organization_id}`,
+        provider: "manual",
         user_id: owner.user_id,
         organization_id: body.organization_id,
         product_id: t.product_id,
@@ -325,42 +326,37 @@ Deno.serve(async (req) => {
     }
 
     if (body.type === "list_transactions") {
-      const env = body.environment ?? "live";
-      // Get org owner's paddle_customer_id from subscriptions
-      const { data: subs } = await admin.from("subscriptions")
-        .select("paddle_customer_id").eq("organization_id", body.organization_id).eq("environment", env);
-      const customerIds = [...new Set((subs ?? []).map((s: any) => s.paddle_customer_id).filter((c: string) => c && !c.startsWith("comp_")))];
-      if (customerIds.length === 0) return ok({ transactions: [] });
-      const per = body.per_page ?? 25;
-      const res = await gatewayFetch(env, `/transactions?customer_id=${customerIds.join(",")}&per_page=${per}&order_by=created_at[DESC]`);
-      const data = await res.json();
-      return ok({ transactions: data.data ?? [] });
+      // Stripe charges for this org's billing customer.
+      const { data: bc } = await admin.from("billing_customers")
+        .select("stripe_customer_id").eq("organization_id", body.organization_id).maybeSingle();
+      const customerId = bc?.stripe_customer_id as string | undefined;
+      if (!customerId) return ok({ transactions: [] });
+      const stripe = getStripe();
+      const charges = await stripe.charges.list({ customer: customerId, limit: body.per_page ?? 25 });
+      return ok({
+        transactions: charges.data.map((c) => ({
+          id: c.id,
+          created_at: new Date(c.created * 1000).toISOString(),
+          status: c.refunded ? "refunded" : c.status,
+          amount: (c.amount / 100).toFixed(2),
+          currency_code: c.currency?.toUpperCase(),
+          description: c.description,
+          receipt_url: c.receipt_url,
+        })),
+      });
     }
 
     if (body.type === "refund_transaction") {
-      const env = body.environment ?? "live";
       if (!body.transaction_id) throw new Error("transaction_id required");
-      const paddle = getPaddleClient(env);
-      // Fetch transaction to find line items
-      const txRes = await gatewayFetch(env, `/transactions/${body.transaction_id}`);
-      const tx = (await txRes.json()).data;
-      const items = (tx?.details?.line_items ?? tx?.items ?? []).map((li: any) => ({
-        item_id: li.id,
-        type: body.type_action === "partial" && body.amount ? "partial" : "full",
-        ...(body.type_action === "partial" && body.amount ? { amount: body.amount } : {}),
-      }));
-      const adjRes = await gatewayFetch(env, `/adjustments`, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "refund",
-          transaction_id: body.transaction_id,
-          reason: body.reason ?? "Admin refund",
-          items,
-        }),
+      const stripe = getStripe();
+      const refund = await stripe.refunds.create({
+        charge: body.transaction_id,
+        ...(body.type_action === "partial" && body.amount
+          ? { amount: Math.round(Number(body.amount) * 100) }
+          : {}),
+        metadata: { reason: body.reason ?? "Admin refund" },
       });
-      const adj = await adjRes.json();
-      if (adj.error) throw new Error(adj.error.detail ?? adj.error.code ?? "refund failed");
-      return ok({ adjustment: adj.data });
+      return ok({ adjustment: { id: refund.id, status: refund.status, amount: refund.amount } });
     }
 
     if (body.type === "mark_invoice_paid") {
