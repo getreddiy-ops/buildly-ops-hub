@@ -70,7 +70,10 @@ export async function syncSubscription(
     const next = schedule.phases.find((p: any) => p.start_date > nowSecs);
     if (next) {
       const nextPrice = next.items?.[0]?.price;
-      scheduledPriceId = typeof nextPrice === "string" ? nextPrice : nextPrice?.id ?? null;
+      const rawId = typeof nextPrice === "string" ? nextPrice : nextPrice?.id ?? null;
+      const scheduledTier = tierFromStripePrice(rawId);
+      // Store the logical price id so the frontend tier map can read it.
+      scheduledPriceId = scheduledTier ? TIER_LOGICAL_PRICE[scheduledTier] : rawId;
       scheduledChangeAt = ts(next.start_date);
     }
   }
