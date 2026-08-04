@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -63,6 +64,23 @@ export function RequirePlatformAdmin({
   if (loading) return <FullPageSpinner />;
   if (!isPlatformAdmin) return <Navigate to={redirectTo} replace />;
   return <>{children}</>;
+}
+
+/**
+ * The office portal requires an active subscription (a 7-day trial counts).
+ * Billing and account settings stay reachable so an expired org can resubscribe.
+ */
+const SUBSCRIPTION_EXEMPT = ["/app/billing", "/app/settings"];
+
+export function RequireSubscription({ children }: { children: ReactNode }) {
+  const { loading, isPlatformAdmin } = useAuth();
+  const { isActive, loading: subLoading } = useSubscription();
+  const location = useLocation();
+
+  if (SUBSCRIPTION_EXEMPT.some((p) => location.pathname.startsWith(p))) return <>{children}</>;
+  if (loading || subLoading) return <FullPageSpinner />;
+  if (isPlatformAdmin || isActive) return <>{children}</>;
+  return <Navigate to="/app/billing" state={{ from: location, reason: "subscription" }} replace />;
 }
 
 export function RequireAgent({ children }: { children: ReactNode }) {

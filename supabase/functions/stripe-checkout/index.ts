@@ -7,6 +7,7 @@ import {
   priceIdForTier,
   appUrl,
   stripeEnvironment,
+  subscriptionIsActive,
 } from "../_shared/stripe.ts";
 
 Deno.serve(async (req) => {
@@ -59,6 +60,23 @@ Deno.serve(async (req) => {
     const stripe = getStripe();
     const env = stripeEnvironment();
 
+    // Never open a second checkout for an org that already has a live subscription —
+    // Stripe would happily bill twice. Plan switches go through stripe-change-plan.
+    const { data: currentSub } = await admin
+      .from("subscriptions")
+      .select("status,current_period_end,stripe_subscription_id,provider")
+      .eq("organization_id", organizationId)
+      .not("stripe_subscription_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (currentSub && subscriptionIsActive(currentSub as any)) {
+      return json(409, {
+        error: "This organization already has an active subscription. Change plans instead.",
+        code: "already_subscribed",
+      });
+    }
+
     // Reuse an existing Stripe customer for this org (also tracks trial usage).
     const { data: existing } = await admin
       .from("billing_customers")
@@ -84,8 +102,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Trial abuse prevention: only grant a trial if this org has never had one.
-    const trialUsed = existing?.trial_used === true;
+    // Trial abuse prevention: one trial per owner, across every org they own.
+    let trialUsed = existing?.trial_used === true;
+    if (!trialUsed) {
+      const { data: priorTrials } = await admin
+        .from("billing_customers")
+        .select("trial_used")
+        .eq("user_id", user.id)
+        .eq("trial_used", true)
+        .limit(1);
+      trialUsed = !!priorTrials?.length;
+    }
 
     const base = appUrl();
     const session = await stripe.checkout.sessions.create({
@@ -103,7 +130,7 @@ Deno.serve(async (req) => {
       cancel_url: `${base}/app/billing?checkout=cancelled`,
     });
 
-    return json(200, { url: session.url, id: session.id });
+    return json(200, { url: session.url, id: session.id, trial: !trialUsed });
   } catch (e) {
     console.error("stripe-checkout error:", e);
     return json(500, { error: (e as Error).message });

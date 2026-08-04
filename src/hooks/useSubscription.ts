@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBillingEnvironment } from "@/lib/billing";
 import { tierFromPriceId, hasAssistant, hasPhoneAssistant } from "@/lib/tiers";
 
 export type SubscriptionRow = {
@@ -14,9 +13,10 @@ export type SubscriptionRow = {
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
+  scheduled_price_id: string | null;
+  scheduled_change_at: string | null;
   environment: string;
   provider: string | null;
-  paddle_subscription_id: string | null;
   trial_end: string | null;
   payment_status: string | null;
   created_at: string;
@@ -24,7 +24,10 @@ export type SubscriptionRow = {
 
 /**
  * Org-scoped subscription state. Any member of the active org sees the org's
- * Pro subscription. The owner is the one who can actually purchase / manage it.
+ * subscription. The owner is the one who can purchase / manage it.
+ *
+ * Note: rows are NOT filtered by environment. There is a single Stripe account
+ * behind the app, and filtering caused test-mode purchases to be invisible.
  */
 export function useSubscription() {
   const { user, activeOrg } = useAuth();
@@ -42,10 +45,9 @@ export function useSubscription() {
     const { data } = await supabase
       .from("subscriptions")
       .select(
-        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,environment,provider,paddle_subscription_id,trial_end,payment_status,created_at",
+        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,scheduled_price_id,scheduled_change_at,environment,provider,trial_end,payment_status,created_at",
       )
       .eq("organization_id", orgId)
-      .eq("environment", getBillingEnvironment())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -83,8 +85,10 @@ export function useSubscription() {
       (!periodEnd || periodEnd > now)) ||
       (subscription.status === "canceled" && !!periodEnd && periodEnd > now));
   const isPastDue = subscription?.status === "past_due";
+  const isTrialing = subscription?.status === "trialing";
   const isOwner = activeOrg?.role === "owner";
   const tier = isActive ? tierFromPriceId(subscription?.price_id) : null;
+  const scheduledTier = tierFromPriceId(subscription?.scheduled_price_id);
   const canUseAssistant = hasAssistant(tier);
   const canUsePhoneAssistant = hasPhoneAssistant(tier);
 
@@ -92,8 +96,10 @@ export function useSubscription() {
     subscription,
     isActive,
     isPastDue,
+    isTrialing,
     isOwner,
     tier,
+    scheduledTier,
     canUseAssistant,
     canUsePhoneAssistant,
     loading,
