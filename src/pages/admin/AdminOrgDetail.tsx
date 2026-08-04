@@ -264,7 +264,7 @@ export default function AdminOrgDetail() {
       {/* Plan / comp */}
       <Card className="p-4 mb-6 border-primary/30">
         <h3 className="font-semibold mb-1">Plan assignment (comp / free)</h3>
-        <p className="text-xs text-muted-foreground mb-3">Grants an internal subscription that bypasses Paddle. Blank days = free forever.</p>
+        <p className="text-xs text-muted-foreground mb-3">Grants an internal subscription that bypasses Stripe billing. Blank days = free forever.</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
           <div><Label className="text-xs">Tier</Label>
             <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
@@ -401,10 +401,10 @@ export default function AdminOrgDetail() {
         </Card>
       )}
 
-      {/* Paddle transactions */}
+      {/* Stripe transactions */}
       <Card className="p-4 mt-6">
         <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-          <h3 className="font-semibold">Paddle transactions</h3>
+          <h3 className="font-semibold">Stripe transactions</h3>
           <div className="flex items-center gap-2">
             <select value={txEnv} onChange={(e) => setTxEnv(e.target.value as any)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
               <option value="live">live</option><option value="sandbox">test</option>
@@ -412,7 +412,7 @@ export default function AdminOrgDetail() {
             <Button size="sm" variant="outline" onClick={loadTransactions} disabled={busy}><RefreshCw className="h-3 w-3 mr-1" /> Load</Button>
           </div>
         </div>
-        {txs.length === 0 ? <p className="text-sm text-muted-foreground">No transactions loaded. Click "Load" to fetch from Paddle.</p> : (
+        {txs.length === 0 ? <p className="text-sm text-muted-foreground">No transactions loaded. Click "Load" to fetch from Stripe.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground">

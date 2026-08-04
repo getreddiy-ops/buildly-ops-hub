@@ -385,7 +385,6 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .select("price_id,status,current_period_end")
       .eq("organization_id", organizationId)
-      .eq("environment", environment)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
