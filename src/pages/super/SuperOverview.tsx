@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, Building2, CircleDollarSign, CpuIcon, Users } from "lucide-react";
+import { StripeWebhookHealth } from "@/components/StripeWebhookHealth";
 
 type Stat = { label: string; value: string; sub?: string; icon: any; accent?: string };
 
@@ -63,6 +64,8 @@ export default function SuperOverview() {
           </Card>
         ))}
       </div>
+
+      <StripeWebhookHealth />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="border-border/60 bg-card/70 p-5 lg:col-span-2">

@@ -1684,6 +1684,16 @@ export type Database = {
         }[]
       }
       get_org_tax_id: { Args: { _org_id: string }; Returns: string }
+      get_stripe_webhook_health: {
+        Args: never
+        Returns: {
+          events_24h: number
+          events_7d: number
+          events_total: number
+          last_event_at: string
+          last_event_type: string
+        }[]
+      }
       has_active_org_subscription: {
         Args: { check_env?: string; org_id: string }
         Returns: boolean

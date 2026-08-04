@@ -161,11 +161,11 @@ export default function Pricing() {
 
       <footer className="mt-20 border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-          <div>© {new Date().getFullYear()} GetReddiy · FastTract</div>
+          <div>© {new Date().getFullYear()} Lynchmarc LLC · FastTract</div>
           <nav className="flex flex-wrap items-center gap-4">
-            <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
-            <Link to="/privacy" className="hover:text-foreground">Privacy Notice</Link>
-            <Link to="/refunds" className="hover:text-foreground">Refund Policy</Link>
+            <Link to="/legal/terms" className="hover:text-foreground">Terms of Service</Link>
+            <Link to="/legal/privacy" className="hover:text-foreground">Privacy Notice</Link>
+            <Link to="/legal/refunds" className="hover:text-foreground">Refund Policy</Link>
             <Link to="/contact" className="hover:text-foreground">Contact</Link>
           </nav>
         </div>

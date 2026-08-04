@@ -101,7 +101,8 @@ const softwareSchema = {
   operatingSystem: "Web, iOS, Android",
   description: "FastTract is the AI-powered contractor operating system — AI phone answering, CRM, AI estimating, contracts, material lists, labor projections, scheduling, invoices, and payments in one contractor dashboard.",
   offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
-  brand: { "@type": "Brand", name: "GetReddiy" },
+  brand: { "@type": "Brand", name: "FastTract" },
+  publisher: { "@type": "Organization", name: "Lynchmarc LLC" },
   url: "https://fasttract.org/",
 };
 
