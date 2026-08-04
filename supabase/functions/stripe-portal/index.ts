@@ -1,7 +1,8 @@
 // Creates a Stripe Billing Portal session for the caller's active org. Owners only.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getStripe, appUrl } from "../_shared/stripe.ts";
+import { getStripe } from "../_shared/stripe.ts";
+import { resolveAppOrigin, billingPortalReturnUrl } from "../_shared/app-origin.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
     const stripe = getStripe();
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${appUrl()}/app/billing`,
+      return_url: billingPortalReturnUrl(resolveAppOrigin(req, Deno.env.get("PUBLIC_APP_URL"))),
     });
 
     return json(200, { url: session.url });

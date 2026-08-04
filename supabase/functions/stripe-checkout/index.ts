@@ -5,10 +5,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   getStripe,
   priceIdForTier,
-  appUrl,
   stripeEnvironment,
   subscriptionIsActive,
 } from "../_shared/stripe.ts";
+import {
+  resolveAppOrigin,
+  checkoutSuccessUrl,
+  checkoutCancelUrl,
+} from "../_shared/app-origin.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -114,7 +118,7 @@ Deno.serve(async (req) => {
       trialUsed = !!priorTrials?.length;
     }
 
-    const base = appUrl();
+    const base = resolveAppOrigin(req, Deno.env.get("PUBLIC_APP_URL"));
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
@@ -126,8 +130,8 @@ Deno.serve(async (req) => {
         metadata: { userId: user.id, organizationId, plan: resolved.tier },
       },
       metadata: { userId: user.id, organizationId, plan: resolved.tier },
-      success_url: `${base}/app/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/app/billing?checkout=cancelled`,
+      success_url: checkoutSuccessUrl(base),
+      cancel_url: checkoutCancelUrl(base),
     });
 
     return json(200, { url: session.url, id: session.id, trial: !trialUsed });
