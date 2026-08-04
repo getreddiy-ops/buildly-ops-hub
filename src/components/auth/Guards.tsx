@@ -65,6 +65,23 @@ export function RequirePlatformAdmin({
   return <>{children}</>;
 }
 
+/**
+ * The office portal requires an active subscription (a 7-day trial counts).
+ * Billing and account settings stay reachable so an expired org can resubscribe.
+ */
+const SUBSCRIPTION_EXEMPT = ["/app/billing", "/app/settings"];
+
+export function RequireSubscription({ children }: { children: ReactNode }) {
+  const { loading, isPlatformAdmin } = useAuth();
+  const { isActive, loading: subLoading } = useSubscription();
+  const location = useLocation();
+
+  if (SUBSCRIPTION_EXEMPT.some((p) => location.pathname.startsWith(p))) return <>{children}</>;
+  if (loading || subLoading) return <FullPageSpinner />;
+  if (isPlatformAdmin || isActive) return <>{children}</>;
+  return <Navigate to="/app/billing" state={{ from: location, reason: "subscription" }} replace />;
+}
+
 export function RequireAgent({ children }: { children: ReactNode }) {
   const { isAgent, loading } = useAuth();
   if (loading) return <FullPageSpinner />;
