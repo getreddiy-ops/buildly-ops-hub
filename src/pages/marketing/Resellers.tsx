@@ -7,7 +7,7 @@ export default function Resellers() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract Reseller Program | Earn Recurring Revenue — GetReddiy"
+        title="FastTract Reseller Program | Earn Recurring Revenue"
         description="Resell FastTract to contractors and earn recurring revenue. White-glove onboarding, agent portal, and payout tracking included."
         path="/resellers"
       />
