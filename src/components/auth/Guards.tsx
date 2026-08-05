@@ -78,6 +78,8 @@ export function RequireSubscription({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   if (SUBSCRIPTION_EXEMPT.some((p) => location.pathname.startsWith(p))) return <>{children}</>;
+  // Admin support sessions keep full access even if the client's plan lapsed.
+  if (getImpersonation()) return <>{children}</>;
   if (loading || subLoading) return <FullPageSpinner />;
   if (isPlatformAdmin || isActive) return <>{children}</>;
   return <Navigate to="/app/billing" state={{ from: location, reason: "subscription" }} replace />;
