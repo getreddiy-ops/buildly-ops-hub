@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Settings, User, Building2, CreditCard, Palette, Code2, Smartphone,
   Users as UsersIcon, LogOut, Save, Bot, FileText, ArrowRight, CheckCircle2, Circle,
+  Globe,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
