@@ -85,6 +85,8 @@ import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
+import AdminWorkspace from "./pages/admin/AdminWorkspace";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +98,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GoogleAdsTracker />
+          <ImpersonationBanner />
           <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
@@ -190,6 +193,7 @@ const App = () => (
               <Route path="organizations" element={<AdminOrgs />} />
               <Route path="organizations/:id" element={<AdminOrgDetail />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="workspace" element={<AdminWorkspace />} />
               <Route path="audit" element={<AdminAudit />} />
               <Route path="ai-usage" element={<AdminAiUsage />} />
             </Route>

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { getImpersonation } from "@/lib/impersonation";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -78,6 +79,8 @@ export function RequireSubscription({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   if (SUBSCRIPTION_EXEMPT.some((p) => location.pathname.startsWith(p))) return <>{children}</>;
+  // Admin support sessions keep full access even if the client's plan lapsed.
+  if (getImpersonation()) return <>{children}</>;
   if (loading || subLoading) return <FullPageSpinner />;
   if (isPlatformAdmin || isActive) return <>{children}</>;
   return <Navigate to="/app/billing" state={{ from: location, reason: "subscription" }} replace />;
