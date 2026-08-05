@@ -206,11 +206,10 @@ export default function DnsSetup() {
                 delegated subdomain. Paste those values into the fields here, then copy them to Name.com.
               </p>
               <div className="mt-3">
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/" onClick={(e) => { e.preventDefault(); window.openEmailSetup?.(); }}>
-                    Open email setup <ExternalLink className="ml-1 h-3 w-3" />
-                  </a>
-                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Ask in this chat to "open the email setup dialog" and the exact values will appear in
+                  Cloud → Emails.
+                </p>
               </div>
             </div>
 
