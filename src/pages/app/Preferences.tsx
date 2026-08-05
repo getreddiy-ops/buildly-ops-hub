@@ -213,6 +213,26 @@ export default function Preferences() {
         </div>
       </Card>
 
+      {/* Domain & email */}
+      <Card className="p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-lg font-semibold">Domain & email</h3>
+              <p className="text-sm text-muted-foreground">
+                Set up branded sending email and a support mailbox on fasttract.org.
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/app/settings/dns-setup">
+              Configure DNS <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </Card>
+
       {/* Invoice & document appearance — prominent */}
       <Card className="border-primary/40 p-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
