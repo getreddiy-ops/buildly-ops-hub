@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, CheckCircle2, Circle, Copy, Globe, Mail, Server,
-  AlertCircle, ExternalLink, RefreshCw,
+  AlertCircle, RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
