@@ -96,6 +96,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GoogleAdsTracker />
+          <ImpersonationBanner />
           <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
