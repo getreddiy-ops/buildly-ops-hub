@@ -83,6 +83,7 @@ import SuperData from "./pages/super/SuperData";
 import SuperLive from "./pages/super/SuperLive";
 import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
+import DnsSetup from "./pages/app/DnsSetup";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import AdminWorkspace from "./pages/admin/AdminWorkspace";
@@ -165,6 +166,7 @@ const App = () => (
               />
 
               <Route path="settings" element={<Preferences />} />
+              <Route path="settings/dns-setup" element={<DnsSetup />} />
 
             </Route>
 

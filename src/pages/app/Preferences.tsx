@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Settings, User, Building2, CreditCard, Palette, Code2, Smartphone,
   Users as UsersIcon, LogOut, Save, Bot, FileText, ArrowRight, CheckCircle2, Circle,
+  Globe,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -208,6 +209,26 @@ export default function Preferences() {
           <Button onClick={saveProfile} disabled={saving || loading}>
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Domain & email */}
+      <Card className="p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-lg font-semibold">Domain & email</h3>
+              <p className="text-sm text-muted-foreground">
+                Set up branded sending email and a support mailbox on fasttract.org.
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/app/settings/dns-setup">
+              Configure DNS <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </Card>
