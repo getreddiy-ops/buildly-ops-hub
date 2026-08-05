@@ -85,6 +85,8 @@ import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
+import AdminWorkspace from "./pages/admin/AdminWorkspace";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 
 const queryClient = new QueryClient();
 
