@@ -193,6 +193,7 @@ const App = () => (
               <Route path="organizations" element={<AdminOrgs />} />
               <Route path="organizations/:id" element={<AdminOrgDetail />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="workspace" element={<AdminWorkspace />} />
               <Route path="audit" element={<AdminAudit />} />
               <Route path="ai-usage" element={<AdminAiUsage />} />
             </Route>
