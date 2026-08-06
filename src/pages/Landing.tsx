@@ -131,8 +131,8 @@ export default function Landing() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract | Contractor Estimating, CRM, Invoices & AI Phone Answering"
-        description="Run your contracting business from first call to final invoice. FastTract uses AI to answer calls, capture leads, build estimates, create contracts, generate material lists, track jobs, and send invoices — all from one contractor dashboard."
+        title={"The new way to run your business, you do the work, while you're assistant handles the rest."}
+        description={"The easiest way to own a business not a job.  Fasttract answers your phone, learns your business, pull up to a job, take a couple pictures and measurements in the app, and click send.  Fasttract produces your customer facing estimates, invoices, material list , the list goes on...  Stop taking the old road, take Fasttract."}
         path="/"
         jsonLd={softwareSchema}
       />
