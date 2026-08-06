@@ -38,8 +38,8 @@ export default function DnsSetup() {
   const [step, setStep] = useState(0);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [nsValues, setNsValues] = useState<DnsRecord[]>([
-    { type: "NS", name: "notify", value: "ns1.lovable.cloud", ttl: "3600" },
-    { type: "NS", name: "notify", value: "ns2.lovable.cloud", ttl: "3600" },
+    { type: "NS", name: "notify", value: "ns3.lovable.cloud", ttl: "3600" },
+    { type: "NS", name: "notify", value: "ns4.lovable.cloud", ttl: "3600" },
   ]);
   const [mxProvider, setMxProvider] = useState<"google" | "zoho" | "microsoft" | "other">("zoho");
 
