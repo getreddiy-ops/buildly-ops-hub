@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
       if (!body.organization_id) throw new Error("organization_id required");
       const env = body.environment ?? "live";
       const compId = `comp_${body.organization_id}_${env}`;
-      const { error } = await admin.from("subscriptions").delete().eq("paddle_subscription_id", compId);
+      const { error } = await admin.from("subscriptions").delete().eq("stripe_subscription_id", compId);
       if (error) throw error;
       return ok({ removed: true });
     }
