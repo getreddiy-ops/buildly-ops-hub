@@ -142,7 +142,7 @@ export default function Crew() {
           recipientEmail: parsed.data.email,
           idempotencyKey: `crew-invite-${inserted.id}`,
           templateData: {
-            companyName: activeOrg.organization_name ?? "your team",
+            companyName: activeOrg.organization?.name ?? "your team",
             role: parsed.data.role,
             inviteUrl: url,
           },
