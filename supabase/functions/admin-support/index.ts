@@ -218,19 +218,22 @@ Deno.serve(async (req) => {
         : new Date(now.getTime() + Number(body.days) * 86400_000).toISOString();
 
       const { error } = await admin.from("subscriptions").upsert({
-        paddle_subscription_id: compId,
-        paddle_customer_id: `comp_customer_${body.organization_id}`,
+        stripe_subscription_id: compId,
+        stripe_customer_id: `comp_customer_${body.organization_id}`,
         provider: "manual",
         user_id: owner.user_id,
         organization_id: body.organization_id,
         product_id: t.product_id,
         price_id: t.price_id,
+        stripe_price_id: t.price_id,
         status: "active",
+        comped: true,
+        comp_note: `Comped by platform admin (${body.tier})`,
         current_period_start: now.toISOString(),
         current_period_end: endIso,
         cancel_at_period_end: false,
         environment: env,
-      }, { onConflict: "paddle_subscription_id" });
+      }, { onConflict: "stripe_subscription_id" });
       if (error) throw error;
 
       await admin.from("organizations").update({ plan: body.tier }).eq("id", body.organization_id);
@@ -241,7 +244,7 @@ Deno.serve(async (req) => {
       if (!body.organization_id) throw new Error("organization_id required");
       const env = body.environment ?? "live";
       const compId = `comp_${body.organization_id}_${env}`;
-      const { error } = await admin.from("subscriptions").delete().eq("paddle_subscription_id", compId);
+      const { error } = await admin.from("subscriptions").delete().eq("stripe_subscription_id", compId);
       if (error) throw error;
       return ok({ removed: true });
     }
