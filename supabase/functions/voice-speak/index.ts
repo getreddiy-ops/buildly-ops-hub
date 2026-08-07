@@ -2,6 +2,7 @@
 // Accepts JSON { text, voice? }; returns { audio: base64 mp3 }.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { requireAuthedUser } from "../_shared/require-user.ts";
+import { requirePlanTier } from "../_shared/entitlement.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -13,6 +14,9 @@ Deno.serve(async (req) => {
 
   const auth = requireAuthedUser(req);
   if (!auth.ok) return auth.response;
+
+  const entitled = await requirePlanTier(req, "plus");
+  if (!entitled.ok) return entitled.response;
 
   try {
     const { text, voice } = await req.json() as { text?: string; voice?: string };
