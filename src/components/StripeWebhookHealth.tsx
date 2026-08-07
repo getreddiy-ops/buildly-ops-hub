@@ -35,7 +35,7 @@ const STATUS_META: Record<Status, { label: string; className: string; hint: stri
   never: {
     label: "Never received",
     className: "border-rose-500/40 bg-rose-500/15 text-rose-500",
-    hint: "No webhook event has ever been processed. The Stripe endpoint is likely missing or misconfigured.",
+    hint: "No webhook event has ever been processed. In Stripe → Developers → Webhooks, confirm an enabled endpoint pointing at this project's stripe-webhook function, subscribed to checkout.session.completed, customer.subscription.*, and invoice.* events, and that its signing secret matches STRIPE_WEBHOOK_SECRET.",
   },
   unknown: {
     label: "Unavailable",

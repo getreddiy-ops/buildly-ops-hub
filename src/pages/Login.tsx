@@ -161,7 +161,11 @@ export default function Login() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div><Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div><Label htmlFor="password">Password</Label>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
+                  </div>
                   <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 <Button type="submit" variant="outline" className="w-full" disabled={loading}>
                   {loading ? "Signing in…" : "Sign in with email"}

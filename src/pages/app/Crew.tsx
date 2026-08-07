@@ -136,7 +136,23 @@ export default function Crew() {
       setInviteTokens((m) => ({ ...m, [inserted.id]: token }));
       const url = `${window.location.origin}/signup?invite=${token}`;
       try { await navigator.clipboard.writeText(url); } catch {}
-      toast.success("Invite link copied — it will not be shown again");
+      const { error: mailError } = await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "crew-invite",
+          recipientEmail: parsed.data.email,
+          idempotencyKey: `crew-invite-${inserted.id}`,
+          templateData: {
+            companyName: activeOrg.organization?.name ?? "your team",
+            role: parsed.data.role,
+            inviteUrl: url,
+          },
+        },
+      });
+      if (mailError) {
+        toast.warning("Invite created and link copied, but the email could not be sent.");
+      } else {
+        toast.success(`Invitation emailed to ${parsed.data.email} — link also copied`);
+      }
     }
     setInvEmail(""); setInvRole("worker"); setOpen(false);
     load();
