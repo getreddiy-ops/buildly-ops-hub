@@ -19,6 +19,8 @@ export type SubscriptionRow = {
   provider: string | null;
   trial_end: string | null;
   payment_status: string | null;
+  comped: boolean | null;
+  comp_note: string | null;
   created_at: string;
 };
 
@@ -45,7 +47,7 @@ export function useSubscription() {
     const { data } = await supabase
       .from("subscriptions")
       .select(
-        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,scheduled_price_id,scheduled_change_at,environment,provider,trial_end,payment_status,created_at",
+        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,scheduled_price_id,scheduled_change_at,environment,provider,trial_end,payment_status,comped,comp_note,created_at",
       )
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
@@ -79,11 +81,13 @@ export function useSubscription() {
   const periodEnd = subscription?.current_period_end
     ? new Date(subscription.current_period_end).getTime()
     : null;
+  const isComped = !!subscription?.comped;
   const isActive =
-    !!subscription &&
+    isComped ||
+    (!!subscription &&
     ((["active", "trialing", "past_due"].includes(subscription.status) &&
       (!periodEnd || periodEnd > now)) ||
-      (subscription.status === "canceled" && !!periodEnd && periodEnd > now));
+      (subscription.status === "canceled" && !!periodEnd && periodEnd > now)));
   const isPastDue = subscription?.status === "past_due";
   const isTrialing = subscription?.status === "trialing";
   const isOwner = activeOrg?.role === "owner";
@@ -95,6 +99,7 @@ export function useSubscription() {
   return {
     subscription,
     isActive,
+    isComped,
     isPastDue,
     isTrialing,
     isOwner,
