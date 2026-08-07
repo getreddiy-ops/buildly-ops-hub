@@ -50,7 +50,7 @@ export default function ResetPassword() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <SEO title="Set a new password | FastTract" description="Choose a new password for your FastTract account." />
+      <SEO title="Set a new password | FastTract" description="Choose a new password for your FastTract account." path="/reset-password" />
       <h1 className="text-2xl font-semibold">Set a new password</h1>
       {!ready && invalid ? (
         <div className="mt-4 space-y-4">

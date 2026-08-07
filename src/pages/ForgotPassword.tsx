@@ -29,7 +29,7 @@ export default function ForgotPassword() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <SEO title="Reset your password | FastTract" description="Request a password reset link for your FastTract account." />
+      <SEO title="Reset your password | FastTract" description="Request a password reset link for your FastTract account." path="/forgot-password" />
       <h1 className="text-2xl font-semibold">Reset your password</h1>
       {sent ? (
         <div className="mt-4 space-y-4">
