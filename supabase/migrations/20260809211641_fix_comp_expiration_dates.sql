@@ -5,7 +5,6 @@ UPDATE public.subscriptions
 SET current_period_end = NULL,
     updated_at = now()
 WHERE comped = true
-  AND provider = 'manual'
   AND current_period_end > now() + interval '90 years';
 
 CREATE OR REPLACE FUNCTION public.has_active_org_subscription(org_id uuid, check_env text DEFAULT 'live'::text)
