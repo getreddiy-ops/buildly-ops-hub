@@ -20,8 +20,9 @@ type Org = {
 };
 type Member = { user_id: string; role: string; profile: { full_name: string | null; email: string | null } | null };
 type Subscription = {
-  id: string; status: string; price_id: string | null; current_period_end: string | null;
-  cancel_at_period_end: boolean; environment: string; user_id: string;
+  id: string; status: string; price_id: string | null;
+  current_period_start: string | null; current_period_end: string | null;
+  cancel_at_period_end: boolean; environment: string; user_id: string; comped: boolean;
 };
 type Note = { id: string; body: string; pinned: boolean; created_at: string; author_id: string };
 type Invoice = { id: string; invoice_number: string | null; total: number; status: string; paid_at: string | null; created_at: string };
@@ -33,6 +34,9 @@ type Snapshot = {
 type Transaction = { id: string; status: string; created_at: string; details?: { totals?: { grand_total?: string; currency_code?: string } } };
 
 const ROLES = ["owner", "admin", "manager", "worker", "agent"] as const;
+const formatDate = (value: string) => new Intl.DateTimeFormat(undefined, {
+  year: "numeric", month: "short", day: "numeric",
+}).format(new Date(value));
 
 export default function AdminOrgDetail() {
   const { id } = useParams<{ id: string }>();
@@ -94,7 +98,7 @@ export default function AdminOrgDetail() {
 
     try {
       const { data: s } = await supabase.from("subscriptions")
-        .select("id, status, price_id, current_period_end, cancel_at_period_end, environment, user_id")
+        .select("id, status, price_id, current_period_start, current_period_end, cancel_at_period_end, environment, user_id, comped")
         .eq("organization_id", id).order("created_at", { ascending: false });
       setSubs((s ?? []) as Subscription[]);
     } catch (e) { console.error(e); }
@@ -154,7 +158,7 @@ export default function AdminOrgDetail() {
 
   const compTrial = async (sid: string) => {
     try { const r = await callAdmin({ type: "comp_trial", subscription_id: sid, days: trialDays });
-      toast.success(`Extended to ${new Date(r.current_period_end).toLocaleDateString()}`); load();
+      toast.success(`Extended to ${formatDate(r.current_period_end)}`); load();
     } catch (e) { toast.error((e as Error).message); }
   };
 
@@ -221,7 +225,7 @@ export default function AdminOrgDetail() {
       </Link>
       <PageHeader
         title={org.name}
-        description={`Joined ${new Date(org.created_at).toLocaleDateString()} · plan: ${org.plan}`}
+        description={`Joined ${formatDate(org.created_at)} · plan: ${org.plan}`}
       />
 
       {/* Business snapshot */}
@@ -287,8 +291,12 @@ export default function AdminOrgDetail() {
             <Button className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
               try {
                 const days = compDays.trim() === "" ? null : Number(compDays);
-                await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
-                toast.success(`Set to ${compTier} in ${compEnv}`); load();
+                if (days !== null && (!Number.isInteger(days) || days < 1 || days > 3650)) {
+                  throw new Error("Days must be a whole number between 1 and 3650");
+                }
+                const result = await callAdmin({ type: "set_plan", organization_id: id, tier: compTier, days, environment: compEnv });
+                const expiration = result.current_period_end ? formatDate(result.current_period_end) : "no expiration";
+                toast.success(`Set to ${compTier} in ${compEnv} · ${expiration}`); load();
               } catch (e) { toast.error((e as Error).message); }
             }}>Assign plan</Button>
             <Button variant="outline" className="flex-1 lg:flex-initial h-10" disabled={busy} onClick={async () => {
@@ -351,7 +359,9 @@ export default function AdminOrgDetail() {
                     <div className="min-w-0 flex-1">
                       <div className="font-medium break-all">{s.price_id ?? "—"}</div>
                       <div className="text-xs text-muted-foreground">
-                        {s.environment} · {s.current_period_end ? `ends ${new Date(s.current_period_end).toLocaleDateString()}` : "no end"}
+                        {s.comped ? `complimentary · ${s.environment}` : s.environment}
+                        {s.current_period_start && ` · started ${formatDate(s.current_period_start)}`}
+                        {s.current_period_end ? ` · expires ${formatDate(s.current_period_end)}` : " · no expiration"}
                         {s.cancel_at_period_end && " · cancels at period end"}
                       </div>
                     </div>

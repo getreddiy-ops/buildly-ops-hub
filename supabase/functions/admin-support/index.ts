@@ -4,6 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { getStripe } from "../_shared/stripe.ts";
+import { expirationFromDays, extendedExpiration } from "../_shared/comp-dates.ts";
 
 type Tier = "base" | "plus" | "premium";
 
@@ -95,19 +96,20 @@ Deno.serve(async (req) => {
     }
 
     if (body.type === "comp_trial") {
-      if (!body.subscription_id || !body.days) throw new Error("subscription_id + days required");
-      const { data: sub } = await admin
+      if (!body.subscription_id) throw new Error("subscription_id required");
+      const { data: sub, error: subError } = await admin
         .from("subscriptions").select("current_period_end")
         .eq("id", body.subscription_id).maybeSingle();
-      const base = sub?.current_period_end ? new Date(sub.current_period_end) : new Date();
-      const newEnd = new Date(base.getTime() + body.days * 86400_000);
+      if (subError) throw subError;
+      if (!sub) throw new Error("subscription not found");
+      const newEnd = extendedExpiration(new Date(), sub.current_period_end, body.days, 365);
       const { error } = await admin.from("subscriptions").update({
         status: "trialing",
-        current_period_end: newEnd.toISOString(),
+        current_period_end: newEnd,
         cancel_at_period_end: false,
       }).eq("id", body.subscription_id);
       if (error) throw error;
-      return ok({ current_period_end: newEnd.toISOString() });
+      return ok({ current_period_end: newEnd });
     }
 
     if (body.type === "cancel_subscription") {
@@ -214,8 +216,8 @@ Deno.serve(async (req) => {
       const compId = `comp_${body.organization_id}_${env}`;
       const now = new Date();
       const endIso = body.days == null
-        ? new Date(now.getTime() + 100 * 365 * 86400_000).toISOString()
-        : new Date(now.getTime() + Number(body.days) * 86400_000).toISOString();
+        ? null
+        : expirationFromDays(now, body.days, 3650);
 
       const { error } = await admin.from("subscriptions").upsert({
         stripe_subscription_id: compId,
