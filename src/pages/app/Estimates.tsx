@@ -28,6 +28,7 @@ import { AiFormHelper } from "@/components/AiFormHelper";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import type { Database } from "@/integrations/supabase/types";
+import { estimateKnowledgeRules, estimateKnowledgeTemplates } from "@/lib/estimateKnowledge";
 
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
 type EstStatus = Database["public"]["Enums"]["estimate_status"];
@@ -97,6 +98,14 @@ export default function Estimates() {
     setItems([{ description: "", quantity: 1, unit_price: 0 }]);
   };
   const openNew = () => { setEditing(null); resetForm(); setOpen(true); };
+  const applyTemplate = (templateId: string) => {
+    const template = estimateKnowledgeTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    setTitle(template.name);
+    setNotes(template.notes);
+    setItems(template.items.map((item) => ({ ...item })));
+    toast.success(`${template.name} starting point loaded`);
+  };
 
   const openEdit = async (e: Estimate) => {
     setEditing(e);
@@ -237,6 +246,18 @@ export default function Estimates() {
                 </div>
               </DialogHeader>
               <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-1">
+                {!editing && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <Label className="text-xs text-muted-foreground">1. Start with the closest job type</Label>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {estimateKnowledgeTemplates.map((template) => (
+                        <Button key={template.id} type="button" variant="outline" className="h-auto justify-start py-2 text-left" onClick={() => applyTemplate(template.id)}>
+                          <span><span className="block text-xs font-semibold">{template.name}</span><span className="block text-[11px] font-normal text-muted-foreground">{template.trade}</span></span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
                   <Field label="Customer">
@@ -271,7 +292,7 @@ export default function Estimates() {
 
                 <div>
                   <div className="mb-2 flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground">Line items</Label>
+                    <Label className="text-xs text-muted-foreground">2. Price the work phases</Label>
                     <Button size="sm" variant="outline"
                       onClick={() => setItems((s) => [...s, { description: "", quantity: 1, unit_price: 0 }])}>
                       <Plus className="h-3.5 w-3.5" /> Add row
@@ -301,7 +322,20 @@ export default function Estimates() {
                   <div className="border-t border-border pt-1"><Row label="Total" value={fmt(total)} bold /></div>
                 </div>
 
-                <Field label="Notes"><Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+                <Field label="3. Scope, timeline, terms, exclusions, and changes"><Textarea rows={9} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+                <div className="rounded-lg border border-border p-3">
+                  <Label className="text-xs text-muted-foreground">Ready-to-send check</Label>
+                  <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                    <span className={customerId ? "text-emerald-600" : ""}>{customerId ? "✓" : "○"} Customer selected</span>
+                    <span className={title.trim() ? "text-emerald-600" : ""}>{title.trim() ? "✓" : "○"} Job-specific title</span>
+                    <span className={items.some((item) => item.description.trim() && item.unit_price > 0) ? "text-emerald-600" : ""}>{items.some((item) => item.description.trim() && item.unit_price > 0) ? "✓" : "○"} Work is priced</span>
+                    <span className={notes.includes("SCOPE OF WORK") && notes.includes("EXCLUSIONS") ? "text-emerald-600" : ""}>{notes.includes("SCOPE OF WORK") && notes.includes("EXCLUSIONS") ? "✓" : "○"} Scope and exclusions included</span>
+                  </div>
+                </div>
+                <details className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer font-medium text-foreground">Your estimating knowledge</summary>
+                  <ul className="mt-2 space-y-1">{estimateKnowledgeRules.map((rule) => <li key={rule}>✓ {rule}</li>)}</ul>
+                </details>
               </div>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
