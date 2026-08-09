@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,18 +86,6 @@ export default function Signup() {
     toast({ title: "Confirmation email sent", description: `Check ${pendingEmail} again.` });
   };
 
-  const handleGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/login",
-    });
-    if (result.error) {
-      toast({ title: "Google sign-in failed", description: result.error.message, variant: "destructive" });
-      return;
-    }
-    if (result.redirected) return;
-    navigate("/onboarding");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-dark">
       <SEO title="Create an account — FastTract" description="Meet your personal FastTract AI assistant and set up your business with five quick answers." path="/signup" noindex />
@@ -149,13 +136,7 @@ export default function Signup() {
             <>
               <h1 className="text-2xl font-semibold">Join FastTract</h1>
               <p className="mt-1 text-sm text-muted-foreground">Create your account, set up your company, then choose a 7-day trial plan.</p>
-              <Button variant="outline" className="mt-6 w-full" onClick={handleGoogle}>
-                Continue with Google
-              </Button>
-              <div className="my-6 flex items-center gap-3 text-xs uppercase text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
-              </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div><Label htmlFor="name">Full name</Label>
                   <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
                 <div><Label htmlFor="email">Work email</Label>

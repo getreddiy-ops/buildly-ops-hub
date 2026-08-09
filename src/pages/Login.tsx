@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +18,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
-  const [googleHint, setGoogleHint] = useState(false);
+  const [showEmail, setShowEmail] = useState(true);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -70,7 +68,6 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setGoogleHint(false);
     setUnconfirmed(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
@@ -84,13 +81,10 @@ export default function Login() {
           variant: "destructive",
         });
       }
-      // Detect Google-only accounts: Supabase returns "Invalid login credentials" for
-      // users who signed up via OAuth and have no password set.
       if (msg.includes("invalid login") || msg.includes("invalid_credentials")) {
-        setGoogleHint(true);
         return toast({
           title: "Check your credentials",
-          description: "If you signed up with Google, use Continue with Google. If you signed up with email, make sure you've confirmed it.",
+          description: "Check your email and password. If you need a new password, contact FastTract support.",
         });
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
@@ -101,22 +95,6 @@ export default function Login() {
     if (nextPath) { window.location.href = nextPath; return; }
   };
 
-  const handleGoogle = async () => {
-    const redirectTarget = nextPath
-      ? window.location.origin + "/login?next=" + encodeURIComponent(nextPath)
-      : window.location.origin + "/login";
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: redirectTarget,
-    });
-    if (result.error) {
-      toast({ title: "Google sign-in failed", description: result.error.message, variant: "destructive" });
-      return;
-    }
-    if (result.redirected) return;
-    // Popup path: useEffect routes by role once memberships load.
-    if (nextPath) window.location.href = nextPath;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-dark">
       <SEO title="Sign in — FastTract" description="Sign in to your FastTract account to manage leads, jobs, crew, and time tracking." path="/login" noindex />
@@ -124,7 +102,7 @@ export default function Login() {
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-semibold">Sign in to FastTract</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Most crews sign in with Google — one tap, no password to forget.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Use your FastTract email and password.</p>
 
           {user && authedDest && (
             <div className="mt-4 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
@@ -135,23 +113,13 @@ export default function Login() {
             </div>
           )}
 
-          <Button className="mt-6 w-full" onClick={handleGoogle}>
-            Continue with Google
-          </Button>
-
-          {googleHint && (
-            <div className="mt-4 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
-              That email looks like a Google account. Use <strong>Continue with Google</strong> above.
-            </div>
-          )}
-
           {!showEmail ? (
             <button
               type="button"
               onClick={() => setShowEmail(true)}
-              className="mt-6 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              className="mt-6 w-full text-center text-sm font-medium text-primary hover:underline"
             >
-              Sign in with email instead
+              Enter your FastTract login
             </button>
           ) : (
             <>

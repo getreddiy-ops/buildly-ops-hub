@@ -14,9 +14,6 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
   },
 }));
-vi.mock("@/integrations/lovable/index", () => ({
-  lovable: { auth: { signInWithOAuth: vi.fn() } },
-}));
 vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
 vi.mock("@/lib/gtag", () => ({ trackSignup: vi.fn() }));
 vi.mock("@/components/SEO", () => ({ SEO: () => null }));
