@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceRecorder, useVoiceSpeaker } from "@/hooks/useVoice";
 import { toast } from "sonner";
-import { collectFastTractScreenContext, resolveTakeoverRoute } from "@/lib/assistantTakeover";
+import { collectFastTractScreenContext, resolveTakeoverIntent, resolveTakeoverRoute } from "@/lib/assistantTakeover";
 
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
@@ -105,6 +105,17 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
     if ((!content && images.length === 0) || loading) return;
     setInput("");
     setPendingImages([]);
+    const directDestination = takeoverEnabled && images.length === 0 ? resolveTakeoverIntent(content) : null;
+    if (directDestination) {
+      setMessages((current) => [
+        ...current,
+        { role: "user", content },
+        { role: "assistant", content: `Opening ${directDestination.label}.` },
+      ]);
+      navigate(directDestination.path);
+      toast.success(`Ava opened ${directDestination.label}`);
+      return;
+    }
     const next: Msg[] = [
       ...messages,
       { role: "user", content: content || "(image attached)", images: images.length ? images : undefined },

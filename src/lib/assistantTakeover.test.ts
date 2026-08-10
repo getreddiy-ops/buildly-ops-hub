@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectFastTractScreenContext,
+  resolveTakeoverIntent,
   resolveTakeoverRoute,
   TAKEOVER_ROUTES,
 } from "./assistantTakeover";
@@ -11,6 +12,13 @@ describe("FastTract Screen Takeover", () => {
     expect(resolveTakeoverRoute("https://example.com")).toBeNull();
     expect(resolveTakeoverRoute("/admin")).toBeNull();
     expect(new Set(TAKEOVER_ROUTES.map((route) => route.path)).size).toBe(TAKEOVER_ROUTES.length);
+  });
+
+  it("resolves direct navigation commands without treating ordinary questions as takeover actions", () => {
+    expect(resolveTakeoverIntent("Take me to the phone assistant")).toMatchObject({ path: "/app/phone-assistant" });
+    expect(resolveTakeoverIntent("Open estimates")).toMatchObject({ path: "/app/estimates" });
+    expect(resolveTakeoverIntent("How many open estimates do I have?")).toBeNull();
+    expect(resolveTakeoverIntent("Open https://example.com")).toBeNull();
   });
 
   it("collects visible page labels without input values, secrets, or assistant content", () => {

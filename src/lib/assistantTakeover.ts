@@ -33,6 +33,39 @@ export function resolveTakeoverRoute(path: string) {
   return TAKEOVER_ROUTES.find((route) => route.path === path) ?? null;
 }
 
+const TAKEOVER_ROUTE_TERMS: ReadonlyArray<{ path: TakeoverRoute; terms: readonly string[] }> = [
+  { path: "/app/phone-assistant", terms: ["phone assistant", "ai phone", "phone agent"] },
+  { path: "/app/business-profile", terms: ["business profile", "company profile"] },
+  { path: "/app/assistant", terms: ["ai assistant", "ava", "assistant"] },
+  { path: "/app/costing", terms: ["job costing", "costing"] },
+  { path: "/app/time", terms: ["time tracking", "timesheets", "time"] },
+  { path: "/app/approvals", terms: ["approvals", "approval"] },
+  { path: "/app/customers", terms: ["customers", "customer"] },
+  { path: "/app/estimates", terms: ["estimates", "estimate", "quotes", "quote"] },
+  { path: "/app/invoices", terms: ["invoices", "invoice"] },
+  { path: "/app/contracts", terms: ["contracts", "contract"] },
+  { path: "/app/materials", terms: ["materials", "material list"] },
+  { path: "/app/calendar", terms: ["calendar", "schedule"] },
+  { path: "/app/settings", terms: ["settings", "preferences"] },
+  { path: "/app/branding", terms: ["branding", "brand"] },
+  { path: "/app/billing", terms: ["billing", "subscription"] },
+  { path: "/app/vendors", terms: ["vendors", "vendor"] },
+  { path: "/app/leads", terms: ["leads", "lead"] },
+  { path: "/app/jobs", terms: ["jobs", "job"] },
+  { path: "/app/crew", terms: ["crew", "team"] },
+  { path: "/app", terms: ["dashboard", "home"] },
+];
+
+export function resolveTakeoverIntent(command: string) {
+  const normalized = command.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!/^(please )?((can|could|would) you )?(open|go to|show|take me to|navigate to|switch to|bring up|view)\b/.test(normalized)) return null;
+
+  const match = TAKEOVER_ROUTE_TERMS.find(({ terms }) =>
+    terms.some((term) => new RegExp(`\\b${term.replace(/ /g, "\\s+")}\\b`).test(normalized)),
+  );
+  return match ? resolveTakeoverRoute(match.path) : null;
+}
+
 function cleanText(value: string | null | undefined) {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
 }
