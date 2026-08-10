@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PhoneAssistantStatusCard } from "@/components/PhoneAssistantStatusCard";
+import { getBusinessOnboardingProgress } from "@/lib/business-onboarding";
 
 type StatKey = "won_leads" | "active_jobs" | "pending_estimates" | "unpaid_invoices" | "revenue_paid";
 type Stats = Record<StatKey, number>;
@@ -76,14 +77,19 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [pipeline, setPipeline] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activation, setActivation] = useState({ profile: false, customer: false, estimate: false, sent: false });
+  const [activation, setActivation] = useState({
+    onboarding: getBusinessOnboardingProgress({}),
+    customer: false,
+    estimate: false,
+    sent: false,
+  });
 
   useEffect(() => {
     if (!orgId) return;
     let alive = true;
     (async () => {
       setLoading(true);
-      const [leadsRes, jobsRes, estimatesRes, invoicesRes, activeJobsRes, pipelineRes, customersRes, profileRes] = await Promise.all([
+      const [leadsRes, jobsRes, estimatesRes, invoicesRes, activeJobsRes, pipelineRes, customersRes, profileRes, taxIdRes] = await Promise.all([
         supabase.from("leads").select("id,status", { count: "exact", head: false }).eq("organization_id", orgId).eq("status", "won"),
         supabase.from("jobs").select("id,status").eq("organization_id", orgId),
         supabase.from("estimates").select("id,status").eq("organization_id", orgId),
@@ -104,7 +110,12 @@ export default function Dashboard() {
           .order("created_at", { ascending: false })
           .limit(5),
         supabase.from("customers").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
-        supabase.from("organizations").select("business_profile").eq("id", orgId).maybeSingle(),
+        supabase
+          .from("organizations")
+          .select("name,legal_name,logo_url,brand_color,brand_color_secondary,address,phone,email,website,document_defaults,business_profile")
+          .eq("id", orgId)
+          .maybeSingle(),
+        supabase.rpc("get_org_tax_id", { _org_id: orgId }),
       ]);
       if (!alive) return;
 
@@ -123,9 +134,13 @@ export default function Dashboard() {
       setJobs((activeJobsRes.data ?? []) as JobRow[]);
       setPipeline((pipelineRes.data ?? []) as LeadRow[]);
       const estimates = estimatesRes.data ?? [];
-      const businessProfile = profileRes.data?.business_profile as Record<string, unknown> | null | undefined;
       setActivation({
-        profile: Boolean(businessProfile && Object.values(businessProfile).some((value) => value != null && value !== "" && (!(Array.isArray(value)) || value.length > 0))),
+        onboarding: getBusinessOnboardingProgress({
+          ...(profileRes.data ?? {}),
+          tax_id: (taxIdRes.data as string | null) ?? null,
+          business_profile: profileRes.data?.business_profile as Record<string, unknown> | null | undefined,
+          document_defaults: profileRes.data?.document_defaults ?? {},
+        }),
         customer: (customersRes.count ?? 0) > 0,
         estimate: estimates.length > 0,
         sent: estimates.some((estimate) => estimate.status === "sent" || estimate.status === "approved"),
@@ -137,7 +152,14 @@ export default function Dashboard() {
 
   const orderedStats: StatKey[] = ["won_leads", "active_jobs", "pending_estimates", "unpaid_invoices", "revenue_paid"];
   const activationSteps = [
-    { done: activation.profile, label: "Add your business profile", detail: "Teach FastTract your trade, service area, rates, and policies.", to: "/app/business-profile" },
+    {
+      done: activation.onboarding.complete,
+      label: "Onboard your business",
+      detail: activation.onboarding.complete
+        ? "Your company, brand, documents, and AI business details are ready."
+        : `Complete ${activation.onboarding.done} of ${activation.onboarding.total} business setup items in Settings.`,
+      to: "/app/settings",
+    },
     { done: activation.customer, label: "Add your first customer", detail: "Create the customer record used for estimates and invoices.", to: "/app/customers" },
     { done: activation.estimate, label: "Build your first estimate", detail: "Turn a real job opportunity into a professional draft.", to: "/app/estimates" },
     { done: activation.sent, label: "Send the estimate", detail: "Deliver the first customer-facing document and follow up.", to: "/app/estimates" },

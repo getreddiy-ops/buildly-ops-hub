@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
+import { getBusinessOnboardingProgress } from "@/lib/business-onboarding";
 
 type BusinessProfile = Record<string, unknown> | null;
 
@@ -80,24 +81,11 @@ export default function Preferences() {
   const contractDefaults = branding?.document_defaults?.contract ?? {};
 
   const checklist = useMemo(() => {
-    const hasLogo = !!branding?.logo_signed_url;
-    const hasBrandColor = !!branding?.brand_color;
-    const hasAddress = !!branding?.address;
-    const hasPhone = !!branding?.phone;
-    const hasInvoiceDefaults = !!(invoiceDefaults.header || invoiceDefaults.footer || invoiceDefaults.terms);
-    const hasBusinessProfile =
-      !!businessProfile && Object.keys(businessProfile).length > 0;
-    const items = [
-      { label: "Company logo uploaded", done: hasLogo, to: "/app/branding" },
-      { label: "Brand color chosen", done: hasBrandColor, to: "/app/branding" },
-      { label: "Business address on file", done: hasAddress, to: "/app/branding" },
-      { label: "Business phone on file", done: hasPhone, to: "/app/branding" },
-      { label: "Invoice defaults set", done: hasInvoiceDefaults, to: "/app/branding" },
-      { label: "Business profile filled in", done: hasBusinessProfile, to: "/app/business-profile" },
-    ];
-    const done = items.filter((i) => i.done).length;
-    return { items, done, total: items.length, pct: Math.round((done / items.length) * 100) };
-  }, [branding, invoiceDefaults, businessProfile]);
+    return getBusinessOnboardingProgress({
+      ...(branding ?? {}),
+      business_profile: businessProfile,
+    });
+  }, [branding, businessProfile]);
 
   const orgName = activeOrg?.organization?.name ?? branding?.name ?? "Your business";
 
@@ -125,6 +113,7 @@ export default function Preferences() {
             )}
             <div>
               <div className="text-lg font-semibold">{orgName}</div>
+              <div className="text-sm font-medium text-foreground">Business onboarding checklist</div>
               <div className="text-sm text-muted-foreground">
                 Signed in as {user?.email}
               </div>

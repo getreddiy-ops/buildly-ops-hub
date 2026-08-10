@@ -78,6 +78,9 @@ describe("Settings Home", () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(screen.getAllByText(/Acme Roofing/i).length).toBeGreaterThan(0));
+    expect(screen.getByText(/Business onboarding checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/Display and legal business names/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI business profile essentials/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Invoice & document appearance/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Team & crew/i })).toBeInTheDocument();
     expect(screen.getByText(/Billing & plan/i)).toBeInTheDocument();
