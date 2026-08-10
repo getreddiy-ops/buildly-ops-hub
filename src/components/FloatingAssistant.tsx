@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Bot, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -54,13 +54,7 @@ export function tryParseNavigation(input: string): { path: string; label: string
 
 export function FloatingAssistant() {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
-
-  // Close on route change so the drawer doesn't trap focus across navigations
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname]);
 
   // Listen for global "open assistant" events
   useEffect(() => {
@@ -88,7 +82,6 @@ export function FloatingAssistant() {
         (ta as HTMLTextAreaElement).value = "";
         ta.dispatchEvent(new Event("input", { bubbles: true }));
         navigate(nav.path);
-        setOpen(false);
       }
     };
     sheet.addEventListener("keydown", onKey, true);

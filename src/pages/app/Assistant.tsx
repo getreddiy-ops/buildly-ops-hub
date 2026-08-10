@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, Download, FileText, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Check, Download, Eye, EyeOff, FileText, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { generateDocumentPdf, type DocArgs } from "@/lib/generateDocumentPdf";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceRecorder, useVoiceSpeaker } from "@/hooks/useVoice";
 import { toast } from "sonner";
+import { collectFastTractScreenContext, resolveTakeoverRoute } from "@/lib/assistantTakeover";
 
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
@@ -44,10 +46,15 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
   const { activeOrg, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [takeoverEnabled, setTakeoverEnabled] = useState(
+    () => typeof window !== "undefined" && window.sessionStorage.getItem("fasttract-screen-takeover") === "on",
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +71,12 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  const setTakeover = (enabled: boolean) => {
+    setTakeoverEnabled(enabled);
+    window.sessionStorage.setItem("fasttract-screen-takeover", enabled ? "on" : "off");
+    toast.success(enabled ? "Screen Takeover is on for FastTract" : "Screen Takeover is off");
+  };
 
   const onPickImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -117,6 +130,10 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           orgName: activeOrg?.organization.name,
           organizationId: activeOrg?.organization_id,
           environment: (await import("@/lib/billing")).getBillingEnvironment(),
+          screenTakeover: takeoverEnabled,
+          screenContext: takeoverEnabled
+            ? collectFastTractScreenContext(document, location.pathname)
+            : undefined,
         },
       });
       if (error) {
@@ -138,6 +155,16 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       }
       if (data?.error) throw new Error(data.error);
       const allTools = (data.tool_calls ?? []) as ToolCall[];
+      const navigationTool = allTools.find((tool) => tool.name === "navigate_fasttract");
+      if (navigationTool) {
+        const destination = resolveTakeoverRoute(String(navigationTool.args?.path ?? ""));
+        if (takeoverEnabled && destination) {
+          navigate(destination.path);
+          toast.success(`Ava opened ${destination.label}`);
+        } else if (!takeoverEnabled) {
+          toast.error("Turn on Screen Takeover before Ava navigates.");
+        }
+      }
       const proposals: Proposal[] = allTools
         .filter((t) => t.needsApproval && t.name !== "generate_document")
         .map((t) => ({ ...t, status: "pending" as ProposalStatus }));
@@ -399,8 +426,32 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   return (
     <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100vh-8rem)]"}>
       {!compact && (
-        <PageHeader title="AI Assistant" description="Draft leads, estimates, jobs, and more. You approve every write." />
+        <PageHeader title="AI Assistant" description="Ava can navigate FastTract and draft work while you approve every write." />
       )}
+
+      <div className={`mb-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ${takeoverEnabled ? "border-primary/60 bg-primary/10" : "border-border bg-muted/40"}`}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            {takeoverEnabled ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+            Screen Takeover {takeoverEnabled ? "on" : "off"}
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {takeoverEnabled
+              ? "Ava can read visible labels and move between FastTract pages. Writes still require approval."
+              : "Off by default. This controls FastTract only—not other apps on your computer."}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant={takeoverEnabled ? "default" : "outline"}
+          aria-pressed={takeoverEnabled}
+          onClick={() => setTakeover(!takeoverEnabled)}
+          className="shrink-0"
+        >
+          {takeoverEnabled ? "Turn off" : "Turn on"}
+        </Button>
+      </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
         {messages.length === 0 && (

@@ -319,7 +319,7 @@ export default function AppShell() {
       <PaymentTestModeBanner />
       <PastDueBanner />
 
-      <main className="relative z-10 mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main data-fasttract-page className="relative z-10 mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />
       </main>
       <FloatingAssistant />
