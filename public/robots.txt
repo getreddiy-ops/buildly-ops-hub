@@ -9,5 +9,8 @@ Disallow: /agent/
 Disallow: /admin
 Disallow: /admin/
 Disallow: /onboarding
+Disallow: /super
+Disallow: /super/
+Disallow: /.lovable/
 
 Sitemap: https://fasttract.org/sitemap.xml

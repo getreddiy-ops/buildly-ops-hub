@@ -11,13 +11,13 @@ export const posts: BlogPost[] = [
     slug: "how-ai-estimating-helps-contractors-save-time",
     title: "How AI Estimating Helps Contractors Save Time",
     description:
-      "AI estimating gives contractors a draft estimate in minutes instead of hours. Here’s how it works and where it actually saves time.",
+      "AI estimating helps contractors prepare a structured draft from job details, photos, and saved pricing. Here’s how it works and where it saves time.",
     date: "2025-01-15",
     body: [
-      "Most contractors lose 5–10 hours a week to estimating. Driving to the site, measuring, typing it up, sending the proposal, chasing the customer.",
+      "Estimate preparation can consume hours: visiting the site, measuring, writing the scope, applying pricing, sending the proposal, and following up.",
       "AI estimating compresses that work. The customer uploads photos. AI drafts rough dimensions and applies your saved unit pricing. You review, adjust, and send.",
-      "It’s not magic — it’s a head start. You still own the final quote. But starting from a 90%-done draft beats starting from a blank page every time.",
-      "Contractors using FastTract typically cut estimating time by half on small-to-medium jobs and close more deals because they quote same-day.",
+      "It’s not magic — it’s a head start. You still own the final scope and price, but reviewing a structured draft is more efficient than starting from a blank page.",
+      "FastTract is designed to reduce repetitive estimate preparation so you can respond sooner while keeping control of every quote.",
     ],
   },
   {
@@ -68,7 +68,7 @@ export const posts: BlogPost[] = [
       "A few good photos cover scope: dimensions, condition, access, and obstructions.",
       "Ask the customer for: a wide shot, a measured shot (a tape or a ruler in the frame), and any close-ups of damage or specifics.",
       "Feed those into FastTract. The AI estimator drafts rough measurements, applies your unit pricing, and gives you a starting estimate.",
-      "Then you verify on site if needed. The estimate is already 90% done before you arrive.",
+      "Then you verify the conditions, measurements, scope, and final price on site when needed before sending the estimate.",
     ],
   },
   {
@@ -84,9 +84,10 @@ export const posts: BlogPost[] = [
       "Contractor Foreman — strong on traditional construction management features (job costing, daily logs, RFIs, submittals). Solid value for small-to-mid GCs that need document-heavy project management. Limited AI: no AI phone answering, no photo-to-estimate. Better fit if your bottleneck is project documentation, not lead response or quoting speed.",
       "ADP — primarily a payroll and HR platform. Contractors use it for payroll and compliance, not for CRM, estimating, or scheduling. Pair it with something else for the front of the business. ADP and FastTract aren’t direct competitors — most contractors run both.",
       "Buildertrend / JobTread — full-featured construction management aimed at remodelers and custom-home builders. Higher price point, steeper learning curve, less focus on trade-based field crews. AI features are limited compared to FastTract.",
-      "Jobber / Housecall Pro — strong field-service CRMs for home-service trades. Good scheduling and invoicing. No native AI phone agent and no photo-based AI estimating today. FastTract overlaps heavily and adds the AI layer on top.",
+      "Jobber / Housecall Pro — established field-service CRMs for home-service trades, with scheduling and invoicing among their core workflows. FastTract focuses on connecting those operating tools with AI-assisted estimating and phone answering.",
       "How to choose. If you’re a trade contractor (concrete, framing, fencing, roofing, siding, decks, landscaping) and your biggest pain is missed calls and slow estimates, FastTract wins on AI. If you’re a GC running large commercial projects with heavy documentation requirements, Contractor Foreman or Buildertrend may fit better. If you only need payroll, stick with ADP and pair it with a front-office tool.",
       "AI-assisted estimates are drafts — contractors verify before final quote. FastTract keeps you in control of every estimate before it’s sent.",
+      "Features, plan limits, and pricing can change. Verify each vendor’s current offering and contract terms before purchasing.",
       "Try FastTract free and see the AI workflow end to end: customer call answered by AI, lead created, photos uploaded, estimate drafted, job scheduled, crew clocked in, invoice paid.",
     ],
   },

@@ -48,8 +48,14 @@ const steps = [
 ];
 
 const trades = [
-  "Concrete", "Framing", "Roofing", "Remodeling", "Excavation", "Landscaping",
-  "Painting", "Electrical", "Plumbing", "HVAC", "Handyman", "General Contractors",
+  { label: "Concrete", to: "/concrete-contractor-software" },
+  { label: "Framing", to: "/framing-contractor-software" },
+  { label: "Roofing", to: "/roofing-contractor-software" },
+  { label: "Fencing", to: "/fencing-contractor-software" },
+  { label: "Landscaping", to: "/landscaping-contractor-software" },
+  { label: "Siding", to: "/siding-contractor-software" },
+  { label: "Deck Builders", to: "/deck-builder-software" },
+  { label: "General Contractors", to: "/general-contractor-software" },
 ];
 
 const estimateLines = [
@@ -131,8 +137,8 @@ export default function Landing() {
   return (
     <MarketingShell>
       <SEO
-        title={"The new way to run your business, you do the work, while you're assistant handles the rest."}
-        description={"The easiest way to own a business not a job.  Fasttract answers your phone, learns your business, pull up to a job, take a couple pictures and measurements in the app, and click send.  Fasttract produces your customer facing estimates, invoices, material list , the list goes on...  Stop taking the old road, take Fasttract."}
+        title="FastTract | Contractor Estimating, CRM & AI Phone Answering"
+        description="Run your contracting business from first call to final invoice with AI phone answering, estimating, CRM, scheduling, and invoicing."
         path="/"
         jsonLd={softwareSchema}
       />
@@ -325,10 +331,14 @@ export default function Landing() {
             </p>
           </div>
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {trades.map((t) => (
-              <div key={t} className="rounded-lg border border-border bg-card px-4 py-3 text-center text-sm font-semibold">
-                {t}
-              </div>
+            {trades.map((trade) => (
+              <Link
+                key={trade.to}
+                to={trade.to}
+                className="rounded-lg border border-border bg-card px-4 py-3 text-center text-sm font-semibold transition hover:border-primary/60 hover:text-primary"
+              >
+                {trade.label}
+              </Link>
             ))}
           </div>
         </div>

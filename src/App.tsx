@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,89 +8,86 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOfficeRole, RequireSubscription } from "@/components/auth/Guards";
 import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
 
-import Landing from "./pages/Landing";
-import Pricing from "./pages/Pricing";
-import Contact from "./pages/Contact";
-import Demo from "./pages/Demo";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Onboarding from "./pages/Onboarding";
-import NotFound from "./pages/NotFound";
-import Privacy from "./pages/legal/Privacy";
-import Terms from "./pages/legal/Terms";
-import Refunds from "./pages/legal/Refunds";
-import ContractorCRMOld from "./pages/features/ContractorCRM";
-import Features from "./pages/marketing/Features";
-import AIPhotoEstimator from "./pages/marketing/AIPhotoEstimator";
-import AIPhoneAgent from "./pages/marketing/AIPhoneAgent";
-import ContractorCRMPage from "./pages/marketing/ContractorCRM";
-import EstimateSoftware from "./pages/marketing/EstimateSoftware";
-import InvoiceSoftware from "./pages/marketing/InvoiceSoftware";
-import Resellers from "./pages/marketing/Resellers";
-import TradePage from "./pages/marketing/TradePage";
-import BlogIndex from "./pages/marketing/blog/BlogIndex";
-import BlogPost from "./pages/marketing/blog/BlogPost";
-
-import AppShell from "./layouts/AppShell";
-import FieldAppShell from "./layouts/FieldAppShell";
-import AgentShell from "./layouts/AgentShell";
-import AdminShell from "./layouts/AdminShell";
-
-import Dashboard from "./pages/app/Dashboard";
-import Leads from "./pages/app/Leads";
-import Customers from "./pages/app/Customers";
-import Estimates from "./pages/app/Estimates";
-import EstimateDetail from "./pages/app/EstimateDetail";
-import Jobs from "./pages/app/Jobs";
-import Crew from "./pages/app/Crew";
-import TimeTracking from "./pages/app/TimeTracking";
-import Approvals from "./pages/app/Approvals";
-import Costing from "./pages/app/Costing";
-import FieldClock from "./pages/field/FieldClock";
-import FieldJobs from "./pages/field/FieldJobs";
-import FieldMap from "./pages/field/FieldMap";
-import FieldCrew from "./pages/field/FieldCrew";
-import FieldAssistant from "./pages/field/FieldAssistant";
-import Assistant from "./pages/app/Assistant";
-import PhoneAssistant from "./pages/app/PhoneAssistant";
-import Billing from "./pages/app/Billing";
-import BusinessProfile from "./pages/app/BusinessProfile";
-import Branding from "./pages/app/Branding";
-import Developer from "./pages/app/Developer";
-import Invoices from "./pages/app/Invoices";
-import Contracts from "./pages/app/Contracts";
-import Vendors from "./pages/app/Vendors";
-import Materials from "./pages/app/Materials";
-import Calendar from "./pages/app/Calendar";
 import { BrandingProvider } from "./components/BrandingProvider";
-
-
 import { PaywallGate } from "./components/PaywallGate";
-import AgentOverview from "./pages/agent/AgentOverview";
-import AgentClients from "./pages/agent/AgentClients";
-import AgentLeads from "./pages/agent/AgentLeads";
-import AgentPayouts from "./pages/agent/AgentPayouts";
-import AdminOverview from "./pages/admin/AdminOverview";
-import AdminOrgs from "./pages/admin/AdminOrgs";
-import AdminOrgDetail from "./pages/admin/AdminOrgDetail";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminAudit from "./pages/admin/AdminAudit";
-import AdminAiUsage from "./pages/admin/AdminAiUsage";
-import SuperShell from "./pages/super/SuperShell";
-import SuperOverview from "./pages/super/SuperOverview";
-import SuperControls from "./pages/super/SuperControls";
-import SuperOrgs from "./pages/super/SuperOrgs";
-import SuperData from "./pages/super/SuperData";
-import SuperLive from "./pages/super/SuperLive";
-import { Messages, FieldProfile } from "./pages/stubs";
-import Preferences from "./pages/app/Preferences";
-import DnsSetup from "./pages/app/DnsSetup";
-import Unsubscribe from "./pages/Unsubscribe";
-import OAuthConsent from "./pages/OAuthConsent";
-import AdminWorkspace from "./pages/admin/AdminWorkspace";
 import { ImpersonationBanner } from "./components/ImpersonationBanner";
+
+const Landing = lazy(() => import("./pages/Landing"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Demo = lazy(() => import("./pages/Demo"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Refunds = lazy(() => import("./pages/legal/Refunds"));
+const Features = lazy(() => import("./pages/marketing/Features"));
+const AIPhotoEstimator = lazy(() => import("./pages/marketing/AIPhotoEstimator"));
+const AIPhoneAgent = lazy(() => import("./pages/marketing/AIPhoneAgent"));
+const ContractorCRMPage = lazy(() => import("./pages/marketing/ContractorCRM"));
+const EstimateSoftware = lazy(() => import("./pages/marketing/EstimateSoftware"));
+const InvoiceSoftware = lazy(() => import("./pages/marketing/InvoiceSoftware"));
+const Resellers = lazy(() => import("./pages/marketing/Resellers"));
+const TradePage = lazy(() => import("./pages/marketing/TradePage"));
+const BlogIndex = lazy(() => import("./pages/marketing/blog/BlogIndex"));
+const BlogPost = lazy(() => import("./pages/marketing/blog/BlogPost"));
+const AppShell = lazy(() => import("./layouts/AppShell"));
+const FieldAppShell = lazy(() => import("./layouts/FieldAppShell"));
+const AgentShell = lazy(() => import("./layouts/AgentShell"));
+const AdminShell = lazy(() => import("./layouts/AdminShell"));
+const Dashboard = lazy(() => import("./pages/app/Dashboard"));
+const Leads = lazy(() => import("./pages/app/Leads"));
+const Customers = lazy(() => import("./pages/app/Customers"));
+const Estimates = lazy(() => import("./pages/app/Estimates"));
+const EstimateDetail = lazy(() => import("./pages/app/EstimateDetail"));
+const Jobs = lazy(() => import("./pages/app/Jobs"));
+const Crew = lazy(() => import("./pages/app/Crew"));
+const TimeTracking = lazy(() => import("./pages/app/TimeTracking"));
+const Approvals = lazy(() => import("./pages/app/Approvals"));
+const Costing = lazy(() => import("./pages/app/Costing"));
+const FieldClock = lazy(() => import("./pages/field/FieldClock"));
+const FieldJobs = lazy(() => import("./pages/field/FieldJobs"));
+const FieldMap = lazy(() => import("./pages/field/FieldMap"));
+const FieldCrew = lazy(() => import("./pages/field/FieldCrew"));
+const FieldAssistant = lazy(() => import("./pages/field/FieldAssistant"));
+const Assistant = lazy(() => import("./pages/app/Assistant"));
+const PhoneAssistant = lazy(() => import("./pages/app/PhoneAssistant"));
+const Billing = lazy(() => import("./pages/app/Billing"));
+const BusinessProfile = lazy(() => import("./pages/app/BusinessProfile"));
+const Branding = lazy(() => import("./pages/app/Branding"));
+const Developer = lazy(() => import("./pages/app/Developer"));
+const Invoices = lazy(() => import("./pages/app/Invoices"));
+const Contracts = lazy(() => import("./pages/app/Contracts"));
+const Vendors = lazy(() => import("./pages/app/Vendors"));
+const Materials = lazy(() => import("./pages/app/Materials"));
+const Calendar = lazy(() => import("./pages/app/Calendar"));
+const AgentOverview = lazy(() => import("./pages/agent/AgentOverview"));
+const AgentClients = lazy(() => import("./pages/agent/AgentClients"));
+const AgentLeads = lazy(() => import("./pages/agent/AgentLeads"));
+const AgentPayouts = lazy(() => import("./pages/agent/AgentPayouts"));
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminOrgs = lazy(() => import("./pages/admin/AdminOrgs"));
+const AdminOrgDetail = lazy(() => import("./pages/admin/AdminOrgDetail"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
+const AdminAiUsage = lazy(() => import("./pages/admin/AdminAiUsage"));
+const AdminWorkspace = lazy(() => import("./pages/admin/AdminWorkspace"));
+const SuperShell = lazy(() => import("./pages/super/SuperShell"));
+const SuperOverview = lazy(() => import("./pages/super/SuperOverview"));
+const SuperControls = lazy(() => import("./pages/super/SuperControls"));
+const SuperOrgs = lazy(() => import("./pages/super/SuperOrgs"));
+const SuperData = lazy(() => import("./pages/super/SuperData"));
+const SuperLive = lazy(() => import("./pages/super/SuperLive"));
+const Messages = lazy(() => import("./pages/stubs").then((module) => ({ default: module.Messages })));
+const FieldProfile = lazy(() => import("./pages/stubs").then((module) => ({ default: module.FieldProfile })));
+const Preferences = lazy(() => import("./pages/app/Preferences"));
+const DnsSetup = lazy(() => import("./pages/app/DnsSetup"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient();
 
@@ -102,7 +100,8 @@ const App = () => (
         <AuthProvider>
           <GoogleAdsTracker />
           <ImpersonationBanner />
-          <Routes>
+          <Suspense fallback={<div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">Loading FastTract…</div>}>
+            <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -118,10 +117,10 @@ const App = () => (
             <Route path="/legal/privacy" element={<Privacy />} />
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refunds" element={<Refunds />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/refunds" element={<Refunds />} />
-            <Route path="/features/contractor-crm" element={<ContractorCRMOld />} />
+            <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
+            <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
+            <Route path="/refunds" element={<Navigate to="/legal/refunds" replace />} />
+            <Route path="/features/contractor-crm" element={<Navigate to="/contractor-crm" replace />} />
             <Route path="/features" element={<Features />} />
             <Route path="/ai-photo-estimator" element={<AIPhotoEstimator />} />
             <Route path="/ai-phone-agent" element={<AIPhoneAgent />} />
@@ -214,7 +213,8 @@ const App = () => (
             </Route>
 
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
