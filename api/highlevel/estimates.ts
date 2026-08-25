@@ -27,6 +27,11 @@ function dateOnly(date: Date) {
 
 function normalizeLineItems(body: EstimateInput) {
   const source = body.line_items ?? body.items ?? [];
+  const taxPercent = Math.max(0, Number(body.taxPercent ?? body.tax_percent ?? 0) || 0);
+  const taxes = taxPercent > 0
+    ? [{ name: "Tax", rate: taxPercent, calculation: "exclusive", description: "FastTract estimate tax" }]
+    : [];
+
   return source
     .filter((item) => item && typeof item.description === "string" && item.description.trim())
     .map((item) => ({
@@ -35,7 +40,7 @@ function normalizeLineItems(body: EstimateInput) {
       currency: "USD",
       amount: Number(item.unit_price) || 0,
       qty: Number(item.quantity) || 0,
-      taxes: [],
+      taxes,
       type: "one_time",
       taxInclusive: false,
     }));
@@ -99,6 +104,7 @@ async function buildEstimatePayload(body: EstimateInput, locationId: string, tok
   const parties = await getEstimateParties(locationId, contactId, token);
   const issueDate = new Date();
   const expiryDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const taxPercent = Math.max(0, Number(body.taxPercent ?? body.tax_percent ?? 0) || 0);
 
   return {
     altId: locationId,
@@ -114,10 +120,7 @@ async function buildEstimatePayload(body: EstimateInput, locationId: string, tok
     issueDate: dateOnly(issueDate),
     expiryDate: dateOnly(expiryDate),
     automaticTaxesEnabled: false,
-    meta: {
-      source: "FastTract",
-      taxPercent: Number(body.taxPercent ?? body.tax_percent ?? 0) || 0,
-    },
+    meta: { source: "FastTract", taxPercent },
     frequencySettings: { enabled: false },
     estimateNumberPrefix: "EST-",
     autoInvoice: { enabled: false, directPayments: false },
@@ -146,11 +149,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === "POST") {
       const body: EstimateInput = req.body && typeof req.body === "object" ? req.body : {};
       const payload = await buildEstimatePayload(body, locationId, token);
-      const result = await highLevelRequest("/invoices/estimate", {
-        method: "POST",
-        token,
-        body: payload,
-      });
+      const result = await highLevelRequest("/invoices/estimate", { method: "POST", token, body: payload });
       return json(res, 201, result);
     }
 
@@ -158,11 +157,7 @@ export default async function handler(req: any, res: any) {
       if (!estimateId) return json(res, 400, { error: "Missing estimate id" });
       const body: EstimateInput = req.body && typeof req.body === "object" ? req.body : {};
       const payload = await buildEstimatePayload(body, locationId, token);
-      const result = await highLevelRequest(`/invoices/estimate/${encodeURIComponent(estimateId)}`, {
-        method: "PUT",
-        token,
-        body: payload,
-      });
+      const result = await highLevelRequest(`/invoices/estimate/${encodeURIComponent(estimateId)}`, { method: "PUT", token, body: payload });
       return json(res, 200, result);
     }
 
