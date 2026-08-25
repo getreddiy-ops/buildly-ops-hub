@@ -1,9 +1,9 @@
 import {
   ensureFastTractPipeline,
-  getHighLevelLocationId,
   highLevelRequest,
   json,
   requirePost,
+  resolveHighLevelConnection,
 } from "./_shared";
 
 type HighLevelObject = {
@@ -51,16 +51,14 @@ export default async function handler(req: any, res: any) {
   if (!requirePost(req, res)) return;
 
   try {
-    const locationId = getHighLevelLocationId();
+    const { locationId, token, mode } = await resolveHighLevelConnection(req);
     const errors: string[] = [];
     let pipeline: { id: string; name: string; stages: unknown[] } | null = null;
 
     try {
-      pipeline = await ensureFastTractPipeline();
+      pipeline = await ensureFastTractPipeline(locationId, token);
     } catch (error) {
-      errors.push(
-        `Sales pipeline: ${error instanceof Error ? error.message : "unknown error"}`,
-      );
+      errors.push(`Sales pipeline: ${error instanceof Error ? error.message : "unknown error"}`);
     }
 
     const created: string[] = [];
@@ -69,6 +67,7 @@ export default async function handler(req: any, res: any) {
     try {
       const current = await highLevelRequest<ObjectListResponse>(
         `/objects/?locationId=${encodeURIComponent(locationId)}`,
+        { token },
       );
       const existing = new Set((current.objects ?? []).map((item) => item.key));
 
@@ -81,46 +80,32 @@ export default async function handler(req: any, res: any) {
         try {
           await highLevelRequest("/objects/", {
             method: "POST",
-            body: {
-              ...definition,
-              locationId,
-            },
+            token,
+            body: { ...definition, locationId },
           });
           created.push(definition.key);
         } catch (error) {
-          errors.push(
-            `${definition.key}: ${error instanceof Error ? error.message : "unknown error"}`,
-          );
+          errors.push(`${definition.key}: ${error instanceof Error ? error.message : "unknown error"}`);
         }
       }
     } catch (error) {
-      errors.push(
-        `Custom objects: ${error instanceof Error ? error.message : "unknown error"}`,
-      );
+      errors.push(`Custom objects: ${error instanceof Error ? error.message : "unknown error"}`);
     }
 
     json(res, 200, {
       ok: errors.length === 0,
       locationId,
+      mode,
       pipeline,
       created,
       skipped,
       errors,
-      nativeRecords: [
-        "contacts",
-        "opportunities",
-        "estimates",
-        "invoices",
-        "calendars",
-        "conversations",
-      ],
-      message:
-        "FastTract is configured to use HighLevel native CRM, estimates/invoices, and contractor-specific Custom Objects as its primary business-data backend.",
+      nativeRecords: ["contacts", "opportunities", "estimates", "invoices", "calendars", "conversations"],
+      message: "FastTract is configured to use the active HighLevel sub-account as its primary business-data backend.",
     });
   } catch (error) {
-    json(res, 500, {
-      ok: false,
-      error: error instanceof Error ? error.message : "Unknown HighLevel error",
-    });
+    const message = error instanceof Error ? error.message : "Unknown HighLevel error";
+    const status = message.includes("context is required") || message.includes("GHL_APP_SHARED_SECRET") ? 401 : 500;
+    json(res, status, { ok: false, error: message });
   }
 }
