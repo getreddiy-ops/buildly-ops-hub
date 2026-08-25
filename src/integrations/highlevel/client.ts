@@ -27,8 +27,11 @@ export type HighLevelContact = {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
+  address1?: string | null;
+  source?: string | null;
   locationId?: string;
   tags?: string[];
+  dateAdded?: string;
 };
 
 export type HighLevelOpportunity = {
@@ -39,6 +42,28 @@ export type HighLevelOpportunity = {
   pipelineStageId?: string;
   status?: "open" | "won" | "lost" | "abandoned";
   monetaryValue?: number;
+};
+
+export type FastTractLeadStatus =
+  | "new"
+  | "contacted"
+  | "qualified"
+  | "won"
+  | "lost";
+
+export type FastTractLead = {
+  id: string;
+  contact_id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  source?: string | null;
+  status: FastTractLeadStatus;
+  notes?: string | null;
+  note_id?: string | null;
+  pipeline_id?: string;
+  pipeline_stage_id?: string;
 };
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -70,6 +95,8 @@ export const highLevel = {
       created: string[];
       skipped: string[];
       locationId: string;
+      pipeline?: { id: string; name: string; stages: unknown[] } | null;
+      errors?: string[];
     }>("/api/highlevel/bootstrap", { method: "POST" });
   },
 
@@ -84,11 +111,76 @@ export const highLevel = {
     );
   },
 
+  getContact(id: string) {
+    return request<{
+      contact: HighLevelContact;
+      notes?: Array<{ id: string; body?: string }>;
+      latestNote?: { id: string; body?: string } | null;
+    }>(`/api/highlevel/contacts?id=${encodeURIComponent(id)}`);
+  },
+
   upsertContact(data: Record<string, unknown>) {
     return request<{ contact: HighLevelContact }>("/api/highlevel/contacts", {
       method: "POST",
       body: JSON.stringify(data),
     });
+  },
+
+  updateContact(id: string, data: Record<string, unknown>) {
+    return request<{ contact: HighLevelContact }>(
+      `/api/highlevel/contacts?id=${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    );
+  },
+
+  deleteContact(id: string) {
+    return request<{ succeeded?: boolean }>(
+      `/api/highlevel/contacts?id=${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+  },
+
+  listLeads(options: { query?: string; page?: number; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (options.query) params.set("q", options.query);
+    if (options.page) params.set("page", String(options.page));
+    if (options.limit) params.set("limit", String(options.limit));
+    return request<{ leads: FastTractLead[]; meta?: unknown }>(
+      `/api/highlevel/leads?${params.toString()}`,
+    );
+  },
+
+  getLead(id: string) {
+    return request<{ lead: FastTractLead }>(
+      `/api/highlevel/leads?id=${encodeURIComponent(id)}`,
+    );
+  },
+
+  createLead(data: Record<string, unknown>) {
+    return request<{ lead: FastTractLead }>("/api/highlevel/leads", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLead(id: string, data: Record<string, unknown>) {
+    return request<{ lead: FastTractLead }>(
+      `/api/highlevel/leads?id=${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    );
+  },
+
+  deleteLead(id: string) {
+    return request<{ success?: boolean }>(
+      `/api/highlevel/leads?id=${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
   },
 
   listOpportunities(
