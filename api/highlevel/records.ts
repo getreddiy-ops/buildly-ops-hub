@@ -1,7 +1,7 @@
 import {
-  getHighLevelLocationId,
   highLevelRequest,
   json,
+  resolveHighLevelConnection,
 } from "./_shared";
 
 const OBJECT_KEYS: Record<string, string> = {
@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const locationId = getHighLevelLocationId();
+    const { locationId, token } = await resolveHighLevelConnection(req);
 
     if (req.method === "GET") {
       const query = typeof req.query?.q === "string" ? req.query.q : "";
@@ -35,6 +35,7 @@ export default async function handler(req: any, res: any) {
         `/objects/${encodeURIComponent(objectKey)}/records/search`,
         {
           method: "POST",
+          token,
           body: {
             locationId,
             page,
@@ -54,6 +55,7 @@ export default async function handler(req: any, res: any) {
         `/objects/${encodeURIComponent(objectKey)}/records`,
         {
           method: "POST",
+          token,
           body: {
             ...body,
             locationId,
@@ -67,8 +69,8 @@ export default async function handler(req: any, res: any) {
     res.setHeader("Allow", "GET, POST");
     return json(res, 405, { error: "Method not allowed" });
   } catch (error) {
-    return json(res, 500, {
-      error: error instanceof Error ? error.message : "Unknown HighLevel error",
-    });
+    const message = error instanceof Error ? error.message : "Unknown HighLevel error";
+    const status = message.includes("context is required") || message.includes("GHL_APP_SHARED_SECRET") ? 401 : 500;
+    return json(res, status, { error: message });
   }
 }
