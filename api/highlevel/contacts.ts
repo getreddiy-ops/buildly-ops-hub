@@ -1,9 +1,9 @@
 import {
   addContactTags,
   FASTTRACT_CUSTOMER_TAG,
-  getHighLevelLocationId,
   highLevelRequest,
   json,
+  resolveHighLevelConnection,
 } from "./_shared";
 
 type ContactInput = {
@@ -25,10 +25,11 @@ function toContactPayload(body: ContactInput) {
   };
 }
 
-async function addNote(contactId: string, notes: unknown) {
+async function addNote(contactId: string, notes: unknown, token: string) {
   if (typeof notes !== "string" || !notes.trim()) return null;
   return highLevelRequest(`/contacts/${encodeURIComponent(contactId)}/notes`, {
     method: "POST",
+    token,
     body: {
       title: "FastTract note",
       body: notes.trim(),
@@ -38,18 +39,24 @@ async function addNote(contactId: string, notes: unknown) {
 
 export default async function handler(req: any, res: any) {
   try {
-    const locationId = getHighLevelLocationId();
+    const { locationId, token } = await resolveHighLevelConnection(req);
     const contactId = typeof req.query?.id === "string" ? req.query.id : null;
 
     if (req.method === "GET" && contactId) {
       const [contactResult, notesResult] = await Promise.all([
         highLevelRequest<{ contact: any }>(
           `/contacts/${encodeURIComponent(contactId)}`,
+          { token },
         ),
         highLevelRequest<{ notes?: any[] }>(
           `/contacts/${encodeURIComponent(contactId)}/notes`,
+          { token },
         ),
       ]);
+
+      if (contactResult.contact?.locationId && contactResult.contact.locationId !== locationId) {
+        return json(res, 403, { error: "Contact does not belong to this HighLevel sub-account" });
+      }
 
       const notes = notesResult.notes ?? [];
       return json(res, 200, {
@@ -75,7 +82,7 @@ export default async function handler(req: any, res: any) {
         total?: number;
         count?: number;
         meta?: unknown;
-      }>(`/contacts/search?${params.toString()}`);
+      }>(`/contacts/search?${params.toString()}`, { token });
 
       const contacts = (result.contacts ?? []).filter((contact) =>
         Array.isArray(contact.tags)
@@ -101,6 +108,7 @@ export default async function handler(req: any, res: any) {
         "/contacts/upsert",
         {
           method: "POST",
+          token,
           body: {
             ...toContactPayload(body),
             locationId,
@@ -113,8 +121,8 @@ export default async function handler(req: any, res: any) {
         throw new Error("HighLevel did not return a contact id");
       }
 
-      await addContactTags(createdContactId, [FASTTRACT_CUSTOMER_TAG]);
-      await addNote(createdContactId, body.notes);
+      await addContactTags(createdContactId, [FASTTRACT_CUSTOMER_TAG], token);
+      await addNote(createdContactId, body.notes, token);
       return json(res, 200, result);
     }
 
@@ -123,24 +131,41 @@ export default async function handler(req: any, res: any) {
       const body: ContactInput =
         req.body && typeof req.body === "object" ? req.body : {};
 
+      const existing = await highLevelRequest<{ contact: any }>(
+        `/contacts/${encodeURIComponent(contactId)}`,
+        { token },
+      );
+      if (existing.contact?.locationId && existing.contact.locationId !== locationId) {
+        return json(res, 403, { error: "Contact does not belong to this HighLevel sub-account" });
+      }
+
       const result = await highLevelRequest<{ contact: any }>(
         `/contacts/${encodeURIComponent(contactId)}`,
         {
           method: "PUT",
+          token,
           body: toContactPayload(body),
         },
       );
 
-      await addContactTags(contactId, [FASTTRACT_CUSTOMER_TAG]);
-      await addNote(contactId, body.notes);
+      await addContactTags(contactId, [FASTTRACT_CUSTOMER_TAG], token);
+      await addNote(contactId, body.notes, token);
       return json(res, 200, result);
     }
 
     if (req.method === "DELETE") {
       if (!contactId) return json(res, 400, { error: "Missing contact id" });
+      const existing = await highLevelRequest<{ contact: any }>(
+        `/contacts/${encodeURIComponent(contactId)}`,
+        { token },
+      );
+      if (existing.contact?.locationId && existing.contact.locationId !== locationId) {
+        return json(res, 403, { error: "Contact does not belong to this HighLevel sub-account" });
+      }
+
       const result = await highLevelRequest(
         `/contacts/${encodeURIComponent(contactId)}`,
-        { method: "DELETE" },
+        { method: "DELETE", token },
       );
       return json(res, 200, result);
     }
@@ -148,8 +173,8 @@ export default async function handler(req: any, res: any) {
     res.setHeader("Allow", "GET, POST, PUT, DELETE");
     return json(res, 405, { error: "Method not allowed" });
   } catch (error) {
-    return json(res, 500, {
-      error: error instanceof Error ? error.message : "Unknown HighLevel error",
-    });
+    const message = error instanceof Error ? error.message : "Unknown HighLevel error";
+    const status = message.includes("context is required") || message.includes("Missing GHL_APP_SHARED_SECRET") ? 401 : 500;
+    return json(res, status, { error: message });
   }
 }
