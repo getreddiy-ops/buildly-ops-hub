@@ -1,96 +1,152 @@
 # FastTract — HighLevel Primary Backend
 
-FastTract uses HighLevel as the primary system of record for contractor business data.
+FastTract uses HighLevel as the primary system of record for contractor business data. FastTract is the simplified AI-first interface; HighLevel owns the CRM, communications, sales and billing records behind it.
 
 ## Storage map
 
 | FastTract feature | HighLevel storage |
 | --- | --- |
-| Customers | Contacts |
-| Leads / sales | Opportunities + Pipelines |
-| Calls / SMS / email | Conversations |
-| Appointments | Calendars |
-| Invoices / payments | HighLevel native payments/invoices |
+| Customers | Native Contacts |
+| Leads / sales | Native Opportunities + Pipelines |
+| Calls / SMS / email | Native Conversations |
+| Appointments | Native Calendars |
+| Estimates | Native Estimates |
+| Invoices / payments | Native Invoices / Payments |
 | Jobs | Custom Object: `custom_objects.jobs` |
-| Estimates | Custom Object: `custom_objects.estimates` |
 | Time tracking | Custom Object: `custom_objects.time_entries` |
 | Materials / job costs | Custom Object: `custom_objects.materials` |
 
-The browser and mobile app never receive a HighLevel access token. FastTract calls `/api/highlevel/*`, and the server-side Vercel functions call HighLevel.
+Supabase remains in the existing app only where it is still needed for legacy FastTract authentication or features that have not yet been migrated. It is no longer the intended business-data source of truth.
 
-## Initial connection
+## Production SaaS connection
 
-For the first FastTract location, add these Vercel environment variables:
+FastTract should run as a HighLevel Marketplace/Custom Menu app inside each customer sub-account.
+
+1. HighLevel embeds FastTract in an iframe.
+2. The FastTract browser requests HighLevel's encrypted user context from the parent frame.
+3. The encrypted value is forwarded to `/api/highlevel/*` as `X-FastTract-GHL-Context`.
+4. The server decrypts the context with `GHL_APP_SHARED_SECRET` and reads `activeLocation`.
+5. The server uses an agency-level token to request a location-scoped access token from HighLevel.
+6. Every business-data request executes with the token for that active location.
+
+The browser never receives the HighLevel agency token, location token, client secret or app shared secret.
+
+## Required server secrets
+
+Configure these only as server-side Vercel environment variables. Never prefix them with `VITE_`.
 
 ```text
-GHL_LOCATION_ID=<FastTract HighLevel sub-account/location id>
-GHL_PRIVATE_INTEGRATION_TOKEN=<sub-account private integration token>
+GHL_APP_SHARED_SECRET=<Marketplace app Advanced Settings shared secret>
+GHL_AGENCY_TOKEN=<agency OAuth access token capable of generating location tokens>
 ```
 
-`GHL_LOCATION_TOKEN` is also supported and takes precedence over `GHL_PRIVATE_INTEGRATION_TOKEN`.
+`GHL_AGENCY_ACCESS_TOKEN` is accepted as an alternate variable name.
 
-Never put a HighLevel token in a `VITE_*` environment variable; Vite browser variables are public.
+For a temporary one-location development connection only, FastTract also supports:
 
-## Required HighLevel permissions for the first connection
+```text
+GHL_SINGLE_LOCATION_MODE=true
+GHL_LOCATION_ID=<test HighLevel location id>
+GHL_LOCATION_TOKEN=<test location access token>
+```
 
-Start with the minimum scopes FastTract needs:
+`GHL_PRIVATE_INTEGRATION_TOKEN` can be used instead of `GHL_LOCATION_TOKEN` in this explicit single-location mode. Do not enable single-location mode for the multi-customer SaaS deployment.
+
+## HighLevel scopes
+
+Current FastTract HighLevel code needs these scopes for the migrated features:
 
 - `contacts.readonly`
 - `contacts.write`
 - `opportunities.readonly`
 - `opportunities.write`
+- `locations.readonly`
+- `invoices/estimate.readonly`
+- `invoices/estimate.write`
 - `objects/schema.readonly`
 - `objects/schema.write`
 - `objects/record.readonly`
 - `objects/record.write`
 
-Add calendar, conversations, invoices/payments, workflows, users and custom-field scopes as those FastTract screens are moved to HighLevel.
+The agency installation also needs `oauth.write` to generate a location access token for the active sub-account.
 
-## Bootstrap FastTract objects
+Add the appropriate invoice, calendar, conversation and payment scopes as those remaining FastTract screens are migrated.
 
-After the environment variables are present on a deployment, call:
+## FastTract Sales pipeline
+
+`POST /api/highlevel/bootstrap` checks the active sub-account and creates a `FastTract Sales` pipeline if it is missing. The initial open stages are:
+
+- New
+- Contacted
+- Qualified
+
+Won and Lost use HighLevel's native opportunity status instead of duplicate stages.
+
+## Contractor custom objects
+
+The same bootstrap creates only the contractor records HighLevel does not already model natively:
+
+- `custom_objects.jobs`
+- `custom_objects.time_entries`
+- `custom_objects.materials`
+
+The bootstrap is intended to be idempotent and skips schemas that already exist.
+
+## API surface
 
 ```text
+GET  /api/highlevel/context
 POST /api/highlevel/bootstrap
+
+GET/POST/PUT/DELETE /api/highlevel/contacts
+GET/POST/PATCH/PUT/DELETE /api/highlevel/leads
+GET/POST /api/highlevel/opportunities
+
+GET/POST/PUT/DELETE /api/highlevel/estimates
+POST /api/highlevel/estimate-actions
+
+GET/POST /api/highlevel/records?object=jobs
+GET/POST /api/highlevel/records?object=time_entries
+GET/POST /api/highlevel/records?object=materials
 ```
 
-The bootstrap is idempotent. It checks the location first and creates only missing FastTract custom objects.
+The React app uses `src/integrations/highlevel/client.ts`. It requests the encrypted HighLevel iframe context and passes that context to the server; it never calls HighLevel with a secret token directly.
 
-## App endpoints
+## Customer lifecycle
 
-```text
-GET  /api/highlevel/contacts
-POST /api/highlevel/contacts
+A FastTract lead is a HighLevel Contact plus an Opportunity in `FastTract Sales`.
 
-GET  /api/highlevel/opportunities
-POST /api/highlevel/opportunities
+- New lead: Contact + Opportunity + `fasttract-lead` tag.
+- Progress: Opportunity moves through New / Contacted / Qualified.
+- Convert to customer: Opportunity status becomes Won, the same Contact receives `fasttract-customer`, and `fasttract-lead` is removed.
+- Customer notes: native HighLevel contact notes.
 
-GET  /api/highlevel/records?object=jobs
-POST /api/highlevel/records?object=jobs
+This avoids duplicate lead/customer identities and makes the same contact immediately usable by HighLevel workflows, phone, SMS, email and calendars.
 
-GET  /api/highlevel/records?object=estimates
-POST /api/highlevel/records?object=estimates
+## Estimates
 
-GET  /api/highlevel/records?object=time_entries
-POST /api/highlevel/records?object=time_entries
+FastTract estimates are native HighLevel Estimate records, not a custom object.
 
-GET  /api/highlevel/records?object=materials
-POST /api/highlevel/records?object=materials
-```
+The FastTract estimate UI can:
 
-The React app uses `src/integrations/highlevel/client.ts` rather than calling HighLevel directly.
+- List HighLevel estimates.
+- Create and update drafts.
+- Delete estimates.
+- Send by SMS, email, or both through HighLevel.
+- Reflect HighLevel's native lifecycle statuses such as draft, sent, viewed, accepted, declined and invoiced.
 
-## SaaS rollout
+Accepted-estimate-to-invoice conversion should also remain a native HighLevel action when wired into the FastTract UI.
 
-The private integration token is the fastest way to wire and test the first FastTract sub-account. The SaaS production model should use a HighLevel OAuth Marketplace app so FastTract can be installed across sub-accounts without exposing or manually distributing tokens.
+## Remaining migration work
 
-Recommended final distribution:
+The current HighLevel-first branch establishes the tenant-safe foundation and migrates Customers, Leads and Estimates. Remaining business screens should be moved incrementally rather than deleting the existing Supabase integration all at once:
 
-1. Create FastTract as a private HighLevel Marketplace app while developing.
-2. Target Agency for the LynchAI/FastTract SaaS installation model.
-3. Request only FastTract scopes.
-4. Bulk-install to the FastTract SaaS sub-accounts and future locations.
-5. Use the agency installation to obtain/generate location access tokens server-side.
-6. Add FastTract as a HighLevel Custom Menu item so the FastTract UI can run inside each location as well as from the standalone web/mobile app.
+- Jobs -> HighLevel Job custom object
+- Time Tracking -> HighLevel Time Entry custom object
+- Materials / Costing -> HighLevel custom objects
+- Invoices / Payments -> native HighLevel invoices/payments
+- Calendar -> native HighLevel calendars/events
+- Phone / Conversations -> native HighLevel communications
+- AI actions -> call the same FastTract HighLevel service layer
 
-HighLevel remains the business-data source of truth. Any external persistence used later should be limited to technical secrets/session/token-vault data that cannot safely live in browser-visible or business CRM fields.
+Keep FastTract authentication separate until the standalone web/mobile login strategy is intentionally replaced. This prevents a storage migration from breaking TestFlight or standalone sign-in.
