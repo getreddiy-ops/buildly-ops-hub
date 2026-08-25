@@ -26,16 +26,6 @@ const FASTTRACT_OBJECTS = [
     },
   },
   {
-    key: "custom_objects.estimates",
-    labels: { singular: "Estimate", plural: "Estimates" },
-    description: "FastTract estimates and bid records",
-    primaryDisplayPropertyDetails: {
-      key: "custom_objects.estimates.estimate_number",
-      name: "Estimate Number",
-      dataType: "TEXT",
-    },
-  },
-  {
     key: "custom_objects.time_entries",
     labels: { singular: "Time Entry", plural: "Time Entries" },
     description: "FastTract employee and crew time records",
@@ -116,8 +106,16 @@ export default async function handler(req: any, res: any) {
       created,
       skipped,
       errors,
+      nativeRecords: [
+        "contacts",
+        "opportunities",
+        "estimates",
+        "invoices",
+        "calendars",
+        "conversations",
+      ],
       message:
-        "FastTract is configured to use HighLevel Contacts, Opportunities, Pipelines and Custom Objects as its primary business-data backend.",
+        "FastTract is configured to use HighLevel native CRM, estimates/invoices, and contractor-specific Custom Objects as its primary business-data backend.",
     });
   } catch (error) {
     json(res, 500, {
