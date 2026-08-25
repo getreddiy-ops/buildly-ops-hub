@@ -1,0 +1,102 @@
+import {
+  getHighLevelLocationId,
+  highLevelRequest,
+  json,
+  requirePost,
+} from "./_shared.js";
+
+type HighLevelObject = {
+  key: string;
+};
+
+type ObjectListResponse = {
+  objects?: HighLevelObject[];
+};
+
+const FASTTRACT_OBJECTS = [
+  {
+    key: "custom_objects.jobs",
+    labels: { singular: "Job", plural: "Jobs" },
+    description: "FastTract contractor jobs and project records",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.jobs.job_name",
+      name: "Job Name",
+      dataType: "TEXT",
+    },
+  },
+  {
+    key: "custom_objects.estimates",
+    labels: { singular: "Estimate", plural: "Estimates" },
+    description: "FastTract estimates and bid records",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.estimates.estimate_number",
+      name: "Estimate Number",
+      dataType: "TEXT",
+    },
+  },
+  {
+    key: "custom_objects.time_entries",
+    labels: { singular: "Time Entry", plural: "Time Entries" },
+    description: "FastTract employee and crew time records",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.time_entries.description",
+      name: "Description",
+      dataType: "TEXT",
+    },
+  },
+  {
+    key: "custom_objects.materials",
+    labels: { singular: "Material", plural: "Materials" },
+    description: "FastTract job material and cost records",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.materials.material_name",
+      name: "Material Name",
+      dataType: "TEXT",
+    },
+  },
+] as const;
+
+export default async function handler(req: any, res: any) {
+  if (!requirePost(req, res)) return;
+
+  try {
+    const locationId = getHighLevelLocationId();
+    const current = await highLevelRequest<ObjectListResponse>(
+      `/objects/?locationId=${encodeURIComponent(locationId)}`,
+    );
+    const existing = new Set((current.objects ?? []).map((item) => item.key));
+
+    const created: string[] = [];
+    const skipped: string[] = [];
+
+    for (const definition of FASTTRACT_OBJECTS) {
+      if (existing.has(definition.key)) {
+        skipped.push(definition.key);
+        continue;
+      }
+
+      await highLevelRequest("/objects/", {
+        method: "POST",
+        body: {
+          ...definition,
+          locationId,
+        },
+      });
+      created.push(definition.key);
+    }
+
+    json(res, 200, {
+      ok: true,
+      locationId,
+      created,
+      skipped,
+      message:
+        "FastTract core HighLevel objects are present. Contacts, Opportunities, Calendars, Conversations and Payments remain native HighLevel records.",
+    });
+  } catch (error) {
+    json(res, 500, {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown HighLevel error",
+    });
+  }
+}
