@@ -226,6 +226,31 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    if (req.method === "PATCH") {
+      if (!opportunityId) return json(res, 400, { error: "Missing lead id" });
+      const status: LeadStatus = req.body?.status === "lost" ? "lost" : "won";
+      const existing = await highLevelRequest<{ opportunity: any }>(
+        `/opportunities/${encodeURIComponent(opportunityId)}`,
+      );
+      const contactId = existing.opportunity?.contactId;
+      if (!contactId) throw new Error("HighLevel lead is missing its contact");
+
+      await highLevelRequest(
+        `/opportunities/${encodeURIComponent(opportunityId)}/status`,
+        {
+          method: "PUT",
+          body: { status: ghlOpportunityStatus(status) },
+        },
+      );
+
+      if (status === "won") {
+        await addContactTags(contactId, [FASTTRACT_CUSTOMER_TAG]);
+        await removeContactTags(contactId, [FASTTRACT_LEAD_TAG]);
+      }
+
+      return json(res, 200, { success: true, status });
+    }
+
     if (req.method === "PUT") {
       if (!opportunityId) return json(res, 400, { error: "Missing lead id" });
       const body: LeadInput =
@@ -292,7 +317,7 @@ export default async function handler(req: any, res: any) {
       return json(res, 200, result);
     }
 
-    res.setHeader("Allow", "GET, POST, PUT, DELETE");
+    res.setHeader("Allow", "GET, POST, PATCH, PUT, DELETE");
     return json(res, 405, { error: "Method not allowed" });
   } catch (error) {
     return json(res, 500, {
