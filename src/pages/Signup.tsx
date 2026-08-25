@@ -135,7 +135,7 @@ export default function Signup() {
           ) : (
             <>
               <h1 className="text-2xl font-semibold">Join FastTract</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Create your account, set up your company, then choose a 7-day trial plan.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Create your account, then tell FastTract how your company works.</p>
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div><Label htmlFor="name">Full name</Label>
                   <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
@@ -148,7 +148,7 @@ export default function Signup() {
                 </Button>
               </form>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                You will review pricing before entering payment details.
+                Creating an account does not start a paid subscription.
               </p>
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have one? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
