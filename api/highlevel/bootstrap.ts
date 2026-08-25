@@ -1,9 +1,10 @@
 import {
+  ensureFastTractPipeline,
   getHighLevelLocationId,
   highLevelRequest,
   json,
   requirePost,
-} from "./_shared.js";
+} from "./_shared";
 
 type HighLevelObject = {
   key: string;
@@ -61,37 +62,62 @@ export default async function handler(req: any, res: any) {
 
   try {
     const locationId = getHighLevelLocationId();
-    const current = await highLevelRequest<ObjectListResponse>(
-      `/objects/?locationId=${encodeURIComponent(locationId)}`,
-    );
-    const existing = new Set((current.objects ?? []).map((item) => item.key));
+    const errors: string[] = [];
+    let pipeline: { id: string; name: string; stages: unknown[] } | null = null;
+
+    try {
+      pipeline = await ensureFastTractPipeline();
+    } catch (error) {
+      errors.push(
+        `Sales pipeline: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    }
 
     const created: string[] = [];
     const skipped: string[] = [];
 
-    for (const definition of FASTTRACT_OBJECTS) {
-      if (existing.has(definition.key)) {
-        skipped.push(definition.key);
-        continue;
-      }
+    try {
+      const current = await highLevelRequest<ObjectListResponse>(
+        `/objects/?locationId=${encodeURIComponent(locationId)}`,
+      );
+      const existing = new Set((current.objects ?? []).map((item) => item.key));
 
-      await highLevelRequest("/objects/", {
-        method: "POST",
-        body: {
-          ...definition,
-          locationId,
-        },
-      });
-      created.push(definition.key);
+      for (const definition of FASTTRACT_OBJECTS) {
+        if (existing.has(definition.key)) {
+          skipped.push(definition.key);
+          continue;
+        }
+
+        try {
+          await highLevelRequest("/objects/", {
+            method: "POST",
+            body: {
+              ...definition,
+              locationId,
+            },
+          });
+          created.push(definition.key);
+        } catch (error) {
+          errors.push(
+            `${definition.key}: ${error instanceof Error ? error.message : "unknown error"}`,
+          );
+        }
+      }
+    } catch (error) {
+      errors.push(
+        `Custom objects: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
     }
 
     json(res, 200, {
-      ok: true,
+      ok: errors.length === 0,
       locationId,
+      pipeline,
       created,
       skipped,
+      errors,
       message:
-        "FastTract core HighLevel objects are present. Contacts, Opportunities, Calendars, Conversations and Payments remain native HighLevel records.",
+        "FastTract is configured to use HighLevel Contacts, Opportunities, Pipelines and Custom Objects as its primary business-data backend.",
     });
   } catch (error) {
     json(res, 500, {
