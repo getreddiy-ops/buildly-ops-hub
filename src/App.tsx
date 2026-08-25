@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +31,7 @@ import BlogIndex from "./pages/marketing/blog/BlogIndex";
 import BlogPost from "./pages/marketing/blog/BlogPost";
 
 import AppShell from "./layouts/AppShell";
+import HighLevelShell from "./layouts/HighLevelShell";
 import FieldAppShell from "./layouts/FieldAppShell";
 import AgentShell from "./layouts/AgentShell";
 import AdminShell from "./layouts/AdminShell";
@@ -62,7 +63,6 @@ import Vendors from "./pages/app/Vendors";
 import Materials from "./pages/app/Materials";
 import Calendar from "./pages/app/Calendar";
 import { BrandingProvider } from "./components/BrandingProvider";
-
 
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
@@ -137,6 +137,15 @@ const App = () => (
                 <Route index element={<Dashboard />} />
               </Route>
             )}
+
+            {/* HighLevel embedded app: authenticated by encrypted HighLevel user context. */}
+            <Route path="/highlevel" element={<HighLevelShell />}>
+              <Route index element={<Navigate to="customers" replace />} />
+              <Route path="leads" element={<Leads />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="estimates" element={<Estimates />} />
+            </Route>
+
             {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
@@ -146,7 +155,6 @@ const App = () => (
               <Route path="estimates/:id" element={<EstimateDetail />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="contracts" element={<Contracts />} />
-
               <Route path="jobs" element={<Jobs />} />
               <Route path="crew" element={<Crew />} />
               <Route path="vendors" element={<Vendors />} />
@@ -165,9 +173,7 @@ const App = () => (
                 path="developer"
                 element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>}
               />
-
               <Route path="settings" element={<Preferences />} />
-
             </Route>
 
             {/* Field app (mobile) */}
@@ -190,7 +196,7 @@ const App = () => (
             </Route>
 
             {/* Platform admin */}
-            <Route path="/admin" element={<RequireAuth><RequirePlatformAdmin><AdminShell /></RequirePlatformAdmin></RequireAuth>}>
+            <Route path="/admin" element={<RequireAuth><RequirePlatformAdmin><AdminShell /></RequirePlatformAdmin>}>
               <Route index element={<AdminOverview />} />
               <Route path="organizations" element={<AdminOrgs />} />
               <Route path="organizations/:id" element={<AdminOrgDetail />} />
@@ -200,7 +206,7 @@ const App = () => (
             </Route>
 
             {/* Super admin ops console (Midnight Indigo) */}
-            <Route path="/super" element={<RequireAuth><RequirePlatformAdmin><SuperShell /></RequirePlatformAdmin></RequireAuth>}>
+            <Route path="/super" element={<RequireAuth><RequirePlatformAdmin><SuperShell /></RequirePlatformAdmin>}>
               <Route index element={<SuperOverview />} />
               <Route path="controls" element={<SuperControls />} />
               <Route path="orgs" element={<SuperOrgs />} />
