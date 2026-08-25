@@ -1,7 +1,4 @@
-export type FastTractHighLevelObject =
-  | "jobs"
-  | "time_entries"
-  | "materials";
+export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials";
 
 export type HighLevelRecord<T = Record<string, unknown>> = {
   id: string;
@@ -43,12 +40,7 @@ export type HighLevelOpportunity = {
   monetaryValue?: number;
 };
 
-export type FastTractLeadStatus =
-  | "new"
-  | "contacted"
-  | "qualified"
-  | "won"
-  | "lost";
+export type FastTractLeadStatus = "new" | "contacted" | "qualified" | "won" | "lost";
 
 export type FastTractLead = {
   id: string;
@@ -65,25 +57,49 @@ export type FastTractLead = {
   pipeline_stage_id?: string;
 };
 
+export type HighLevelEstimateStatus = "draft" | "sent" | "accepted" | "declined" | "invoiced" | "viewed";
+
+export type HighLevelEstimateItem = {
+  _id?: string;
+  name?: string;
+  description?: string;
+  amount?: number;
+  qty?: number;
+  currency?: string;
+};
+
+export type HighLevelEstimate = {
+  _id: string;
+  name: string;
+  status?: HighLevelEstimateStatus;
+  total?: number;
+  currency?: string;
+  termsNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  items?: HighLevelEstimateItem[];
+  contactDetails?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phoneNo?: string;
+  };
+  meta?: Record<string, unknown>;
+};
+
 const CONTEXT_STORAGE_KEY = "fasttract:ghl-context";
 let contextPromise: Promise<string | null> | null = null;
 
 function storedContext() {
   if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage.getItem(CONTEXT_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  try { return window.sessionStorage.getItem(CONTEXT_STORAGE_KEY); } catch { return null; }
 }
 
 function rememberContext(value: string) {
   if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(CONTEXT_STORAGE_KEY, value);
-  } catch {
-    // Storage can be blocked in some iframe privacy modes; the in-memory request still works.
-  }
+  try { window.sessionStorage.setItem(CONTEXT_STORAGE_KEY, value); } catch { /* iframe privacy mode */ }
 }
 
 async function requestHighLevelParentContext(): Promise<string | null> {
@@ -100,13 +116,11 @@ async function requestHighLevelParentContext(): Promise<string | null> {
       if (value) rememberContext(value);
       resolve(value);
     };
-
     const onMessage = (event: MessageEvent) => {
       if (event.source !== window.parent) return;
       if (event.data?.message !== "REQUEST_USER_DATA_RESPONSE") return;
       finish(typeof event.data?.payload === "string" ? event.data.payload : null);
     };
-
     window.addEventListener("message", onMessage);
     window.parent.postMessage({ message: "REQUEST_USER_DATA" }, "*");
     window.setTimeout(() => finish(null), 2000);
@@ -122,27 +136,17 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const encryptedContext = await getHighLevelContext();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (encryptedContext) headers["X-FastTract-GHL-Context"] = encryptedContext;
-
   if (init?.headers) {
     const extra = new Headers(init.headers);
     extra.forEach((value, key) => { headers[key] = value; });
   }
 
-  const response = await fetch(url, {
-    ...init,
-    headers,
-  });
-
+  const response = await fetch(url, { ...init, headers });
   const payload = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    const message =
-      typeof payload?.error === "string"
-        ? payload.error
-        : `FastTract HighLevel request failed (${response.status})`;
+    const message = typeof payload?.error === "string" ? payload.error : `FastTract HighLevel request failed (${response.status})`;
     throw new Error(message);
   }
-
   return payload as T;
 }
 
@@ -154,15 +158,12 @@ export const highLevel = {
     }
   },
 
+  context() {
+    return request<{ connected: boolean; mode: string; locationId: string; companyId?: string | null; user?: unknown }>("/api/highlevel/context");
+  },
+
   bootstrap() {
-    return request<{
-      ok: boolean;
-      created: string[];
-      skipped: string[];
-      locationId: string;
-      pipeline?: { id: string; name: string; stages: unknown[] } | null;
-      errors?: string[];
-    }>("/api/highlevel/bootstrap", { method: "POST" });
+    return request<{ ok: boolean; created: string[]; skipped: string[]; locationId: string; pipeline?: { id: string; name: string; stages: unknown[] } | null; errors?: string[] }>("/api/highlevel/bootstrap", { method: "POST" });
   },
 
   listContacts(options: { query?: string; page?: number; limit?: number } = {}) {
@@ -174,11 +175,7 @@ export const highLevel = {
   },
 
   getContact(id: string) {
-    return request<{
-      contact: HighLevelContact;
-      notes?: Array<{ id: string; body?: string }>;
-      latestNote?: { id: string; body?: string } | null;
-    }>(`/api/highlevel/contacts?id=${encodeURIComponent(id)}`);
+    return request<{ contact: HighLevelContact; notes?: Array<{ id: string; body?: string }>; latestNote?: { id: string; body?: string } | null }>(`/api/highlevel/contacts?id=${encodeURIComponent(id)}`);
   },
 
   upsertContact(data: Record<string, unknown>) {
@@ -219,6 +216,35 @@ export const highLevel = {
 
   deleteLead(id: string) {
     return request<{ success?: boolean }>(`/api/highlevel/leads?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
+
+  listEstimates(options: { query?: string; status?: HighLevelEstimateStatus | "all"; contactId?: string; limit?: number; offset?: number } = {}) {
+    const params = new URLSearchParams();
+    if (options.query) params.set("q", options.query);
+    if (options.status) params.set("status", options.status);
+    if (options.contactId) params.set("contactId", options.contactId);
+    if (options.limit) params.set("limit", String(options.limit));
+    if (options.offset) params.set("offset", String(options.offset));
+    return request<{ estimates: HighLevelEstimate[]; total: number; traceId?: string }>(`/api/highlevel/estimates?${params.toString()}`);
+  },
+
+  createEstimate(data: Record<string, unknown>) {
+    return request<HighLevelEstimate>("/api/highlevel/estimates", { method: "POST", body: JSON.stringify(data) });
+  },
+
+  updateEstimate(id: string, data: Record<string, unknown>) {
+    return request<HighLevelEstimate>(`/api/highlevel/estimates?id=${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  deleteEstimate(id: string) {
+    return request<HighLevelEstimate>(`/api/highlevel/estimates?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
+
+  sendEstimate(id: string, options: { channel?: "sms_and_email" | "email" | "sms" | "send_manually"; name?: string } = {}) {
+    return request<unknown>("/api/highlevel/estimate-actions", {
+      method: "POST",
+      body: JSON.stringify({ id, channel: options.channel ?? "sms_and_email", name: options.name }),
+    });
   },
 
   listOpportunities(options: { query?: string; page?: number; limit?: number; pipelineId?: string; pipelineStageId?: string; contactId?: string; status?: string } = {}) {
