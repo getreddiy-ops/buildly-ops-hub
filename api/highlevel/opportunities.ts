@@ -2,7 +2,7 @@ import {
   getHighLevelLocationId,
   highLevelRequest,
   json,
-} from "./_shared.js";
+} from "./_shared";
 
 export default async function handler(req: any, res: any) {
   try {
