@@ -2,11 +2,10 @@ import {
   getHighLevelLocationId,
   highLevelRequest,
   json,
-} from "./_shared.js";
+} from "./_shared";
 
 const OBJECT_KEYS: Record<string, string> = {
   jobs: "custom_objects.jobs",
-  estimates: "custom_objects.estimates",
   time_entries: "custom_objects.time_entries",
   materials: "custom_objects.materials",
 };
@@ -20,7 +19,7 @@ export default async function handler(req: any, res: any) {
   const objectKey = resolveObjectKey(req.query?.object);
   if (!objectKey) {
     return json(res, 400, {
-      error: "Invalid object. Use jobs, estimates, time_entries, or materials.",
+      error: "Invalid object. Use jobs, time_entries, or materials.",
     });
   }
 
