@@ -176,6 +176,16 @@ export const highLevel = {
     );
   },
 
+  convertLead(id: string) {
+    return request<{ success: boolean; status: FastTractLeadStatus }>(
+      `/api/highlevel/leads?id=${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status: "won" }),
+      },
+    );
+  },
+
   deleteLead(id: string) {
     return request<{ success?: boolean }>(
       `/api/highlevel/leads?id=${encodeURIComponent(id)}`,
