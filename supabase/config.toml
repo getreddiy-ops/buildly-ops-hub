@@ -9,6 +9,8 @@ project_id = "ohqopzyggxmwentbgivb"
     verify_jwt = true
   [functions.elevenlabs-postcall]
     verify_jwt = false
+  [functions.ghl-oauth-callback]
+    verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]
