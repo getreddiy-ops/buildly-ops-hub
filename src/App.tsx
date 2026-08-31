@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +31,7 @@ import BlogIndex from "./pages/marketing/blog/BlogIndex";
 import BlogPost from "./pages/marketing/blog/BlogPost";
 
 import AppShell from "./layouts/AppShell";
+import HighLevelShell from "./layouts/HighLevelShell";
 import FieldAppShell from "./layouts/FieldAppShell";
 import AgentShell from "./layouts/AgentShell";
 import AdminShell from "./layouts/AdminShell";
@@ -63,7 +64,6 @@ import Materials from "./pages/app/Materials";
 import Calendar from "./pages/app/Calendar";
 import { BrandingProvider } from "./components/BrandingProvider";
 
-
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
 import AgentClients from "./pages/agent/AgentClients";
@@ -85,6 +85,13 @@ import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
+import HighLevelHome from "./pages/highlevel/Home";
+import HighLevelLeads from "./pages/highlevel/Leads";
+import HighLevelCustomers from "./pages/highlevel/Customers";
+import HighLevelEstimates from "./pages/highlevel/Estimates";
+import HighLevelJobs from "./pages/highlevel/Jobs";
+import HighLevelMoney from "./pages/highlevel/Money";
+import HighLevelAssistant from "./pages/highlevel/Assistant";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +144,18 @@ const App = () => (
                 <Route index element={<Dashboard />} />
               </Route>
             )}
+            {/* FastTract inside HighLevel: HighLevel authenticates; FastTract owns the experience. */}
+            <Route path="/highlevel" element={<HighLevelShell />}>
+              <Route index element={<Navigate to="home" replace />} />
+              <Route path="home" element={<HighLevelHome />} />
+              <Route path="leads" element={<HighLevelLeads />} />
+              <Route path="customers" element={<HighLevelCustomers />} />
+              <Route path="jobs" element={<HighLevelJobs />} />
+              <Route path="money" element={<HighLevelMoney />} />
+              <Route path="estimates" element={<HighLevelEstimates />} />
+              <Route path="ai" element={<HighLevelAssistant />} />
+            </Route>
+
             {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
