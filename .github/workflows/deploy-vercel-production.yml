@@ -1,0 +1,157 @@
+name: Deploy FastTract production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DEPLOY to configure production secrets and deploy FastTract"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-vercel-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirmation == 'DEPLOY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      GHL_APP_SHARED_SECRET: ${{ secrets.GHL_APP_SHARED_SECRET }}
+      GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
+      GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GHL_TOKEN_ENCRYPTION_KEY: ${{ secrets.GHL_TOKEN_ENCRYPTION_KEY }}
+      FASTTRACT_READINESS_SECRET: ${{ secrets.FASTTRACT_READINESS_SECRET }}
+      LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      FASTTRACT_AI_GATEWAY_URL: ${{ vars.FASTTRACT_AI_GATEWAY_URL }}
+      FASTTRACT_AI_MODEL: ${{ vars.FASTTRACT_AI_MODEL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test -n "$GHL_APP_SHARED_SECRET"
+          test -n "$GHL_CLIENT_ID"
+          test -n "$GHL_CLIENT_SECRET"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$GHL_TOKEN_ENCRYPTION_KEY"
+          test -n "$FASTTRACT_READINESS_SECRET"
+          test "${#GHL_TOKEN_ENCRYPTION_KEY}" -ge 32
+          test "${#FASTTRACT_READINESS_SECRET}" -ge 32
+          if [ -z "$LOVABLE_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+            echo "Either LOVABLE_API_KEY or OPENAI_API_KEY is required" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify application
+        run: |
+          npm run typecheck:highlevel
+          npm run lint:highlevel
+          npm test
+          npm run build
+
+      - name: Link Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Configure sensitive Vercel environment variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          set_secret() {
+            local name="$1"
+            local value="$2"
+            printf '%s' "$value" | npx vercel@latest env add "$name" production --sensitive --force --token="$VERCEL_TOKEN"
+          }
+          set_secret GHL_APP_SHARED_SECRET "$GHL_APP_SHARED_SECRET"
+          set_secret GHL_CLIENT_ID "$GHL_CLIENT_ID"
+          set_secret GHL_CLIENT_SECRET "$GHL_CLIENT_SECRET"
+          set_secret SUPABASE_URL "$SUPABASE_URL"
+          set_secret SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          set_secret GHL_TOKEN_ENCRYPTION_KEY "$GHL_TOKEN_ENCRYPTION_KEY"
+          set_secret FASTTRACT_READINESS_SECRET "$FASTTRACT_READINESS_SECRET"
+          if [ -n "$LOVABLE_API_KEY" ]; then set_secret LOVABLE_API_KEY "$LOVABLE_API_KEY"; fi
+          if [ -n "$OPENAI_API_KEY" ]; then set_secret OPENAI_API_KEY "$OPENAI_API_KEY"; fi
+
+      - name: Configure non-secret Vercel environment variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' 'false' | npx vercel@latest env add GHL_SINGLE_LOCATION_MODE production --force --token="$VERCEL_TOKEN"
+          if [ -n "$FASTTRACT_AI_GATEWAY_URL" ]; then
+            printf '%s' "$FASTTRACT_AI_GATEWAY_URL" | npx vercel@latest env add FASTTRACT_AI_GATEWAY_URL production --force --token="$VERCEL_TOKEN"
+          fi
+          if [ -n "$FASTTRACT_AI_MODEL" ]; then
+            printf '%s' "$FASTTRACT_AI_MODEL" | npx vercel@latest env add FASTTRACT_AI_MODEL production --force --token="$VERCEL_TOKEN"
+          fi
+
+      - name: Deploy production
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url=$(npx vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" | tail -n 1)
+          test -n "$deployment_url"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+          echo "FastTract production deployment: $deployment_url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify protected readiness endpoint
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          unauthorized_status=$(curl --silent --show-error --output unauthorized.json --write-out '%{http_code}' \
+            "$DEPLOYMENT_URL/api/highlevel/readiness")
+          test "$unauthorized_status" = "404"
+
+          authorized_status=$(curl --silent --show-error --output readiness.json --write-out '%{http_code}' \
+            -H "X-FastTract-Readiness-Secret: $FASTTRACT_READINESS_SECRET" \
+            "$DEPLOYMENT_URL/api/highlevel/readiness")
+          cat readiness.json
+          test "$authorized_status" = "200"
+          node -e 'const fs=require("fs"); const data=JSON.parse(fs.readFileSync("readiness.json","utf8")); if (!data.ok) process.exit(1);'
+
+      - name: Verify unauthenticated API routing
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --output context.json --write-out '%{http_code}' \
+            "$DEPLOYMENT_URL/api/highlevel/context")
+          cat context.json
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); JSON.parse(fs.readFileSync("context.json","utf8"));'
