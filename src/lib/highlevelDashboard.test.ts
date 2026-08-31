@@ -100,8 +100,8 @@ describe("buildHighLevelDashboard", () => {
     expect(result.next.map((task) => task.id)).toEqual([
       "invoice:draft-invoice",
       "estimate:draft",
-      "job:scheduled-job",
       "lead:contacted",
+      "job:scheduled-job",
     ]);
     expect(result.later.map((task) => task.id)).toEqual(["estimate:sent"]);
 
