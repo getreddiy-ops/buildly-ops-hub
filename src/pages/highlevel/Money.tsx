@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   BadgeDollarSign,
@@ -10,17 +10,41 @@ import {
   Loader2,
   Receipt,
   RefreshCw,
+  Search,
   Send,
+  Sparkles,
   WalletCards,
+  type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   highLevel,
   type HighLevelEstimate,
   type HighLevelInvoice,
 } from "@/integrations/highlevel/client";
+import {
+  collectionPrompt,
+  filterInvoices,
+  invoiceAmountDue,
+  invoiceAmountPaid,
+  invoiceCustomer,
+  invoiceIsOverdue,
+  invoiceLabel,
+  invoiceTotal,
+  paymentProgress,
+  summarizeMoney,
+  type MoneyView,
+} from "@/lib/highlevelMoney";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -30,32 +54,45 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-function invoiceAmountDue(invoice: HighLevelInvoice) {
-  const explicit = Number(invoice.amountDue);
-  if (Number.isFinite(explicit)) return Math.max(explicit, 0);
-  return Math.max((Number(invoice.total) || 0) - (Number(invoice.amountPaid) || 0), 0);
-}
+const moneyViews: Array<{ value: MoneyView; label: string }> = [
+  { value: "action", label: "Action queue" },
+  { value: "all", label: "All invoices" },
+  { value: "draft", label: "Draft" },
+  { value: "outstanding", label: "Outstanding" },
+  { value: "overdue", label: "Overdue" },
+  { value: "paid", label: "Paid" },
+];
 
-function invoiceIsOverdue(invoice: HighLevelInvoice) {
-  if (!["sent", "payment_processing", "partially_paid"].includes(invoice.status)) return false;
-  if (!invoice.dueDate || invoiceAmountDue(invoice) <= 0) return false;
-  const due = Date.parse(invoice.dueDate);
-  return Number.isFinite(due) && due < new Date().setHours(0, 0, 0, 0);
+function validMoneyView(value: string | null): value is MoneyView {
+  return moneyViews.some((item) => item.value === value);
 }
 
 function formatDate(value?: string) {
   if (!value) return "No due date";
-  const date = new Date(value);
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
 export default function HighLevelMoney() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [estimates, setEstimates] = useState<HighLevelEstimate[]>([]);
   const [invoices, setInvoices] = useState<HighLevelInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const rawView = searchParams.get("view");
+  const view: MoneyView = validMoneyView(rawView) ? rawView : "action";
+
+  const setView = (nextView: MoneyView) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextView === "action") next.delete("view");
+    else next.set("view", nextView);
+    setSearchParams(next, { replace: true });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -87,25 +124,12 @@ export default function HighLevelMoney() {
     void load();
   }, []);
 
-  const summary = useMemo(() => {
-    const ready = estimates.filter((estimate) => estimate.status === "accepted");
-    const outstanding = invoices.filter((invoice) =>
-      ["sent", "payment_processing", "partially_paid"].includes(invoice.status) && invoiceAmountDue(invoice) > 0,
-    );
-    const overdue = outstanding.filter(invoiceIsOverdue);
-    const paid = invoices.filter((invoice) => invoice.status === "paid");
-
-    return {
-      ready,
-      readyValue: ready.reduce((sum, estimate) => sum + (Number(estimate.total) || 0), 0),
-      outstanding,
-      outstandingValue: outstanding.reduce((sum, invoice) => sum + invoiceAmountDue(invoice), 0),
-      overdue,
-      overdueValue: overdue.reduce((sum, invoice) => sum + invoiceAmountDue(invoice), 0),
-      paid,
-      paidValue: paid.reduce((sum, invoice) => sum + (Number(invoice.amountPaid) || Number(invoice.total) || 0), 0),
-    };
-  }, [estimates, invoices]);
+  const summary = useMemo(() => summarizeMoney(estimates, invoices), [estimates, invoices]);
+  const visibleInvoices = useMemo(() => filterInvoices(invoices, view, query), [invoices, query, view]);
+  const readyEstimates = useMemo(() => [...summary.readyEstimates].sort(
+    (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0),
+  ), [summary.readyEstimates]);
+  const actionCount = summary.draftInvoices.length + summary.outstandingInvoices.length;
 
   const convertEstimate = async (estimate: HighLevelEstimate) => {
     if (!window.confirm(`Create a HighLevel invoice from “${estimate.name || "this estimate"}”?`)) return;
@@ -139,11 +163,15 @@ export default function HighLevelMoney() {
     }
   };
 
+  const scrollToReady = () => {
+    document.getElementById("ready-to-invoice")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-w-0 px-4 py-7 sm:px-7 lg:px-9">
       <PageHeader
         title="Money"
-        description="Move approved work from estimate to invoice to paid—without leaving FastTract."
+        description="See what is ready to bill, what needs collecting, and what has already been paid."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -155,30 +183,52 @@ export default function HighLevelMoney() {
       />
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <MoneyCard
+        <MoneyFilterCard
           icon={FileText}
           label="Ready to invoice"
           value={loading ? "—" : money.format(summary.readyValue)}
-          detail={loading ? "Loading" : `${summary.ready.length} accepted estimate${summary.ready.length === 1 ? "" : "s"}`}
+          detail={loading ? "Loading" : `${summary.readyEstimates.length} accepted estimate${summary.readyEstimates.length === 1 ? "" : "s"}`}
+          active={false}
+          alert={summary.readyValue > 0}
+          onClick={scrollToReady}
         />
-        <MoneyCard
+        <MoneyFilterCard
           icon={BadgeDollarSign}
           label="Outstanding"
           value={loading ? "—" : money.format(summary.outstandingValue)}
-          detail={loading ? "Loading" : `${summary.outstanding.length} open invoice${summary.outstanding.length === 1 ? "" : "s"}`}
+          detail={loading ? "Loading" : `${summary.outstandingInvoices.length} customer balance${summary.outstandingInvoices.length === 1 ? "" : "s"}`}
+          active={view === "outstanding"}
+          alert={summary.outstandingValue > 0}
+          onClick={() => setView("outstanding")}
         />
-        <MoneyCard
+        <MoneyFilterCard
           icon={Clock3}
           label="Overdue"
           value={loading ? "—" : money.format(summary.overdueValue)}
-          detail={loading ? "Loading" : `${summary.overdue.length} past due`}
+          detail={loading ? "Loading" : `${summary.overdueInvoices.length} past due`}
+          active={view === "overdue"}
+          alert={summary.overdueValue > 0}
+          onClick={() => setView("overdue")}
         />
-        <MoneyCard
+        <MoneyFilterCard
           icon={CheckCircle2}
           label="Paid"
           value={loading ? "—" : money.format(summary.paidValue)}
-          detail={loading ? "Loading" : `${summary.paid.length} paid invoice${summary.paid.length === 1 ? "" : "s"}`}
+          detail={loading ? "Loading" : `${summary.paidInvoices.length} paid invoice${summary.paidInvoices.length === 1 ? "" : "s"}`}
+          active={view === "paid"}
+          onClick={() => setView("paid")}
         />
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{loading ? "Checking the money queue…" : actionCount > 0 ? `${actionCount} invoice action${actionCount === 1 ? "" : "s"} need attention.` : "The invoice action queue is clear."}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {summary.draftInvoices.length > 0 ? `${summary.draftInvoices.length} draft worth ${money.format(summary.draftValue)}. ` : ""}
+            {summary.overdueInvoices.length > 0 ? `${summary.overdueInvoices.length} overdue balance${summary.overdueInvoices.length === 1 ? "" : "s"}.` : "No overdue balances."}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setView("action")}>Show action queue</Button>
       </div>
 
       {warnings.length > 0 && (
@@ -188,14 +238,26 @@ export default function HighLevelMoney() {
         </div>
       )}
 
-      {summary.ready.length > 0 && (
-        <section className="mt-7 overflow-hidden rounded-xl border border-primary/25 bg-card/50 shadow-card">
-          <div className="border-b border-border p-4 sm:p-5">
+      <section id="ready-to-invoice" className="mt-7 scroll-mt-28 overflow-hidden rounded-xl border border-primary/25 bg-card/50 shadow-card">
+        <div className="flex items-center justify-between gap-4 border-b border-border p-4 sm:p-5">
+          <div>
             <h2 className="font-semibold">Ready to invoice</h2>
             <p className="mt-1 text-xs text-muted-foreground">Accepted estimates stay linked to the customer when FastTract creates the native HighLevel invoice.</p>
           </div>
+          <FileText className="h-5 w-5 shrink-0 text-primary" />
+        </div>
+        {loading ? (
+          <div className="h-24 animate-pulse bg-muted/20" />
+        ) : readyEstimates.length === 0 ? (
+          <div className="p-7 text-center">
+            <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
+            <h3 className="mt-3 font-semibold">No accepted estimates are waiting</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Accepted work will appear here automatically, ready to become an invoice.</p>
+            <Button className="mt-4" size="sm" variant="outline" asChild><Link to="/highlevel/estimates">Open estimates</Link></Button>
+          </div>
+        ) : (
           <div className="divide-y divide-border">
-            {summary.ready.map((estimate) => {
+            {readyEstimates.map((estimate) => {
               const actionId = `estimate:${estimate._id}`;
               return (
                 <div key={estimate._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
@@ -204,8 +266,11 @@ export default function HighLevelMoney() {
                     <h3 className="truncate font-medium">{estimate.name || "Accepted estimate"}</h3>
                     <p className="mt-1 truncate text-xs text-muted-foreground">{estimate.contactDetails?.name || estimate.contactDetails?.email || "Customer not assigned"}</p>
                   </div>
-                  <div className="flex items-center justify-between gap-4 sm:justify-end">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
                     <span className="font-semibold">{money.format(Number(estimate.total) || 0)}</span>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/highlevel/estimates?edit=${encodeURIComponent(estimate._id)}`}>Review</Link>
+                    </Button>
                     <Button size="sm" onClick={() => void convertEstimate(estimate)} disabled={workingId === actionId}>
                       {workingId === actionId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
                       {workingId === actionId ? "Creating…" : "Create invoice"}
@@ -215,59 +280,98 @@ export default function HighLevelMoney() {
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       <section className="mt-7 overflow-hidden rounded-xl border border-border bg-card/40">
-        <div className="flex items-center justify-between gap-4 border-b border-border p-4 sm:p-5">
-          <div>
-            <h2 className="font-semibold">Invoices</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Native HighLevel invoice status, amount due, and delivery actions.</p>
+        <div className="border-b border-border p-4 sm:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Invoice queue</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Overdue and draft invoices stay at the top so the next money action is obvious.</p>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-background/50 px-3 sm:w-60">
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Input value={query} onChange={(event) => setQuery(event.target.value)} className="h-9 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder="Search invoices…" />
+              </div>
+              <Select value={view} onValueChange={(value) => setView(value as MoneyView)}>
+                <SelectTrigger className="h-10 w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>{moneyViews.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </div>
-          <Receipt className="h-5 w-5 text-primary" />
         </div>
 
         {loading ? (
-          <div className="space-y-3 p-5">
-            {[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-lg bg-muted/40" />)}
-          </div>
-        ) : invoices.length === 0 ? (
+          <div className="space-y-3 p-5">{[0, 1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-lg bg-muted/40" />)}</div>
+        ) : visibleInvoices.length === 0 ? (
           <div className="p-8 text-center">
             <WalletCards className="mx-auto h-9 w-9 text-primary" />
-            <h3 className="mt-4 font-semibold">No invoices yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Accept an estimate, then create the invoice here in one step.</p>
-            <Button className="mt-5" variant="outline" asChild><Link to="/highlevel/estimates">Open estimates</Link></Button>
+            <h3 className="mt-4 font-semibold">No invoices in this view</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Change the filter, clear the search, or create an invoice from accepted work.</p>
+            <Button className="mt-5" variant="outline" onClick={() => { setQuery(""); setView("all"); }}>Show all invoices</Button>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {invoices.map((invoice) => {
+            {visibleInvoices.map((invoice) => {
               const overdue = invoiceIsOverdue(invoice);
               const actionId = `invoice:${invoice._id}`;
-              const label = invoice.invoiceNumber ? `Invoice ${invoice.invoiceNumber}` : invoice.name || "Invoice";
+              const due = invoiceAmountDue(invoice);
+              const paid = invoiceAmountPaid(invoice);
+              const total = invoiceTotal(invoice);
+              const progress = paymentProgress(invoice);
+              const openBalance = due > 0 && invoice.status !== "draft" && invoice.status !== "void";
               return (
-                <div key={invoice._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Receipt className="h-5 w-5" /></div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-medium">{label}</h3>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {invoice.contactDetails?.name || invoice.contactDetails?.email || "Customer not assigned"}
-                      {invoice.dueDate ? ` · Due ${formatDate(invoice.dueDate)}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-                    <StatusBadge status={overdue ? "overdue" : invoice.status} />
-                    <div className="min-w-24 text-right">
-                      <p className="font-semibold">{money.format(invoiceAmountDue(invoice))}</p>
-                      <p className="text-[11px] text-muted-foreground">amount due</p>
+                <article key={invoice._id} className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className={cn(
+                      "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                      overdue ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+                    )}><Receipt className="h-5 w-5" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-medium">{invoiceLabel(invoice)}</h3>
+                        <StatusBadge status={overdue ? "overdue" : invoice.status} />
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {invoiceCustomer(invoice)}{invoice.dueDate ? ` · Due ${formatDate(invoice.dueDate)}` : " · No due date"}
+                      </p>
+                      {(paid > 0 || invoice.status === "paid") && total > 0 && (
+                        <div className="mt-3 max-w-xl">
+                          <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                            <span>{money.format(paid)} paid</span>
+                            <span>{Math.round(progress)}%</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
+                    <div className="grid grid-cols-3 gap-3 text-right sm:w-72">
+                      <Amount label="Total" value={money.format(total)} />
+                      <Amount label="Paid" value={money.format(paid)} />
+                      <Amount label="Due" value={money.format(due)} alert={overdue} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
                     {invoice.status === "draft" && (
-                      <Button size="sm" variant="outline" onClick={() => void sendInvoice(invoice)} disabled={workingId === actionId}>
+                      <Button size="sm" onClick={() => void sendInvoice(invoice)} disabled={workingId === actionId}>
                         {workingId === actionId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        {workingId === actionId ? "Sending…" : "Send"}
+                        {workingId === actionId ? "Sending…" : "Send invoice"}
+                      </Button>
+                    )}
+                    {openBalance && (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={`/highlevel/ai?prompt=${encodeURIComponent(collectionPrompt(invoice))}`}>
+                          <Sparkles className="h-4 w-4 text-primary" /> Draft reminder
+                        </Link>
                       </Button>
                     )}
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
@@ -277,15 +381,47 @@ export default function HighLevelMoney() {
   );
 }
 
-function MoneyCard({ icon: Icon, label, value, detail }: { icon: typeof FileText; label: string; value: string; detail: string }) {
+function MoneyFilterCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  active,
+  alert = false,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  active: boolean;
+  alert?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-card/50 p-4 shadow-card sm:p-5">
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "min-w-0 rounded-xl border p-4 text-left shadow-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-5",
+        active || alert ? "border-primary/35 bg-primary/10" : "border-border bg-card/50 hover:bg-card",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <span className="text-xs leading-5 text-muted-foreground sm:text-sm">{label}</span>
-        <Icon className="h-5 w-5 shrink-0 text-primary" />
+        <Icon className={cn("h-5 w-5 shrink-0", active || alert ? "text-primary" : "text-muted-foreground")} />
       </div>
       <p className="mt-4 truncate text-lg font-semibold tracking-tight sm:text-2xl">{value}</p>
-      <p className="mt-1 truncate text-[11px] text-muted-foreground sm:text-xs">{detail}</p>
+      <p className={cn("mt-1 truncate text-[11px] sm:text-xs", active || alert ? "text-primary" : "text-muted-foreground")}>{detail}</p>
+    </button>
+  );
+}
+
+function Amount({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 truncate text-sm font-semibold", alert && "text-destructive")}>{value}</p>
     </div>
   );
 }
