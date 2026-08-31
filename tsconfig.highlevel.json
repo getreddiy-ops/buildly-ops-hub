@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "noEmit": true
+  },
+  "include": [
+    "api/highlevel/**/*.ts",
+    "src/components/AiFormHelper.tsx",
+    "src/components/StatusBadge.tsx",
+    "src/contexts/HighLevelContext.tsx",
+    "src/hooks/useBrowserSpeech.ts",
+    "src/integrations/highlevel/client.ts",
+    "src/layouts/HighLevelShell.tsx",
+    "src/pages/highlevel/**/*.tsx"
+  ]
+}
