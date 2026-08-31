@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Save,
   ShieldCheck,
-  Sparkles,
   UserPlus,
   Users,
   type LucideIcon,
@@ -30,7 +29,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { highLevel, type FastTractLeadStatus } from "@/integrations/highlevel/client";
+import {
+  highLevel,
+  type FastTractLeadStatus,
+  type HighLevelContact,
+} from "@/integrations/highlevel/client";
 import { toast } from "sonner";
 
 type HandoffKind = "lead" | "customer" | "job";
@@ -45,6 +48,7 @@ type HandoffDraft = {
   lead_status: FastTractLeadStatus;
   job_name: string;
   job_status: JobStatus;
+  customer_id: string;
   start_date: string;
   notes: string;
 };
@@ -61,6 +65,7 @@ const emptyDraft: HandoffDraft = {
   lead_status: "new",
   job_name: "",
   job_status: "scheduled",
+  customer_id: "",
   start_date: "",
   notes: "",
 };
@@ -76,6 +81,7 @@ const contactSchema = z.object({
 const jobSchema = z.object({
   job_name: z.string().trim().min(1, "A job name is required").max(160),
   job_status: z.enum(["lead", "scheduled", "active", "complete", "on_hold"]),
+  customer_id: z.string().trim().max(120),
   address: z.string().trim().max(300),
   start_date: z.string().trim().max(40),
   notes: z.string().trim().max(3000),
@@ -104,10 +110,19 @@ function titleCase(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function contactLabel(contact: HighLevelContact) {
+  return contact.name
+    || [contact.firstName, contact.lastName].filter(Boolean).join(" ")
+    || contact.email
+    || contact.phone
+    || "Unnamed customer";
+}
+
 function normalizedDraft(values: Partial<HandoffDraft>): Partial<HandoffDraft> {
   const next = { ...values };
   if (next.lead_status && !leadStatuses.includes(next.lead_status)) delete next.lead_status;
   if (next.job_status && !jobStatuses.includes(next.job_status)) delete next.job_status;
+  delete next.customer_id;
   return next;
 }
 
@@ -121,9 +136,12 @@ export function AvaHandoffDialog() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [customers, setCustomers] = useState<HighLevelContact[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
   const loadedKey = useRef("");
 
   const close = useCallback(() => {
+    loadedKey.current = "";
     setOpen(false);
     const next = new URLSearchParams(searchParams);
     next.delete("new");
@@ -148,10 +166,10 @@ export function AvaHandoffDialog() {
             { name: "job_status", enum: jobStatuses, description: "Use scheduled unless the user clearly states another status" },
             { name: "address", description: "Job-site address only when provided" },
             { name: "start_date", type: "date", description: "Start date only when explicitly stated" },
-            { name: "notes", description: "Scope, access, schedule, crew, and important job notes from the request" },
+            { name: "notes", description: "Scope, access, schedule, crew, customer name, and important job notes from the request" },
           ],
           context: {
-            instruction: "Prepare a draft only. Never invent a customer, address, start date, measurement, price, or completed action.",
+            instruction: "Prepare a draft only. Never invent a customer, address, start date, measurement, price, record ID, or completed action. Put any stated customer name in notes so the user can select the real HighLevel customer record.",
           },
         });
         setDraft((current) => ({ ...current, ...normalizedDraft(response.values) }));
@@ -186,6 +204,33 @@ export function AvaHandoffDialog() {
   }, []);
 
   useEffect(() => {
+    if (kind !== "job") {
+      setCustomers([]);
+      return;
+    }
+
+    let cancelled = false;
+    setCustomersLoading(true);
+    highLevel.listContacts({ limit: 100 })
+      .then((result) => {
+        if (cancelled) return;
+        setCustomers(result.contacts ?? []);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setCustomers([]);
+        toast.error(error instanceof Error ? error.message : "Unable to load customers for this job");
+      })
+      .finally(() => {
+        if (!cancelled) setCustomersLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+
+  useEffect(() => {
     if (!kind) {
       setOpen(false);
       return;
@@ -210,6 +255,7 @@ export function AvaHandoffDialog() {
           properties: {
             job_name: parsed.data.job_name,
             status: parsed.data.job_status,
+            customer_id: parsed.data.customer_id || null,
             address: parsed.data.address || null,
             start_date: parsed.data.start_date || null,
             notes: parsed.data.notes || null,
@@ -281,14 +327,23 @@ export function AvaHandoffDialog() {
               <>
                 <Field label="Job name"><Input value={draft.job_name} onChange={(event) => setDraft({ ...draft, job_name: event.target.value })} /></Field>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Customer">
+                    <Select value={draft.customer_id || "unassigned"} onValueChange={(value) => setDraft({ ...draft, customer_id: value === "unassigned" ? "" : value })} disabled={customersLoading}>
+                      <SelectTrigger><SelectValue placeholder={customersLoading ? "Loading customers…" : "Choose a customer"} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">No customer selected</SelectItem>
+                        {customers.map((customer) => <SelectItem key={customer.id} value={customer.id}>{contactLabel(customer)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
                   <Field label="Status">
                     <Select value={draft.job_status} onValueChange={(value) => setDraft({ ...draft, job_status: value as JobStatus })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{jobStatuses.map((status) => <SelectItem key={status} value={status}>{titleCase(status)}</SelectItem>)}</SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Start date"><Input type="date" value={draft.start_date} onChange={(event) => setDraft({ ...draft, start_date: event.target.value })} /></Field>
                 </div>
+                <Field label="Start date"><Input type="date" value={draft.start_date} onChange={(event) => setDraft({ ...draft, start_date: event.target.value })} /></Field>
                 <Field label="Job address"><Input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></Field>
                 <Field label="Scope and notes"><Textarea rows={6} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></Field>
               </>
@@ -326,7 +381,7 @@ export function AvaHandoffDialog() {
 
         <div className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-3 text-xs text-muted-foreground">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          FastTract never treats an AI draft as approval. Confirm the identity, dates, scope, and contact details before saving.
+          FastTract never treats an AI draft as approval. Confirm the identity, dates, scope, customer link, and contact details before saving.
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
@@ -336,7 +391,7 @@ export function AvaHandoffDialog() {
               <RefreshCw className="h-4 w-4" /> Fill again
             </Button>
           )}
-          <Button onClick={() => void save()} disabled={loading || saving}>
+          <Button onClick={() => void save()} disabled={loading || saving || customersLoading}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Saving…" : config.saveLabel}
           </Button>
