@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import {
   ArrowRight,
@@ -78,6 +78,7 @@ function titleCase(value: string) {
 }
 
 export default function HighLevelLeads() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<FastTractLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -128,7 +129,7 @@ export default function HighLevelLeads() {
     setOpen(true);
   };
 
-  const openEdit = async (lead: FastTractLead) => {
+  const openEdit = useCallback(async (lead: FastTractLead) => {
     setEditing(lead);
     setForm({
       name: lead.name,
@@ -157,7 +158,19 @@ export default function HighLevelLeads() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to load lead details");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (loading || open || !editId) return;
+    const leadToOpen = rows.find((lead) => lead.id === editId);
+    if (!leadToOpen) return;
+
+    void openEdit(leadToOpen);
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  }, [loading, open, openEdit, rows, searchParams, setSearchParams]);
 
   const save = async () => {
     const parsed = schema.safeParse(form);
