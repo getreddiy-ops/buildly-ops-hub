@@ -12,7 +12,7 @@
     "mobile:assets": "capacitor-assets generate",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "lint:highlevel": "eslint api/highlevel src/components/AiFormHelper.tsx src/components/StatusBadge.tsx src/contexts/HighLevelContext.tsx src/hooks/useBrowserSpeech.ts src/integrations/highlevel/client.ts src/layouts/HighLevelShell.tsx src/lib/highlevelDashboard.ts src/lib/highlevelDashboard.test.ts src/lib/highlevelJobWorkspace.ts src/lib/highlevelJobWorkspace.test.ts src/pages/highlevel",
+    "lint:highlevel": "eslint api/highlevel src/components/AiFormHelper.tsx src/components/StatusBadge.tsx src/contexts/HighLevelContext.tsx src/hooks/useBrowserSpeech.ts src/integrations/highlevel/client.ts src/layouts/HighLevelShell.tsx src/lib/highlevelDashboard.ts src/lib/highlevelDashboard.test.ts src/lib/highlevelJobWorkspace.ts src/lib/highlevelJobWorkspace.test.ts src/lib/highlevelMoney.ts src/lib/highlevelMoney.test.ts src/pages/highlevel",
     "typecheck:highlevel": "tsc -p tsconfig.highlevel.json",
     "preview": "vite preview",
     "test": "vitest run",
