@@ -92,6 +92,9 @@ jobs:
       - name: Deploy encrypted HighLevel OAuth callback
         run: supabase functions deploy ghl-oauth-callback --project-ref "$PROJECT_ID"
 
+      - name: Deploy signed HighLevel webhook receiver
+        run: supabase functions deploy highlevel-webhook --project-ref "$PROJECT_ID"
+
       - name: Install application dependencies
         run: npm ci --ignore-scripts
 
@@ -121,3 +124,13 @@ jobs:
           status=$(curl --silent --show-error --dump-header callback-headers.txt --output /dev/null --write-out '%{http_code}' "$callback_url")
           cat callback-headers.txt
           test "$status" = "302"
+
+      - name: Confirm unsigned webhooks are rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          webhook_url="$SUPABASE_URL/functions/v1/highlevel-webhook"
+          status=$(curl --silent --show-error --output webhook-response.txt --write-out '%{http_code}' \
+            -X POST -H 'Content-Type: application/json' -d '{}' "$webhook_url")
+          cat webhook-response.txt
+          test "$status" = "401"
