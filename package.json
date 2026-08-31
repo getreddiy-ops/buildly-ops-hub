@@ -14,7 +14,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "security:ghl:dry-run": "node scripts/encrypt-ghl-connections.mjs",
+    "security:ghl:apply": "node scripts/encrypt-ghl-connections.mjs --apply"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
