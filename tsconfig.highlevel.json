@@ -17,6 +17,8 @@
     "src/lib/highlevelDashboard.test.ts",
     "src/lib/highlevelJobWorkspace.ts",
     "src/lib/highlevelJobWorkspace.test.ts",
+    "src/lib/highlevelMoney.ts",
+    "src/lib/highlevelMoney.test.ts",
     "src/pages/highlevel/**/*.tsx"
   ]
 }
