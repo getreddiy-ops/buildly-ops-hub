@@ -12,6 +12,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { HighLevelProvider, useHighLevel } from "@/contexts/HighLevelContext";
 import { cn } from "@/lib/utils";
+import { AvaHandoffDialog } from "@/pages/highlevel/AvaHandoffDialog";
 
 const links = [
   { to: "/highlevel/home", label: "Home", icon: Home },
@@ -109,6 +110,8 @@ function ShellContent() {
       <main key={connection.locationId} className="mx-auto min-h-[calc(100dvh-4rem)] w-full max-w-[1480px] pb-24 md:pb-8">
         <Outlet key={connection.locationId} />
       </main>
+
+      <AvaHandoffDialog />
 
       <nav
         className="fixed inset-x-0 bottom-0 z-50 grid h-[72px] grid-cols-5 border-t border-border bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
