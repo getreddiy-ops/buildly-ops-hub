@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import {
   ArrowRight,
+  CheckCircle2,
+  Loader2,
   Mail,
   MapPin,
   MoreHorizontal,
@@ -10,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -60,7 +63,20 @@ type LeadForm = {
   notes: string;
 };
 
+type LeadAction = {
+  label: string;
+  status?: FastTractLeadStatus;
+  convert?: boolean;
+};
+
 const statuses: FastTractLeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
+const statusOrder: Record<FastTractLeadStatus, number> = {
+  qualified: 0,
+  new: 1,
+  contacted: 2,
+  won: 3,
+  lost: 4,
+};
 const empty: LeadForm = { name: "", email: "", phone: "", address: "", source: "", status: "new", notes: "" };
 
 const schema = z.object({
@@ -77,6 +93,32 @@ function titleCase(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function nextStep(lead: FastTractLead) {
+  if (lead.status === "new") return "Make contact and confirm what work they need.";
+  if (lead.status === "contacted") return "Qualify the scope, timing, budget, and job-site details.";
+  if (lead.status === "qualified") return "Convert the lead, then build the estimate and job plan.";
+  if (lead.status === "won") return "This customer is ready for estimates, jobs, and follow-up.";
+  return "This lead is closed. Reopen it only when the customer is active again.";
+}
+
+function nextAction(lead: FastTractLead): LeadAction | null {
+  if (lead.status === "new") return { label: "Mark contacted", status: "contacted" };
+  if (lead.status === "contacted") return { label: "Qualify lead", status: "qualified" };
+  if (lead.status === "qualified") return { label: "Convert", convert: true };
+  if (lead.status === "lost") return { label: "Reopen", status: "new" };
+  return null;
+}
+
+function avaPrompt(lead: FastTractLead) {
+  if (lead.status === "qualified") {
+    return `Help me turn ${lead.name} into a customer and prepare the next step for their project`;
+  }
+  if (lead.status === "new") {
+    return `Help me follow up with ${lead.name} about their new inquiry`;
+  }
+  return `Help me decide the next step for ${lead.name}`;
+}
+
 export default function HighLevelLeads() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<FastTractLead[]>([]);
@@ -87,6 +129,7 @@ export default function HighLevelLeads() {
   const [editing, setEditing] = useState<FastTractLead | null>(null);
   const [form, setForm] = useState<LeadForm>(empty);
   const [saving, setSaving] = useState(false);
+  const [workingId, setWorkingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -114,13 +157,15 @@ export default function HighLevelLeads() {
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return rows.filter((lead) => {
-      const statusMatches = filter === "all"
-        || (filter === "open" ? !["won", "lost"].includes(lead.status) : lead.status === filter);
-      const textMatches = !needle || [lead.name, lead.email, lead.phone, lead.address, lead.source]
-        .some((value) => value?.toLowerCase().includes(needle));
-      return statusMatches && textMatches;
-    });
+    return rows
+      .filter((lead) => {
+        const statusMatches = filter === "all"
+          || (filter === "open" ? !["won", "lost"].includes(lead.status) : lead.status === filter);
+        const textMatches = !needle || [lead.name, lead.email, lead.phone, lead.address, lead.source]
+          .some((value) => value?.toLowerCase().includes(needle));
+        return statusMatches && textMatches;
+      })
+      .sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.name.localeCompare(b.name));
   }, [filter, query, rows]);
 
   const openNew = () => {
@@ -205,23 +250,56 @@ export default function HighLevelLeads() {
   };
 
   const convert = async (lead: FastTractLead) => {
+    setWorkingId(lead.id);
     try {
       await highLevel.convertLead(lead.id);
       toast.success(`${lead.name} is now a customer`);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to convert lead");
+    } finally {
+      setWorkingId(null);
+    }
+  };
+
+  const advance = async (lead: FastTractLead) => {
+    const action = nextAction(lead);
+    if (!action) return;
+    if (action.convert) {
+      await convert(lead);
+      return;
+    }
+
+    setWorkingId(lead.id);
+    try {
+      await highLevel.updateLead(lead.id, {
+        name: lead.name,
+        email: lead.email || null,
+        phone: lead.phone || null,
+        address: lead.address || null,
+        source: lead.source || null,
+        status: action.status,
+      });
+      toast.success(`${lead.name} moved to ${titleCase(action.status || lead.status)}`);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to move the lead forward");
+    } finally {
+      setWorkingId(null);
     }
   };
 
   const remove = async (lead: FastTractLead) => {
     if (!window.confirm(`Remove ${lead.name} from the FastTract sales pipeline?`)) return;
+    setWorkingId(lead.id);
     try {
       await highLevel.deleteLead(lead.id);
       toast.success("Lead removed");
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to remove lead");
+    } finally {
+      setWorkingId(null);
     }
   };
 
@@ -229,7 +307,7 @@ export default function HighLevelLeads() {
     <div className="min-w-0 px-4 py-7 sm:px-7 lg:px-9">
       <PageHeader
         title="Leads"
-        description="New inquiries, callbacks, site visits, and opportunities moving toward a signed job."
+        description="Move every inquiry from first response to a real customer without losing the next step."
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild><Link to="/highlevel/customers"><Users className="h-4 w-4" /> Customers</Link></Button>
@@ -293,6 +371,14 @@ export default function HighLevelLeads() {
         <Summary label="Won" value={counts.won} active={filter === "won"} onClick={() => setFilter("won")} />
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">FastTract flow</span>
+        <span>New inquiry</span><ArrowRight className="h-3.5 w-3.5" />
+        <span>Contacted</span><ArrowRight className="h-3.5 w-3.5" />
+        <span>Qualified</span><ArrowRight className="h-3.5 w-3.5" />
+        <span>Customer</span>
+      </div>
+
       <div className="mb-6 flex items-center gap-2 rounded-xl border border-border bg-card/40 px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <Input value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0" placeholder="Search leads…" />
@@ -307,7 +393,7 @@ export default function HighLevelLeads() {
       </div>
 
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-60 animate-pulse rounded-xl border border-border bg-card/40" />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-72 animate-pulse rounded-xl border border-border bg-card/40" />)}</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center">
           <Users className="mx-auto h-9 w-9 text-primary" />
@@ -317,40 +403,66 @@ export default function HighLevelLeads() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((lead) => (
-            <article key={lead.id} className="min-w-0 rounded-xl border border-border bg-card/50 p-5 shadow-card">
-              <div className="flex items-start justify-between gap-3">
-                <StatusBadge status={lead.status} />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Lead actions"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void openEdit(lead)}>Edit lead</DropdownMenuItem>
-                    {lead.status !== "won" && <DropdownMenuItem onClick={() => void convert(lead)}><UserCheck className="h-4 w-4" /> Convert to customer</DropdownMenuItem>}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => void remove(lead)}>Remove lead</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <button type="button" className="mt-4 block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" onClick={() => void openEdit(lead)}>
-                <h2 className="truncate text-lg font-semibold">{lead.name}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">{lead.source || "Source not recorded"}</p>
-              </button>
-              <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-                {lead.phone && <a className="flex items-center gap-2 hover:text-foreground" href={`tel:${lead.phone}`}><Phone className="h-4 w-4 shrink-0" /><span className="truncate">{lead.phone}</span></a>}
-                {lead.email && <a className="flex items-center gap-2 hover:text-foreground" href={`mailto:${lead.email}`}><Mail className="h-4 w-4 shrink-0" /><span className="truncate">{lead.email}</span></a>}
-                {lead.address && <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /><span>{lead.address}</span></p>}
-              </div>
-              {lead.notes && <p className="mt-4 line-clamp-3 border-t border-border pt-4 text-sm leading-6 text-muted-foreground">{lead.notes}</p>}
-              <div className="mt-5 flex items-center justify-between gap-2">
-                <Button size="sm" variant="outline" onClick={() => void openEdit(lead)}>Open</Button>
-                {lead.status !== "won" ? (
-                  <Button size="sm" onClick={() => void convert(lead)}>Convert <ArrowRight className="h-4 w-4" /></Button>
-                ) : (
-                  <Button size="sm" asChild><Link to="/highlevel/customers">Open customers <ArrowRight className="h-4 w-4" /></Link></Button>
-                )}
-              </div>
-            </article>
-          ))}
+          {filtered.map((lead) => {
+            const action = nextAction(lead);
+            const working = workingId === lead.id;
+            return (
+              <article key={lead.id} className={cn(
+                "min-w-0 rounded-xl border bg-card/50 p-5 shadow-card",
+                lead.status === "qualified" ? "border-primary/35" : "border-border",
+              )}>
+                <div className="flex items-start justify-between gap-3">
+                  <StatusBadge status={lead.status} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Lead actions"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => void openEdit(lead)}>Edit lead</DropdownMenuItem>
+                      {lead.status !== "won" && <DropdownMenuItem onClick={() => void convert(lead)}><UserCheck className="h-4 w-4" /> Convert to customer</DropdownMenuItem>}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => void remove(lead)}>Remove lead</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <button type="button" className="mt-4 block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" onClick={() => void openEdit(lead)}>
+                  <h2 className="truncate text-lg font-semibold">{lead.name}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{lead.source || "Source not recorded"}</p>
+                </button>
+
+                <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                  {lead.phone && <a className="flex items-center gap-2 hover:text-foreground" href={`tel:${lead.phone}`}><Phone className="h-4 w-4 shrink-0" /><span className="truncate">{lead.phone}</span></a>}
+                  {lead.email && <a className="flex items-center gap-2 hover:text-foreground" href={`mailto:${lead.email}`}><Mail className="h-4 w-4 shrink-0" /><span className="truncate">{lead.email}</span></a>}
+                  {lead.address && <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /><span>{lead.address}</span></p>}
+                </div>
+
+                <div className="mt-4 rounded-xl border border-border bg-background/50 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Next step</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{nextStep(lead)}</p>
+                </div>
+
+                {lead.notes && <p className="mt-4 line-clamp-3 border-t border-border pt-4 text-sm leading-6 text-muted-foreground">{lead.notes}</p>}
+
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => void openEdit(lead)}>Open</Button>
+                  {lead.status === "won" ? (
+                    <Button size="sm" asChild><Link to="/highlevel/customers">Customer <ArrowRight className="h-4 w-4" /></Link></Button>
+                  ) : action ? (
+                    <Button size="sm" onClick={() => void advance(lead)} disabled={working}>
+                      {working ? <Loader2 className="h-4 w-4 animate-spin" /> : action.convert ? <UserCheck className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {working ? "Working…" : action.label}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>Closed</Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="col-span-2" asChild>
+                    <Link to={`/highlevel/ai?prompt=${encodeURIComponent(avaPrompt(lead))}`}>
+                      <Sparkles className="h-4 w-4 text-primary" /> Ask Ava about this lead
+                    </Link>
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
