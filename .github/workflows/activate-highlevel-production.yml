@@ -1,0 +1,123 @@
+name: Activate HighLevel production credentials
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type ACTIVATE after the database migration and Vercel production deployment are green"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-highlevel-production-activation
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    if: ${{ inputs.confirmation == 'ACTIVATE' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      PROJECT_ID: ohqopzyggxmwentbgivb
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
+      GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
+      GHL_TOKEN_ENCRYPTION_KEY: ${{ secrets.GHL_TOKEN_ENCRYPTION_KEY }}
+      FASTTRACT_READINESS_SECRET: ${{ secrets.FASTTRACT_READINESS_SECRET }}
+      FASTTRACT_PRODUCTION_URL: ${{ vars.FASTTRACT_PRODUCTION_URL }}
+      GHL_SUCCESS_URL: ${{ vars.GHL_SUCCESS_URL }}
+      GHL_ERROR_URL: ${{ vars.GHL_ERROR_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate activation configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$GHL_CLIENT_ID"
+          test -n "$GHL_CLIENT_SECRET"
+          test -n "$GHL_TOKEN_ENCRYPTION_KEY"
+          test -n "$FASTTRACT_READINESS_SECRET"
+          test -n "$FASTTRACT_PRODUCTION_URL"
+          test "${#GHL_TOKEN_ENCRYPTION_KEY}" -ge 32
+          test "${#FASTTRACT_READINESS_SECRET}" -ge 32
+
+      - name: Verify Vercel is ready before changing stored credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_url="${FASTTRACT_PRODUCTION_URL%/}"
+          status=$(curl --silent --show-error --output pre-activation.json --write-out '%{http_code}' \
+            -H "X-FastTract-Readiness-Secret: $FASTTRACT_READINESS_SECRET" \
+            "$base_url/api/highlevel/readiness")
+          cat pre-activation.json
+          test "$status" = "200"
+          node -e 'const fs=require("fs"); const data=JSON.parse(fs.readFileSync("pre-activation.json","utf8")); if (!data.ok || data.credentialStore.invalid) process.exit(1);'
+
+      - name: Configure HighLevel OAuth function secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            "GHL_CLIENT_ID=$GHL_CLIENT_ID"
+            "GHL_CLIENT_SECRET=$GHL_CLIENT_SECRET"
+            "GHL_TOKEN_ENCRYPTION_KEY=$GHL_TOKEN_ENCRYPTION_KEY"
+          )
+          if [ -n "$GHL_SUCCESS_URL" ]; then args+=("GHL_SUCCESS_URL=$GHL_SUCCESS_URL"); fi
+          if [ -n "$GHL_ERROR_URL" ]; then args+=("GHL_ERROR_URL=$GHL_ERROR_URL"); fi
+          supabase secrets set --project-ref "$PROJECT_ID" "${args[@]}"
+
+      - name: Deploy encrypted HighLevel OAuth callback
+        run: supabase functions deploy ghl-oauth-callback --project-ref "$PROJECT_ID"
+
+      - name: Install application dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Preview legacy credential encryption
+        run: npm run security:ghl:dry-run
+
+      - name: Encrypt legacy HighLevel credentials
+        run: npm run security:ghl:apply
+
+      - name: Verify every stored connection is encrypted and decryptable
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_url="${FASTTRACT_PRODUCTION_URL%/}"
+          status=$(curl --silent --show-error --output post-activation.json --write-out '%{http_code}' \
+            -H "X-FastTract-Readiness-Secret: $FASTTRACT_READINESS_SECRET" \
+            "$base_url/api/highlevel/readiness")
+          cat post-activation.json
+          test "$status" = "200"
+          node -e 'const fs=require("fs"); const data=JSON.parse(fs.readFileSync("post-activation.json","utf8")); const store=data.credentialStore||{}; if (!data.ok || store.invalid !== 0 || store.legacy !== 0 || store.backfillRequired) process.exit(1);'
+
+      - name: Smoke-test OAuth callback routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          callback_url="$SUPABASE_URL/functions/v1/ghl-oauth-callback"
+          status=$(curl --silent --show-error --dump-header callback-headers.txt --output /dev/null --write-out '%{http_code}' "$callback_url")
+          cat callback-headers.txt
+          test "$status" = "302"
