@@ -44,6 +44,7 @@ contacts.readonly
 contacts.write
 opportunities.readonly
 opportunities.write
+locations.readonly
 invoices/estimate.readonly
 invoices/estimate.write
 invoices.readonly
@@ -63,6 +64,7 @@ Why each group is required:
 | --- | --- |
 | Contacts | Customers, lead identity, notes, and FastTract tags |
 | Opportunities | FastTract Sales pipeline and lead stages |
+| Locations | Business identity and address on native estimates |
 | Estimates | Native estimate create, update, send, delete, and convert |
 | Invoices | Native invoice list, create, and send |
 | Object schema/records | Jobs, Time Entries, and Materials |
