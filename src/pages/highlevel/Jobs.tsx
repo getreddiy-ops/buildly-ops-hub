@@ -146,11 +146,11 @@ function jobFormFromRecord(record: HighLevelRecord): JobForm {
   };
 }
 
-function jobPayload(form: JobForm, existing?: HighLevelRecord | null) {
+function jobPayload(form: Partial<JobForm>, existing?: HighLevelRecord | null) {
   return {
     properties: {
-      job_name: form.job_name,
-      status: form.status,
+      job_name: form.job_name ?? "",
+      status: form.status ?? "scheduled",
       address: form.address || null,
       start_date: form.start_date || null,
       notes: form.notes || null,
