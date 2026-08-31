@@ -31,11 +31,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Typecheck HighLevel workspace
+        run: npm run typecheck:highlevel
+
+      - name: Lint HighLevel workspace
+        run: npm run lint:highlevel
 
       - name: Test
         run: npm test
 
       - name: Build
         run: npm run build
+
+      - name: Validate deployment scripts
+        run: node --check scripts/encrypt-ghl-connections.mjs
