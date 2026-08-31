@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   highLevelRequest,
   json,
@@ -10,6 +11,14 @@ const OBJECT_KEYS: Record<string, string> = {
   time_entries: "custom_objects.time_entries",
   materials: "custom_objects.materials",
 };
+
+const JOB_ID_KEYS = [
+  "custom_objects.time_entries.job_id",
+  "custom_object.time_entries.job_id",
+  "custom_objects.materials.job_id",
+  "custom_object.materials.job_id",
+  "job_id",
+];
 
 function resolveObjectKey(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -49,6 +58,18 @@ function normalizeRecordBody(value: unknown) {
   };
 }
 
+function recordProperty(record: any, keys: string[]) {
+  const properties = record?.properties && typeof record.properties === "object"
+    ? record.properties as Record<string, unknown>
+    : {};
+  for (const key of keys) {
+    const value = properties[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
 async function getRecord(objectKey: string, recordId: string, token: string, locationId: string) {
   const result = await highLevelRequest<any>(
     `/objects/${encodeURIComponent(objectKey)}/records/${encodeURIComponent(recordId)}`,
@@ -57,6 +78,56 @@ async function getRecord(objectKey: string, recordId: string, token: string, loc
   const record = result?.record ?? result;
   ensureRecordLocation(record, locationId);
   return record;
+}
+
+async function searchRecordPage(
+  objectKey: string,
+  locationId: string,
+  token: string,
+  page: number,
+  pageLimit: number,
+  query: string,
+) {
+  const result = await highLevelRequest<any>(
+    `/objects/${encodeURIComponent(objectKey)}/records/search`,
+    {
+      method: "POST",
+      token,
+      body: { locationId, page, pageLimit, query, searchAfter: [] },
+    },
+  );
+
+  const records = Array.isArray(result?.records)
+    ? result.records
+    : Array.isArray(result?.data)
+      ? result.data
+      : [];
+  for (const record of records) ensureRecordLocation(record, locationId);
+  const total = Number(result?.total ?? result?.meta?.total ?? records.length) || 0;
+  return { result, records, total };
+}
+
+async function searchLinkedJobRecords(
+  objectKey: string,
+  jobId: string,
+  locationId: string,
+  token: string,
+) {
+  const all: any[] = [];
+  let total = 0;
+  let page = 1;
+  const pageLimit = 100;
+
+  do {
+    const current = await searchRecordPage(objectKey, locationId, token, page, pageLimit, "");
+    total = current.total;
+    all.push(...current.records);
+    if (current.records.length === 0) break;
+    page += 1;
+  } while (all.length < total && page <= 50);
+
+  const records = all.filter((record) => recordProperty(record, JOB_ID_KEYS) === jobId);
+  return { records, total: records.length };
 }
 
 export default async function handler(req: any, res: any) {
@@ -79,23 +150,17 @@ export default async function handler(req: any, res: any) {
       const page = Math.max(1, Number(req.query?.page || 1));
       const pageLimit = Math.min(Math.max(1, Number(req.query?.limit || 25)), 100);
 
-      const result = await highLevelRequest<any>(
-        `/objects/${encodeURIComponent(objectKey)}/records/search`,
-        {
-          method: "POST",
-          token,
-          body: { locationId, page, pageLimit, query, searchAfter: [] },
-        },
-      );
+      if (query && objectKey !== OBJECT_KEYS.jobs) {
+        const linked = await searchLinkedJobRecords(objectKey, query, locationId, token);
+        return json(res, 200, linked);
+      }
 
-      const records = Array.isArray(result?.records)
-        ? result.records
-        : Array.isArray(result?.data)
-          ? result.data
-          : [];
-      for (const record of records) ensureRecordLocation(record, locationId);
-      const total = Number(result?.total ?? result?.meta?.total ?? records.length) || 0;
-      return json(res, 200, { ...result, records, total });
+      const searched = await searchRecordPage(objectKey, locationId, token, page, pageLimit, query);
+      return json(res, 200, {
+        ...searched.result,
+        records: searched.records,
+        total: searched.total,
+      });
     }
 
     if (req.method === "POST") {
