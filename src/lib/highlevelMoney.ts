@@ -21,6 +21,15 @@ function startOfDay(value: Date) {
   return date.getTime();
 }
 
+function dateTimestamp(value?: string | null) {
+  if (!value) return Number.NaN;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
+  }
+  return Date.parse(value);
+}
+
 export function invoiceTotal(invoice: HighLevelInvoice) {
   const value = Number(invoice.total);
   return Number.isFinite(value) ? Math.max(value, 0) : 0;
@@ -40,7 +49,7 @@ export function invoiceAmountDue(invoice: HighLevelInvoice) {
 export function invoiceIsOverdue(invoice: HighLevelInvoice, now = new Date()) {
   if (!["sent", "payment_processing", "partially_paid"].includes(invoice.status)) return false;
   if (!invoice.dueDate || invoiceAmountDue(invoice) <= 0) return false;
-  const due = Date.parse(invoice.dueDate);
+  const due = dateTimestamp(invoice.dueDate);
   return Number.isFinite(due) && startOfDay(new Date(due)) < startOfDay(now);
 }
 
@@ -52,15 +61,14 @@ export function paymentProgress(invoice: HighLevelInvoice) {
 }
 
 function dueTimestamp(invoice: HighLevelInvoice) {
-  if (!invoice.dueDate) return Number.MAX_SAFE_INTEGER;
-  const value = Date.parse(invoice.dueDate);
+  const value = dateTimestamp(invoice.dueDate);
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
 
 function issueTimestamp(invoice: HighLevelInvoice) {
   const raw = invoice.issueDate || invoice.createdAt || invoice.updatedAt;
   if (!raw) return 0;
-  const value = Date.parse(raw);
+  const value = dateTimestamp(raw);
   return Number.isFinite(value) ? value : 0;
 }
 
