@@ -17,6 +17,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:highlevel:isolation": "node scripts/test-highlevel-isolation.mjs",
     "security:ghl:dry-run": "node scripts/encrypt-ghl-connections.mjs",
     "security:ghl:apply": "node scripts/encrypt-ghl-connections.mjs --apply"
   },
