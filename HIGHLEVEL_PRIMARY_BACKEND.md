@@ -251,16 +251,16 @@ The repository still contains unrelated legacy lint debt outside the HighLevel w
 
 ## Ordered production activation
 
-After this branch is approved and merged to the default branch, run the manual workflows in this exact order:
+The confirmation-gated workflow definitions are already on `main`. In GitHub Actions, open each workflow and select **Use workflow from: `chatgpt/fasttract-ghl-flawless`** so the still-unmerged feature branch is checked out and deployed. Run them in this exact order:
 
 1. **Apply Supabase production migrations** — enter `MIGRATE`.
 2. **Deploy FastTract production** — enter `DEPLOY`.
 3. **Activate HighLevel production credentials** — enter `ACTIVATE`.
 4. Install the private Marketplace app into two App Test sub-accounts.
 5. Save two different encrypted signed contexts as `GHL_TEST_CONTEXT_A` and `GHL_TEST_CONTEXT_B` in the `highlevel-app-test` GitHub environment.
-6. **Test HighLevel location isolation** — enter `TEST`.
+6. **Test HighLevel location isolation** — enter `TEST`, again using `chatgpt/fasttract-ghl-flawless`.
 
-The activation workflow refuses to encrypt legacy tokens until the protected Vercel readiness endpoint proves that the new application code, database schema, secrets, and decryption layer are live.
+The activation workflow refuses to encrypt legacy tokens until the protected Vercel readiness endpoint proves that the new application code, database schema, secrets, and decryption layer are live. PR #15 remains unmerged until the live two-location release gate passes.
 
 ## Two-location release gate
 
