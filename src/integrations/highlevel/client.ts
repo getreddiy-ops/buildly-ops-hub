@@ -420,6 +420,14 @@ export const highLevel = {
     return request<HighLevelRecordSearchResponse<T>>(`/api/highlevel/records?${params.toString()}`);
   },
 
+  getRecord<T = Record<string, unknown>>(
+    object: FastTractHighLevelObject,
+    id: string,
+  ) {
+    const params = new URLSearchParams({ object, id });
+    return request<{ record: HighLevelRecord<T> }>(`/api/highlevel/records?${params.toString()}`);
+  },
+
   createRecord<T = Record<string, unknown>>(
     object: FastTractHighLevelObject,
     data: Record<string, unknown>,
@@ -427,6 +435,25 @@ export const highLevel = {
     return request<{ record: HighLevelRecord<T> }>(`/api/highlevel/records?object=${encodeURIComponent(object)}`, {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  },
+
+  updateRecord<T = Record<string, unknown>>(
+    object: FastTractHighLevelObject,
+    id: string,
+    data: Record<string, unknown>,
+  ) {
+    const params = new URLSearchParams({ object, id });
+    return request<{ record: HighLevelRecord<T> }>(`/api/highlevel/records?${params.toString()}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteRecord(object: FastTractHighLevelObject, id: string) {
+    const params = new URLSearchParams({ object, id });
+    return request<{ succeeded?: boolean }>(`/api/highlevel/records?${params.toString()}`, {
+      method: "DELETE",
     });
   },
 };
