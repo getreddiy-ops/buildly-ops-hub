@@ -1,10 +1,10 @@
-name: Deploy Supabase production
+name: Apply Supabase production migrations
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Type APPLY to push migrations, deploy the OAuth callback, and encrypt legacy credentials"
+        description: "Type MIGRATE to preview and apply pending production database migrations"
         required: true
         type: string
 
@@ -12,52 +12,35 @@ permissions:
   contents: read
 
 concurrency:
-  group: fasttract-supabase-production
+  group: fasttract-supabase-production-migrations
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    if: ${{ inputs.confirmation == 'APPLY' }}
+  migrate:
+    if: ${{ inputs.confirmation == 'MIGRATE' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     environment: production
     env:
       PROJECT_ID: ohqopzyggxmwentbgivb
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_URL: https://ohqopzyggxmwentbgivb.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      GHL_TOKEN_ENCRYPTION_KEY: ${{ secrets.GHL_TOKEN_ENCRYPTION_KEY }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Validate required secrets
+      - name: Validate migration credentials
         shell: bash
-        env:
-          GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
-          GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
         run: |
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          test -n "$GHL_TOKEN_ENCRYPTION_KEY"
-          test -n "$GHL_CLIENT_ID"
-          test -n "$GHL_CLIENT_SECRET"
-          test "${#GHL_TOKEN_ENCRYPTION_KEY}" -ge 32
 
       - name: Link production project
         run: supabase link --project-ref "$PROJECT_ID"
@@ -68,24 +51,5 @@ jobs:
       - name: Apply database migrations
         run: supabase db push
 
-      - name: Configure OAuth function secrets
-        env:
-          GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
-          GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
-        run: |
-          supabase secrets set --project-ref "$PROJECT_ID" \
-            GHL_CLIENT_ID="$GHL_CLIENT_ID" \
-            GHL_CLIENT_SECRET="$GHL_CLIENT_SECRET" \
-            GHL_TOKEN_ENCRYPTION_KEY="$GHL_TOKEN_ENCRYPTION_KEY"
-
-      - name: Deploy HighLevel OAuth callback
-        run: supabase functions deploy ghl-oauth-callback --project-ref "$PROJECT_ID"
-
-      - name: Install application dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Preview legacy credential backfill
-        run: npm run security:ghl:dry-run
-
-      - name: Encrypt legacy HighLevel credentials
-        run: npm run security:ghl:apply
+      - name: Verify migration history
+        run: supabase migration list
