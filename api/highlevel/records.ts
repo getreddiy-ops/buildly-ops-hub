@@ -27,6 +27,28 @@ function ensureRecordLocation(record: any, locationId: string) {
   }
 }
 
+function normalizeProperties(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const normalized: Record<string, unknown> = {};
+  for (const [key, propertyValue] of Object.entries(value as Record<string, unknown>)) {
+    const bareKey = key
+      .replace(/^custom_objects\.[^.]+\./, "")
+      .replace(/^custom_object\.[^.]+\./, "");
+    normalized[bareKey] = propertyValue;
+  }
+  return normalized;
+}
+
+function normalizeRecordBody(value: unknown) {
+  const body = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    ...body,
+    properties: normalizeProperties(body.properties),
+  };
+}
+
 async function getRecord(objectKey: string, recordId: string, token: string, locationId: string) {
   const result = await highLevelRequest<any>(
     `/objects/${encodeURIComponent(objectKey)}/records/${encodeURIComponent(recordId)}`,
@@ -77,7 +99,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === "POST") {
-      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const body = normalizeRecordBody(req.body);
       const result = await highLevelRequest<any>(
         `/objects/${encodeURIComponent(objectKey)}/records`,
         {
@@ -94,7 +116,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === "PUT") {
       if (!recordId) return json(res, 400, { error: "Missing record id" });
       await getRecord(objectKey, recordId, token, locationId);
-      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const body = normalizeRecordBody(req.body);
       const result = await highLevelRequest<any>(
         `/objects/${encodeURIComponent(objectKey)}/records/${encodeURIComponent(recordId)}?locationId=${encodeURIComponent(locationId)}`,
         {

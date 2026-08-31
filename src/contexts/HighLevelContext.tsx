@@ -45,10 +45,8 @@ export function HighLevelProvider({ children }: { children: React.ReactNode }) {
         });
         setError(null);
       } catch (cause) {
-        if (!silent) {
-          setConnection(null);
-          setError(cause instanceof Error ? cause.message : "Unable to verify the HighLevel workspace");
-        }
+        setConnection(null);
+        setError(cause instanceof Error ? cause.message : "Unable to verify the HighLevel workspace");
       } finally {
         if (!silent) setLoading(false);
       }
@@ -71,7 +69,7 @@ export function HighLevelProvider({ children }: { children: React.ReactNode }) {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       void verify(true);
     };
-    const intervalId = window.setInterval(silentlyVerify, 60_000);
+    const intervalId = window.setInterval(silentlyVerify, 15_000);
     window.addEventListener("focus", silentlyVerify);
     window.addEventListener("pageshow", silentlyVerify);
     document.addEventListener("visibilitychange", silentlyVerify);

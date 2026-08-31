@@ -82,8 +82,10 @@ export default async function handler(req: any, res: any) {
         const tags = Array.isArray(contact.tags)
           ? contact.tags.filter((tag: unknown): tag is string => typeof tag === "string").map((tag) => tag.toLowerCase())
           : [];
+        const isFastTractHidden = tags.includes(FASTTRACT_HIDDEN_TAG);
         const isFastTractLead = tags.includes(FASTTRACT_LEAD_TAG);
         const isFastTractCustomer = tags.includes(FASTTRACT_CUSTOMER_TAG);
+        if (isFastTractHidden) return false;
         return isFastTractCustomer || !isFastTractLead;
       });
 
