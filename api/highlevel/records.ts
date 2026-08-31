@@ -143,6 +143,14 @@ export default async function handler(req: any, res: any) {
     res.setHeader("Allow", "GET, POST, PUT, DELETE");
     return json(res, 405, { error: "Method not allowed" });
   } catch (error) {
+    if (
+      error instanceof Error
+      && error.message.includes("does not belong to this HighLevel sub-account")
+    ) {
+      return json(res, 403, {
+        error: "That contractor record is outside the active HighLevel sub-account.",
+      });
+    }
     return respondHighLevelError(res, error, "FastTract could not load or save that contractor record.");
   }
 }
