@@ -131,7 +131,7 @@ FASTTRACT_AI_MODEL
 
 ## Ordered activation
 
-Run these manual workflows from the default branch in this exact order:
+The manual workflow definitions are already available on `main`. For every run, choose **Use workflow from: `chatgpt/fasttract-ghl-flawless`** so GitHub checks out the unmerged production candidate. Run them in this exact order:
 
 1. **Apply Supabase production migrations** — enter `MIGRATE`.
 2. **Deploy FastTract production** — enter `DEPLOY`.
@@ -171,4 +171,4 @@ Security rules:
 - clear the local clipboard after saving each secret;
 - recapture the contexts when HighLevel changes the signed-context format, the test user changes, the app shared secret is rotated, or the isolation workflow reports an authentication failure.
 
-The isolation harness resolves both signed contexts through `/api/highlevel/bootstrap` and refuses to continue if they map to the same active location.
+The isolation harness resolves both signed contexts through `/api/highlevel/bootstrap` and refuses to continue if they map to the same active location. Run **Test HighLevel location isolation**, enter `TEST`, and again choose `chatgpt/fasttract-ghl-flawless` as the workflow ref.
