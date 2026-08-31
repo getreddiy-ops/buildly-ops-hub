@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import {
   BriefcaseBusiness,
@@ -83,6 +84,7 @@ function statusLabel(value: string) {
 }
 
 export default function HighLevelJobs() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState<HighLevelRecord<JobProperties>[]>([]);
   const [loading, setLoading] = useState(true);
   const [setupRequired, setSetupRequired] = useState(false);
@@ -110,6 +112,18 @@ export default function HighLevelJobs() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    const jobId = searchParams.get("open");
+    if (loading || selected || !jobId) return;
+    const jobToOpen = jobs.find((job) => job.id === jobId);
+    if (!jobToOpen) return;
+
+    setSelected(jobToOpen);
+    const next = new URLSearchParams(searchParams);
+    next.delete("open");
+    setSearchParams(next, { replace: true });
+  }, [jobs, loading, searchParams, selected, setSearchParams]);
 
   const counts = useMemo(() => ({
     active: jobs.filter((job) => readProperty(job, propertyKeys.status) === "active").length,
