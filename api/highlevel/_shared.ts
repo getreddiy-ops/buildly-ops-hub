@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDecipheriv, createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  decryptHighLevelCredential,
+  encryptHighLevelCredential,
+} from "./_credential-crypto";
 
 const HIGHLEVEL_BASE_URL = "https://services.leadconnectorhq.com";
 const HIGHLEVEL_API_VERSION = "v3";
@@ -72,7 +77,7 @@ export type HighLevelConnection = {
   mode: "embedded" | "single_location";
 };
 
-type StoredHighLevelConnection = {
+type StoredHighLevelConnectionRow = {
   id: string;
   organization_id?: string | null;
   connection_key: string;
@@ -86,8 +91,16 @@ type StoredHighLevelConnection = {
   token_type?: string | null;
   scope?: string | null;
   expires_at: string;
+  credential_version?: number | null;
+  credentials_encrypted_at?: string | null;
   installed_at?: string;
   updated_at?: string;
+};
+
+type StoredHighLevelConnection = StoredHighLevelConnectionRow & {
+  _storedAccessToken: string;
+  _storedRefreshToken: string;
+  _needsEncryption: boolean;
 };
 
 type HighLevelTokenResponse = {
@@ -180,6 +193,10 @@ function requiredEnvironment(name: string) {
   return value;
 }
 
+function credentialEncryptionKey() {
+  return requiredEnvironment("GHL_TOKEN_ENCRYPTION_KEY");
+}
+
 function getAdminClient() {
   if (!adminClient) {
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -233,6 +250,70 @@ function userTypeValue(payload: HighLevelTokenResponse) {
   return payload.user_type ?? payload.userType;
 }
 
+function decodeStoredConnection(row: StoredHighLevelConnectionRow): StoredHighLevelConnection {
+  const key = credentialEncryptionKey();
+  const access = decryptHighLevelCredential(row.access_token, key);
+  const refresh = decryptHighLevelCredential(row.refresh_token, key);
+
+  return {
+    ...row,
+    access_token: access.value,
+    refresh_token: refresh.value,
+    _storedAccessToken: row.access_token,
+    _storedRefreshToken: row.refresh_token,
+    _needsEncryption: !access.encrypted || !refresh.encrypted,
+  };
+}
+
+function encryptedCredentials(accessToken: string, refreshToken: string) {
+  const key = credentialEncryptionKey();
+  const now = new Date().toISOString();
+  return {
+    access_token: encryptHighLevelCredential(accessToken, key),
+    refresh_token: encryptHighLevelCredential(refreshToken, key),
+    credential_version: 1,
+    credentials_encrypted_at: now,
+  };
+}
+
+async function loadConnectionById(id: string) {
+  const { data, error } = await getAdminClient()
+    .from("ghl_connections")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Could not reload HighLevel credentials: ${error?.message ?? "unknown error"}`);
+  }
+  return decodeStoredConnection(data as StoredHighLevelConnectionRow);
+}
+
+async function secureLegacyCredentials(connection: StoredHighLevelConnection) {
+  if (!connection._needsEncryption) return connection;
+
+  const now = new Date().toISOString();
+  const updates = {
+    ...encryptedCredentials(connection.access_token, connection.refresh_token),
+    updated_at: now,
+  };
+
+  const { data, error } = await getAdminClient()
+    .from("ghl_connections")
+    .update(updates)
+    .eq("id", connection.id)
+    .eq("access_token", connection._storedAccessToken)
+    .eq("refresh_token", connection._storedRefreshToken)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Could not encrypt stored HighLevel credentials: ${error.message}`);
+  }
+  if (data) return decodeStoredConnection(data as StoredHighLevelConnectionRow);
+  return loadConnectionById(connection.id);
+}
+
 function needsRefresh(connection: StoredHighLevelConnection) {
   const expires = Date.parse(connection.expires_at);
   return !Number.isFinite(expires) || expires <= Date.now() + TOKEN_REFRESH_WINDOW_MS;
@@ -260,17 +341,12 @@ async function performStoredConnectionRefresh(
   const payload = await response.json().catch(() => ({})) as HighLevelTokenResponse;
   const accessToken = tokenValue(payload);
   const nextRefreshToken = refreshTokenValue(payload);
-  if (!response.ok || !accessToken || !nextRefreshToken) {
-    const { data: latest } = await getAdminClient()
-      .from("ghl_connections")
-      .select("*")
-      .eq("id", connection.id)
-      .maybeSingle();
 
-    const current = latest as StoredHighLevelConnection | null;
+  if (!response.ok || !accessToken || !nextRefreshToken) {
+    const current = await loadConnectionById(connection.id).catch(() => null);
     if (
       current
-      && current.refresh_token !== connection.refresh_token
+      && current.updated_at !== connection.updated_at
       && !needsRefresh(current)
     ) {
       return current;
@@ -278,10 +354,10 @@ async function performStoredConnectionRefresh(
     throw new Error(`HighLevel token refresh failed (${response.status})`);
   }
 
+  const now = new Date().toISOString();
   const updates = {
     user_type: userTypeValue(payload) ?? connection.user_type,
-    access_token: accessToken,
-    refresh_token: nextRefreshToken,
+    ...encryptedCredentials(accessToken, nextRefreshToken),
     refresh_token_id: refreshTokenIdValue(payload) ?? connection.refresh_token_id ?? null,
     token_type: tokenTypeValue(payload),
     scope: payload.scope ?? connection.scope ?? "",
@@ -289,45 +365,39 @@ async function performStoredConnectionRefresh(
     location_id: locationIdValue(payload) ?? connection.location_id ?? null,
     ghl_user_id: userIdValue(payload) ?? connection.ghl_user_id ?? null,
     expires_at: expiresAt(expirationValue(payload)),
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
 
-  const { data, error } = await getAdminClient()
+  let updateQuery = getAdminClient()
     .from("ghl_connections")
     .update(updates)
-    .eq("id", connection.id)
-    .eq("refresh_token", connection.refresh_token)
-    .select("*")
-    .maybeSingle();
+    .eq("id", connection.id);
 
+  if (connection.updated_at) {
+    updateQuery = updateQuery.eq("updated_at", connection.updated_at);
+  }
+
+  const { data, error } = await updateQuery.select("*").maybeSingle();
   if (error) {
     throw new Error(`Could not save refreshed HighLevel credentials: ${error.message}`);
   }
-  if (data) return data as StoredHighLevelConnection;
-
-  const { data: latest, error: latestError } = await getAdminClient()
-    .from("ghl_connections")
-    .select("*")
-    .eq("id", connection.id)
-    .single();
-  if (latestError || !latest) {
-    throw new Error(`Could not reload refreshed HighLevel credentials: ${latestError?.message ?? "unknown error"}`);
-  }
-  return latest as StoredHighLevelConnection;
+  if (data) return decodeStoredConnection(data as StoredHighLevelConnectionRow);
+  return loadConnectionById(connection.id);
 }
 
 async function refreshStoredConnection(
   connection: StoredHighLevelConnection,
   force = false,
 ): Promise<StoredHighLevelConnection> {
-  if (!force && !needsRefresh(connection)) return connection;
+  const secured = await secureLegacyCredentials(connection);
+  if (!force && !needsRefresh(secured)) return secured;
 
-  const existing = refreshByConnectionId.get(connection.id);
+  const existing = refreshByConnectionId.get(secured.id);
   if (existing) return existing;
 
-  const refresh = performStoredConnectionRefresh(connection)
-    .finally(() => refreshByConnectionId.delete(connection.id));
-  refreshByConnectionId.set(connection.id, refresh);
+  const refresh = performStoredConnectionRefresh(secured)
+    .finally(() => refreshByConnectionId.delete(secured.id));
+  refreshByConnectionId.set(secured.id, refresh);
   return refresh;
 }
 
@@ -341,7 +411,8 @@ async function findLocationConnection(locationId: string) {
     .maybeSingle();
 
   if (error) throw new Error(`Could not read the HighLevel location connection: ${error.message}`);
-  return data as StoredHighLevelConnection | null;
+  if (!data) return null;
+  return secureLegacyCredentials(decodeStoredConnection(data as StoredHighLevelConnectionRow));
 }
 
 async function findCompanyConnection(companyId: string) {
@@ -355,7 +426,8 @@ async function findCompanyConnection(companyId: string) {
     .maybeSingle();
 
   if (error) throw new Error(`Could not read the HighLevel agency connection: ${error.message}`);
-  return data as StoredHighLevelConnection | null;
+  if (!data) return null;
+  return secureLegacyCredentials(decodeStoredConnection(data as StoredHighLevelConnectionRow));
 }
 
 async function exchangeLocationConnection(
@@ -381,6 +453,7 @@ async function exchangeLocationConnection(
     throw new Error(`Unable to create the HighLevel location connection (${response.status})`);
   }
 
+  const now = new Date().toISOString();
   const row = {
     organization_id: companyConnection.organization_id ?? null,
     connection_key: `location:${locationId}`,
@@ -388,14 +461,13 @@ async function exchangeLocationConnection(
     location_id: locationIdValue(payload) ?? locationId,
     ghl_user_id: userIdValue(payload) ?? companyConnection.ghl_user_id ?? null,
     user_type: userTypeValue(payload) ?? "Location",
-    access_token: accessToken,
-    refresh_token: refreshToken,
+    ...encryptedCredentials(accessToken, refreshToken),
     refresh_token_id: refreshTokenIdValue(payload) ?? null,
     token_type: tokenTypeValue(payload),
     scope: payload.scope ?? companyConnection.scope ?? "",
     expires_at: expiresAt(expirationValue(payload)),
-    installed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    installed_at: now,
+    updated_at: now,
   };
 
   const { data, error } = await getAdminClient()
@@ -407,7 +479,7 @@ async function exchangeLocationConnection(
   if (error || !data) {
     throw new Error(`Could not save the HighLevel location connection: ${error?.message ?? "unknown error"}`);
   }
-  return data as StoredHighLevelConnection;
+  return decodeStoredConnection(data as StoredHighLevelConnectionRow);
 }
 
 function resolveReplacementToken(token: string) {
@@ -552,9 +624,10 @@ export async function highLevelRequest<T = unknown>(
   return payload as T;
 }
 
-function unwrapPipeline(value: any): HighLevelPipeline {
-  const pipeline = value?.pipeline ?? value;
-  if (!pipeline?.id || !Array.isArray(pipeline?.stages)) {
+function unwrapPipeline(value: unknown): HighLevelPipeline {
+  const candidate = value as { pipeline?: unknown } | null;
+  const pipeline = (candidate?.pipeline ?? candidate) as Partial<HighLevelPipeline> | null;
+  if (!pipeline?.id || !Array.isArray(pipeline.stages)) {
     throw new Error("HighLevel returned an invalid FastTract pipeline response");
   }
   return pipeline as HighLevelPipeline;
@@ -574,7 +647,7 @@ export async function ensureFastTractPipeline(
   );
   if (found) return found;
 
-  const created = await highLevelRequest<any>("/opportunities/pipelines", {
+  const created = await highLevelRequest<unknown>("/opportunities/pipelines", {
     method: "POST",
     token,
     body: {
@@ -644,7 +717,12 @@ export function respondHighLevelError(
   if (message.includes("context is required") || message.includes("activeLocation") || message.includes("opened from a HighLevel sub-account")) {
     return json(res, 401, { error: "Open FastTract from the HighLevel sub-account menu and try again." });
   }
-  if (message.includes("GHL_APP_SHARED_SECRET") || message.includes("SUPABASE_SERVICE_ROLE_KEY") || message.includes("SUPABASE_URL")) {
+  if (
+    message.includes("GHL_APP_SHARED_SECRET")
+    || message.includes("GHL_TOKEN_ENCRYPTION_KEY")
+    || message.includes("SUPABASE_SERVICE_ROLE_KEY")
+    || message.includes("SUPABASE_URL")
+  ) {
     return json(res, 503, { error: "FastTract secure connection services are not fully configured." });
   }
   if (message.includes("token refresh") || message.includes("location connection")) {
@@ -659,7 +737,7 @@ export function json(res: any, status: number, body: unknown) {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Vary", "X-FastTract-GHL-Context");
-  res.status(status).json(body);
+  return res.status(status).json(body);
 }
 
 export function requirePost(req: any, res: any): boolean {
