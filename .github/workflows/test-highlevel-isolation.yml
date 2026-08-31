@@ -1,0 +1,59 @@
+name: Test HighLevel location isolation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type TEST to create temporary records in both App Test sub-accounts"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-highlevel-isolation
+  cancel-in-progress: false
+
+jobs:
+  isolation:
+    if: ${{ inputs.confirmation == 'TEST' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: highlevel-app-test
+    env:
+      FASTTRACT_BASE_URL: ${{ vars.FASTTRACT_PRODUCTION_URL }}
+      GHL_TEST_CONTEXT_A: ${{ secrets.GHL_TEST_CONTEXT_A }}
+      GHL_TEST_CONTEXT_B: ${{ secrets.GHL_TEST_CONTEXT_B }}
+      FASTTRACT_ISOLATION_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}
+      FASTTRACT_TEST_TIMEOUT_MS: "45000"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate isolation test configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FASTTRACT_BASE_URL"
+          test -n "$GHL_TEST_CONTEXT_A"
+          test -n "$GHL_TEST_CONTEXT_B"
+          test "$GHL_TEST_CONTEXT_A" != "$GHL_TEST_CONTEXT_B"
+
+      - name: Validate test harness syntax
+        run: node --check scripts/test-highlevel-isolation.mjs
+
+      - name: Run write-mode two-location isolation test
+        run: npm run test:highlevel:isolation
+
+      - name: Record release-gate result
+        if: ${{ success() }}
+        run: |
+          echo "### HighLevel two-location isolation: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Customer, lead, job, and estimate lists plus direct read/write attempts were isolated in both directions." >> "$GITHUB_STEP_SUMMARY"
