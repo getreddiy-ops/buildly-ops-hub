@@ -13,6 +13,8 @@
     "src/hooks/useBrowserSpeech.ts",
     "src/integrations/highlevel/client.ts",
     "src/layouts/HighLevelShell.tsx",
+    "src/lib/highlevelDashboard.ts",
+    "src/lib/highlevelDashboard.test.ts",
     "src/pages/highlevel/**/*.tsx"
   ]
 }
