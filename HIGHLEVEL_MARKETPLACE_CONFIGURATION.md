@@ -147,3 +147,28 @@ The third workflow refuses to encrypt legacy tokens unless the protected Vercel 
 4. Confirm the `FASTTRACT` Custom Page appears in each sub-account's left navigation.
 5. Open FastTract inside each location and run bootstrap once.
 6. Complete the automated two-location isolation test before changing the app from private to public.
+
+## Securely capture two signed App Test contexts
+
+Capture the contexts immediately before the isolation test. Treat each value as a temporary secret because it represents signed HighLevel user and active-location context.
+
+For Location A:
+
+1. Open the `FASTTRACT` Custom Page from inside Location A.
+2. Open browser developer tools and select **Network**.
+3. Reload the FastTract page.
+4. Select the request to `/api/highlevel/context`.
+5. Under **Request Headers**, copy only the value of `X-FastTract-GHL-Context`.
+6. Save that value as the GitHub `highlevel-app-test` environment secret `GHL_TEST_CONTEXT_A`.
+
+Repeat from Location B and save the different value as `GHL_TEST_CONTEXT_B`.
+
+Security rules:
+
+- never paste either context into a pull request, issue, chat, workflow input, URL, or source file;
+- do not use **Copy as cURL**, because that copies every request header and may leak unrelated browser information;
+- confirm the two secret values differ;
+- clear the local clipboard after saving each secret;
+- recapture the contexts when HighLevel changes the signed-context format, the test user changes, the app shared secret is rotated, or the isolation workflow reports an authentication failure.
+
+The isolation harness resolves both signed contexts through `/api/highlevel/bootstrap` and refuses to continue if they map to the same active location.
