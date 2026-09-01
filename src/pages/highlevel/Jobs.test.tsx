@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import HighLevelJobs from "./Jobs";
 import { highLevel } from "@/integrations/highlevel/client";
@@ -9,6 +10,8 @@ vi.mock("@/integrations/highlevel/client", () => ({
     listContacts: vi.fn(),
     bootstrap: vi.fn(),
     createRecord: vi.fn(),
+    updateRecord: vi.fn(),
+    deleteRecord: vi.fn(),
   },
 }));
 
@@ -52,6 +55,14 @@ const material = {
   },
 };
 
+function renderJobs(route = "/highlevel/jobs") {
+  return render(
+    <MemoryRouter initialEntries={[route]}>
+      <HighLevelJobs />
+    </MemoryRouter>,
+  );
+}
+
 describe("FastTract HighLevel Jobs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,20 +79,22 @@ describe("FastTract HighLevel Jobs", () => {
     });
   });
 
-  it("shows customer, hours, materials, and the combined tracked job cost", async () => {
-    render(<HighLevelJobs />);
+  it("loads linked labor and materials after the job is opened", async () => {
+    renderJobs();
 
-    expect(await screen.findByText("Fletcher stamped patio")).toBeInTheDocument();
-    expect(screen.getByText("Branden Fletcher")).toBeInTheDocument();
+    const jobCard = await screen.findByRole("button", { name: /Fletcher stamped patio/i });
+    fireEvent.click(jobCard);
+
+    expect(await screen.findByText("Tracked cost")).toBeInTheDocument();
     expect(screen.getAllByText("$1,400.00").length).toBeGreaterThan(0);
 
     expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("jobs", { limit: 100 });
-    expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("time_entries", { limit: 100 });
-    expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("materials", { limit: 100 });
+    expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("time_entries", { query: "job-1", limit: 100 });
+    expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("materials", { query: "job-1", limit: 100 });
   });
 
   it("opens the job and exposes real crew-time and material details", async () => {
-    render(<HighLevelJobs />);
+    renderJobs();
 
     const jobCard = await screen.findByRole("button", { name: /Fletcher stamped patio/i });
     fireEvent.click(jobCard);
@@ -100,7 +113,7 @@ describe("FastTract HighLevel Jobs", () => {
 
   it("offers setup instead of pretending the custom objects loaded", async () => {
     mockedHighLevel.listRecords.mockRejectedValueOnce(new Error("Custom objects are not ready"));
-    render(<HighLevelJobs />);
+    renderJobs();
 
     expect(await screen.findByText("Initialize the FastTract job workspace")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("button", { name: /Set up Jobs/i })).toBeEnabled());
