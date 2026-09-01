@@ -1,4 +1,4 @@
-export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials";
+export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials" | "change_orders";
 
 export type HighLevelRecord<T = Record<string, unknown>> = {
   id: string;
@@ -126,6 +126,19 @@ export type HighLevelInvoice = {
     email?: string;
     phoneNo?: string;
   };
+};
+
+export type HighLevelInvoicePaymentMode = "cash" | "card" | "cheque" | "bank_transfer" | "other";
+
+export type HighLevelInvoicePaymentInput = {
+  amount: number;
+  mode: HighLevelInvoicePaymentMode;
+  notes?: string;
+  fulfilledAt?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+  chequeNumber?: string;
+  paymentScheduleIds?: string[];
 };
 
 export type HighLevelConnectionContext = {
@@ -378,6 +391,17 @@ export const highLevel = {
         action: "send_invoice",
         invoiceId,
         channel: options.channel ?? "sms_and_email",
+      }),
+    });
+  },
+
+  recordInvoicePayment(invoiceId: string, payment: HighLevelInvoicePaymentInput) {
+    return request<{ success?: boolean; invoice: HighLevelInvoice }>("/api/highlevel/invoices", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "record_payment",
+        invoiceId,
+        ...payment,
       }),
     });
   },
