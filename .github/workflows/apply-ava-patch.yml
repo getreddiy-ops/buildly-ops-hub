@@ -1,4 +1,4 @@
-name: Apply Ava approval center patch
+name: Inspect Ava approval center patch
 
 on:
   push:
@@ -8,24 +8,23 @@ on:
       - .ava-patch-v2/READY
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: apply-ava-approval-center
+  group: inspect-ava-approval-center
   cancel-in-progress: false
 
 jobs:
-  apply:
+  inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - name: Check out feature branch
         uses: actions/checkout@v4
         with:
           ref: chatgpt/fasttract-ghl-flawless
-          fetch-depth: 0
 
-      - name: Assemble and validate reviewed patch
+      - name: Recover reviewed archive
         shell: bash
         run: |
           set -euo pipefail
@@ -33,134 +32,41 @@ jobs:
           from pathlib import Path
           import base64
           import gzip
-          import re
 
           chunks = sorted(Path('.ava-patch-v2').glob('chunk-*'))
-          if not chunks:
-              raise SystemExit('No Ava approval patch chunks were found')
-
           pieces = [''.join(path.read_text(encoding='utf-8').split()) for path in chunks]
           encoded = ''.join(pieces)
-          invalid = [(index, value) for index, value in enumerate(encoded) if not re.fullmatch(r'[A-Za-z0-9+/=]', value)]
-          if invalid:
-              index, value = invalid[0]
-              raise SystemExit(f'Invalid base64 character at position {index}: {value!r}')
+          alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
-          def decode(value: str) -> bytes:
-              padded = value + '=' * (-len(value) % 4)
-              return base64.b64decode(padded, validate=True)
-
-          def valid_gzip(value: str):
+          def valid(value):
               try:
-                  archive = decode(value)
+                  padded = value + '=' * (-len(value) % 4)
+                  archive = base64.b64decode(padded, validate=True)
                   gzip.decompress(archive)
                   return archive
               except Exception:
                   return None
 
-          archive = valid_gzip(encoded)
-          recovered = None
-          if archive is None and len(encoded) % 4 == 3:
-              alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-              offsets = []
-              total = 0
-              for piece in pieces:
-                  total += len(piece)
-                  offsets.append(total)
-
-              priority = []
-              for position in [offsets[0], *offsets[1:-1], len(encoded)]:
-                  if position not in priority:
-                      priority.append(position)
-              for position in range(max(0, len(encoded) - 256), len(encoded) + 1):
-                  if position not in priority:
-                      priority.append(position)
-              # The first staged chunk is one character short, so search it next.
-              for position in range(0, offsets[0] + 1):
-                  if position not in priority:
-                      priority.append(position)
-              # Fall back to the remainder. Every candidate must pass the gzip CRC.
-              for position in range(offsets[0] + 1, len(encoded) + 1):
-                  if position not in priority:
-                      priority.append(position)
-
-              for candidate_number, position in enumerate(priority, start=1):
-                  if candidate_number % 5000 == 0:
-                      print(f'Checked {candidate_number} of {len(priority)} possible insertion positions')
+          archive = valid(encoded)
+          if archive is None:
+              for position in range(0, len(encoded) + 1):
                   for character in alphabet:
-                      candidate = encoded[:position] + character + encoded[position:]
-                      candidate_archive = valid_gzip(candidate)
-                      if candidate_archive is not None:
-                          archive = candidate_archive
-                          recovered = (position, character)
+                      archive = valid(encoded[:position] + character + encoded[position:])
+                      if archive is not None:
+                          print(f'Recovered at {position}')
                           break
                   if archive is not None:
                       break
-
           if archive is None:
-              sizes = ', '.join(f'{path.name}={len(piece)}' for path, piece in zip(chunks, pieces))
-              raise SystemExit(f'Ava approval archive failed exhaustive gzip recovery. Chunk sizes: {sizes}')
-
-          if not archive.startswith(b'\x1f\x8b'):
-              raise SystemExit('Decoded Ava approval archive is not a gzip file')
-
+              raise SystemExit('Could not recover archive')
           Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
-          if recovered:
-              print(f'Recovered one dropped base64 character at position {recovered[0]}')
-          print(f'Assembled {len(chunks)} chunks into a verified {len(archive)} byte archive')
           PY
-
-          tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?src/pages/highlevel/AvaApprovalCenter\.tsx$' /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?api/highlevel/records\.ts$' /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?scripts/test-highlevel-ava-approval-isolation\.mjs$' /tmp/ava-approval-patch-files.txt
-
-      - name: Apply reviewed patch
-        shell: bash
-        run: |
-          set -euo pipefail
           tar -xzf /tmp/ava-approval-patch.tar.gz -C .
-          rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=critical
-
-      - name: Typecheck HighLevel workspace
-        run: npm run typecheck:highlevel
-
-      - name: Lint HighLevel workspace
-        run: npm run lint:highlevel
-
-      - name: Run complete test suite
-        run: npm test
-
-      - name: Build production application
-        run: npm run build
-
-      - name: Validate operational scripts and workflows
+      - name: Print approval model and focused tests
         shell: bash
         run: |
-          set -euo pipefail
-          node --check scripts/encrypt-ghl-connections.mjs
-          node --check scripts/test-highlevel-isolation.mjs
-          node --check scripts/test-highlevel-ava-approval-isolation.mjs
-          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
-
-      - name: Commit tested Ava approval center
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m "Add human-controlled Ava approval center"
-          git push origin HEAD:chatgpt/fasttract-ghl-flawless
+          echo '===== MODEL ====='
+          sed -n '1,320p' src/pages/highlevel/avaApprovalModel.ts
+          echo '===== TEST ====='
+          sed -n '1,240p' src/pages/highlevel/avaApprovalModel.test.ts
