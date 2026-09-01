@@ -1,0 +1,93 @@
+name: Repair Ava approval center CI
+
+on:
+  push:
+    branches:
+      - chatgpt/fasttract-ghl-flawless
+    paths:
+      - .ava-fix/READY
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-ava-approval-center-ci
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fasttract-ghl-flawless
+          fetch-depth: 0
+
+      - name: Repair the approved object key and remove an unused placeholder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          approvals = Path('src/pages/highlevel/Approvals.tsx')
+          text = approvals.read_text()
+          count = text.count('"approval_actions"')
+          if count != 2:
+              raise SystemExit(f'Expected exactly 2 approval_actions references, found {count}')
+          approvals.write_text(text.replace('"approval_actions"', '"ava_actions"'))
+
+          placeholder = Path('src/pages/highlevel/ApprovalCenterPanel.tsx')
+          if placeholder.exists():
+              if placeholder.read_text().strip() != 'PLACEHOLDER':
+                  raise SystemExit('Refusing to delete a non-placeholder ApprovalCenterPanel.tsx')
+              placeholder.unlink()
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit critical production dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Typecheck HighLevel workspace
+        run: npm run typecheck:highlevel
+
+      - name: Lint HighLevel workspace
+        run: npm run lint:highlevel
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Validate operational scripts and workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/encrypt-ghl-connections.mjs
+          node --check scripts/test-highlevel-isolation.mjs
+          if [ -f scripts/test-highlevel-ava-approval-isolation.mjs ]; then
+            node --check scripts/test-highlevel-ava-approval-isolation.mjs
+          fi
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
+
+      - name: Commit the verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .ava-fix .github/workflows/fix-ava-approval-ci.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Repair Ava approval center build gate"
+          git push origin HEAD:chatgpt/fasttract-ghl-flawless
