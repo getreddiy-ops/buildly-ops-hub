@@ -32,30 +32,71 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import base64
+          import gzip
           import re
 
           chunks = sorted(Path('.ava-patch-v2').glob('chunk-*'))
           if not chunks:
               raise SystemExit('No Ava approval patch chunks were found')
 
-          raw = ''.join(path.read_text(encoding='utf-8') for path in chunks)
-          encoded = ''.join(raw.split())
+          pieces = [''.join(path.read_text(encoding='utf-8').split()) for path in chunks]
+          encoded = ''.join(pieces)
           invalid = [(index, value) for index, value in enumerate(encoded) if not re.fullmatch(r'[A-Za-z0-9+/=]', value)]
           if invalid:
               index, value = invalid[0]
               raise SystemExit(f'Invalid base64 character at position {index}: {value!r}')
 
-          encoded += '=' * (-len(encoded) % 4)
-          try:
-              archive = base64.b64decode(encoded, validate=True)
-          except Exception as error:
-              raise SystemExit(f'Unable to decode Ava approval archive: {error}') from error
+          def decode(value: str) -> bytes:
+              padded = value + '=' * (-len(value) % 4)
+              return base64.b64decode(padded, validate=True)
+
+          def valid_gzip(value: str):
+              try:
+                  archive = decode(value)
+                  gzip.decompress(archive)
+                  return archive
+              except Exception:
+                  return None
+
+          archive = valid_gzip(encoded)
+          recovered = None
+          if archive is None and len(encoded) % 4 == 3:
+              alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+              offsets = []
+              total = 0
+              for piece in pieces:
+                  total += len(piece)
+                  offsets.append(total)
+
+              # A single character was lost while staging. Test only deterministic
+              # transport seams; never guess inside application source files.
+              positions = []
+              for position in [offsets[0], *offsets[1:-1], len(encoded)]:
+                  if position not in positions:
+                      positions.append(position)
+
+              for position in positions:
+                  for character in alphabet:
+                      candidate = encoded[:position] + character + encoded[position:]
+                      candidate_archive = valid_gzip(candidate)
+                      if candidate_archive is not None:
+                          archive = candidate_archive
+                          recovered = (position, character)
+                          break
+                  if archive is not None:
+                      break
+
+          if archive is None:
+              sizes = ', '.join(f'{path.name}={len(piece)}' for path, piece in zip(chunks, pieces))
+              raise SystemExit(f'Ava approval archive failed gzip validation. Chunk sizes: {sizes}')
 
           if not archive.startswith(b'\x1f\x8b'):
               raise SystemExit('Decoded Ava approval archive is not a gzip file')
 
           Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
-          print(f'Assembled {len(chunks)} chunks into a {len(archive)} byte archive')
+          if recovered:
+              print(f'Recovered one dropped base64 character at seam {recovered[0]}')
+          print(f'Assembled {len(chunks)} chunks into a verified {len(archive)} byte archive')
           PY
 
           tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
