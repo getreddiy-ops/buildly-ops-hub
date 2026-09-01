@@ -5,7 +5,9 @@ import {
   BadgeDollarSign,
   CheckCircle2,
   CircleAlert,
+  CircleDollarSign,
   Clock3,
+  FilePlus2,
   FileText,
   Loader2,
   Receipt,
@@ -31,7 +33,13 @@ import {
   highLevel,
   type HighLevelEstimate,
   type HighLevelInvoice,
+  type HighLevelRecord,
 } from "@/integrations/highlevel/client";
+import {
+  changeOrderPropertyKeys,
+  summarizeChangeOrders,
+} from "@/lib/highlevelChangeOrders";
+import { readRecordString } from "@/lib/highlevelJobWorkspace";
 import {
   collectionPrompt,
   filterInvoices,
@@ -46,6 +54,9 @@ import {
   type MoneyView,
 } from "@/lib/highlevelMoney";
 import { cn } from "@/lib/utils";
+import { AcceptedWorkPanel } from "./AcceptedWorkPanel";
+import { ChangeOrdersPanel } from "./ChangeOrdersPanel";
+import { RecordPaymentDialog } from "./RecordPaymentDialog";
 import { toast } from "sonner";
 
 const money = new Intl.NumberFormat("en-US", {
@@ -79,10 +90,15 @@ export default function HighLevelMoney() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [estimates, setEstimates] = useState<HighLevelEstimate[]>([]);
   const [invoices, setInvoices] = useState<HighLevelInvoice[]>([]);
+  const [jobs, setJobs] = useState<HighLevelRecord[]>([]);
+  const [changeOrders, setChangeOrders] = useState<HighLevelRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [jobsSetupRequired, setJobsSetupRequired] = useState(false);
+  const [changeOrdersSetupRequired, setChangeOrdersSetupRequired] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [paymentInvoice, setPaymentInvoice] = useState<HighLevelInvoice | null>(null);
 
   const rawView = searchParams.get("view");
   const view: MoneyView = validMoneyView(rawView) ? rawView : "action";
@@ -96,9 +112,11 @@ export default function HighLevelMoney() {
 
   const load = async () => {
     setLoading(true);
-    const [estimateResult, invoiceResult] = await Promise.allSettled([
+    const [estimateResult, invoiceResult, jobResult, changeOrderResult] = await Promise.allSettled([
       highLevel.listEstimates({ limit: 100, status: "all" }),
       highLevel.listInvoices({ limit: 100, status: "all" }),
+      highLevel.listRecords("jobs", { limit: 100 }),
+      highLevel.listRecords("change_orders", { limit: 100 }),
     ]);
 
     const nextWarnings: string[] = [];
@@ -116,6 +134,23 @@ export default function HighLevelMoney() {
       nextWarnings.push("Invoices are temporarily unavailable. Confirm that the HighLevel app includes invoice scopes.");
     }
 
+    if (jobResult.status === "fulfilled") {
+      setJobs(jobResult.value.records ?? []);
+      setJobsSetupRequired(false);
+    } else {
+      setJobs([]);
+      setJobsSetupRequired(true);
+      nextWarnings.push("Jobs need to be initialized before accepted work can be linked.");
+    }
+
+    if (changeOrderResult.status === "fulfilled") {
+      setChangeOrders(changeOrderResult.value.records ?? []);
+      setChangeOrdersSetupRequired(false);
+    } else {
+      setChangeOrders([]);
+      setChangeOrdersSetupRequired(true);
+    }
+
     setWarnings(nextWarnings);
     setLoading(false);
   };
@@ -124,29 +159,26 @@ export default function HighLevelMoney() {
     void load();
   }, []);
 
-  const summary = useMemo(() => summarizeMoney(estimates, invoices), [estimates, invoices]);
+  const approvalEstimateIds = useMemo(() => new Set(
+    changeOrders
+      .map((record) => readRecordString(record, changeOrderPropertyKeys.approvalEstimateId))
+      .filter(Boolean),
+  ), [changeOrders]);
+  const originalEstimates = useMemo(
+    () => estimates.filter((estimate) => !approvalEstimateIds.has(estimate._id)),
+    [approvalEstimateIds, estimates],
+  );
+  const summary = useMemo(() => summarizeMoney(originalEstimates, invoices), [invoices, originalEstimates]);
+  const changeSummary = useMemo(
+    () => summarizeChangeOrders(changeOrders, estimates),
+    [changeOrders, estimates],
+  );
   const visibleInvoices = useMemo(() => filterInvoices(invoices, view, query), [invoices, query, view]);
-  const readyEstimates = useMemo(() => [...summary.readyEstimates].sort(
-    (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0),
-  ), [summary.readyEstimates]);
-  const actionCount = summary.draftInvoices.length + summary.outstandingInvoices.length;
-
-  const convertEstimate = async (estimate: HighLevelEstimate) => {
-    if (!window.confirm(`Create a HighLevel invoice from “${estimate.name || "this estimate"}”?`)) return;
-    const actionId = `estimate:${estimate._id}`;
-    setWorkingId(actionId);
-    try {
-      const result = await highLevel.convertEstimateToInvoice(estimate._id);
-      toast.success("Invoice created in HighLevel", {
-        description: result.invoice?.name || estimate.name || "The accepted estimate is now an invoice.",
-      });
-      await load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to create the invoice");
-    } finally {
-      setWorkingId(null);
-    }
-  };
+  const actionCount = summary.readyEstimates.length
+    + summary.draftInvoices.length
+    + summary.outstandingInvoices.length
+    + changeSummary.draftCount
+    + changeSummary.approvedCount;
 
   const sendInvoice = async (invoice: HighLevelInvoice) => {
     if (!window.confirm(`Send “${invoice.name || "this invoice"}” by SMS and email?`)) return;
@@ -171,7 +203,7 @@ export default function HighLevelMoney() {
     <div className="min-w-0 px-4 py-7 sm:px-7 lg:px-9">
       <PageHeader
         title="Money"
-        description="See what is ready to bill, what needs collecting, and what has already been paid."
+        description="Move accepted work through jobs, change orders, invoices, collection, and payment without leaving FastTract."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -185,9 +217,9 @@ export default function HighLevelMoney() {
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MoneyFilterCard
           icon={FileText}
-          label="Ready to invoice"
+          label="Accepted work"
           value={loading ? "—" : money.format(summary.readyValue)}
-          detail={loading ? "Loading" : `${summary.readyEstimates.length} accepted estimate${summary.readyEstimates.length === 1 ? "" : "s"}`}
+          detail={loading ? "Loading" : `${summary.readyEstimates.length} estimate${summary.readyEstimates.length === 1 ? "" : "s"} ready for operations`}
           active={false}
           alert={summary.readyValue > 0}
           onClick={scrollToReady}
@@ -222,13 +254,21 @@ export default function HighLevelMoney() {
 
       <div className="mt-5 flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{loading ? "Checking the money queue…" : actionCount > 0 ? `${actionCount} invoice action${actionCount === 1 ? "" : "s"} need attention.` : "The invoice action queue is clear."}</p>
+          <p className="text-sm font-semibold">
+            {loading
+              ? "Checking the operating and money queues…"
+              : actionCount > 0
+                ? `${actionCount} action${actionCount === 1 ? "" : "s"} need attention.`
+                : "The accepted-work and invoice queues are clear."}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {summary.draftInvoices.length > 0 ? `${summary.draftInvoices.length} draft worth ${money.format(summary.draftValue)}. ` : ""}
+            {summary.readyEstimates.length > 0 ? `${summary.readyEstimates.length} accepted job${summary.readyEstimates.length === 1 ? "" : "s"}. ` : ""}
+            {changeSummary.draftCount > 0 ? `${changeSummary.draftCount} change order draft${changeSummary.draftCount === 1 ? "" : "s"}. ` : ""}
+            {changeSummary.approvedCount > 0 ? `${changeSummary.approvedCount} approved change${changeSummary.approvedCount === 1 ? "" : "s"} ready to invoice. ` : ""}
             {summary.overdueInvoices.length > 0 ? `${summary.overdueInvoices.length} overdue balance${summary.overdueInvoices.length === 1 ? "" : "s"}.` : "No overdue balances."}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={() => setView("action")}>Show action queue</Button>
+        <Button size="sm" variant="outline" onClick={() => setView("action")}>Show invoice actions</Button>
       </div>
 
       {warnings.length > 0 && (
@@ -238,50 +278,22 @@ export default function HighLevelMoney() {
         </div>
       )}
 
-      <section id="ready-to-invoice" className="mt-7 scroll-mt-28 overflow-hidden rounded-xl border border-primary/25 bg-card/50 shadow-card">
-        <div className="flex items-center justify-between gap-4 border-b border-border p-4 sm:p-5">
-          <div>
-            <h2 className="font-semibold">Ready to invoice</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Accepted estimates stay linked to the customer when FastTract creates the native HighLevel invoice.</p>
-          </div>
-          <FileText className="h-5 w-5 shrink-0 text-primary" />
-        </div>
-        {loading ? (
-          <div className="h-24 animate-pulse bg-muted/20" />
-        ) : readyEstimates.length === 0 ? (
-          <div className="p-7 text-center">
-            <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
-            <h3 className="mt-3 font-semibold">No accepted estimates are waiting</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Accepted work will appear here automatically, ready to become an invoice.</p>
-            <Button className="mt-4" size="sm" variant="outline" asChild><Link to="/highlevel/estimates">Open estimates</Link></Button>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {readyEstimates.map((estimate) => {
-              const actionId = `estimate:${estimate._id}`;
-              return (
-                <div key={estimate._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><FileText className="h-5 w-5" /></div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-medium">{estimate.name || "Accepted estimate"}</h3>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{estimate.contactDetails?.name || estimate.contactDetails?.email || "Customer not assigned"}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-                    <span className="font-semibold">{money.format(Number(estimate.total) || 0)}</span>
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/highlevel/estimates?edit=${encodeURIComponent(estimate._id)}`}>Review</Link>
-                    </Button>
-                    <Button size="sm" onClick={() => void convertEstimate(estimate)} disabled={workingId === actionId}>
-                      {workingId === actionId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
-                      {workingId === actionId ? "Creating…" : "Create invoice"}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <AcceptedWorkPanel
+        estimates={summary.readyEstimates}
+        jobs={jobs}
+        loading={loading}
+        jobsSetupRequired={jobsSetupRequired}
+        onChanged={load}
+      />
+
+      <ChangeOrdersPanel
+        jobs={jobs}
+        estimates={estimates}
+        changeOrders={changeOrders}
+        loading={loading}
+        setupRequired={changeOrdersSetupRequired}
+        onChanged={load}
+      />
 
       <section className="mt-7 overflow-hidden rounded-xl border border-border bg-card/40">
         <div className="border-b border-border p-4 sm:p-5">
@@ -364,11 +376,16 @@ export default function HighLevelMoney() {
                       </Button>
                     )}
                     {openBalance && (
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/highlevel/ai?prompt=${encodeURIComponent(collectionPrompt(invoice))}`}>
-                          <Sparkles className="h-4 w-4 text-primary" /> Draft reminder
-                        </Link>
-                      </Button>
+                      <>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/highlevel/ai?prompt=${encodeURIComponent(collectionPrompt(invoice))}`}>
+                            <Sparkles className="h-4 w-4 text-primary" /> Draft reminder
+                          </Link>
+                        </Button>
+                        <Button size="sm" onClick={() => setPaymentInvoice(invoice)}>
+                          <CircleDollarSign className="h-4 w-4" /> Record payment
+                        </Button>
+                      </>
                     )}
                   </div>
                 </article>
@@ -377,6 +394,18 @@ export default function HighLevelMoney() {
           </div>
         )}
       </section>
+
+      <div className="mt-5 flex items-start gap-2 rounded-xl border border-border bg-card/30 p-4 text-xs leading-5 text-muted-foreground">
+        <FilePlus2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        Original work and change orders remain separate for approval and billing, while FastTract keeps them connected to the same job and customer.
+      </div>
+
+      <RecordPaymentDialog
+        invoice={paymentInvoice}
+        open={Boolean(paymentInvoice)}
+        onOpenChange={(next) => { if (!next) setPaymentInvoice(null); }}
+        onRecorded={load}
+      />
     </div>
   );
 }
