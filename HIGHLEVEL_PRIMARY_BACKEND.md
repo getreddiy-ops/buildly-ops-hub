@@ -22,11 +22,13 @@ Do not create a separate HighLevel menu item for every FastTract module. The emb
 | Leads | Contact + Opportunity in `FastTract Sales` |
 | Calls, SMS, email | Conversations |
 | Appointments | Calendars |
-| Estimates | Native Estimates |
-| Invoices and payments | Native Invoices / Payments |
+| Original estimates | Native HighLevel Estimates |
+| Change-order approvals | Separate native HighLevel Estimates |
+| Invoices and payments | Native HighLevel Invoices / invoice payments |
 | Jobs | `custom_objects.jobs` |
 | Time entries | `custom_objects.time_entries` |
 | Materials | `custom_objects.materials` |
+| Change orders | `custom_objects.change_orders` |
 
 Supabase stores backend-only HighLevel OAuth installation records and legacy FastTract records that have not yet been intentionally migrated. Browser clients never receive HighLevel access tokens, refresh tokens, the Supabase service-role key, or the credential-encryption key.
 
@@ -150,17 +152,34 @@ locations/customFields.write
 oauth.write
 ```
 
-Do not request calendar, conversation, payment, phone, snapshot, company-management, custom-menu-link, or SaaS-management scopes until a shipped FastTract feature actually calls those APIs.
+The current Money workspace records manual payments through the native invoice API under the invoice-write capability. Do not request broad payment/order scopes unless a shipped FastTract feature calls the separate Payments APIs.
+
+Do not request calendar, conversation, phone, snapshot, company-management, custom-menu-link, or SaaS-management scopes until a shipped FastTract feature actually calls those APIs.
 
 ## Bootstrap
 
 `POST /api/highlevel/bootstrap` is idempotent and prepares the active signed location:
 
 - creates the `FastTract Sales` pipeline when missing;
-- creates Jobs, Time Entries, and Materials custom-object schemas when missing;
-- creates the FastTract custom-field folders and fields when missing.
+- creates Jobs, Time Entries, Materials, and Change Orders custom-object schemas when missing;
+- creates their FastTract custom-field folders and fields when missing;
+- adds job linkage fields for customer, original estimate, and primary invoice;
+- adds change-order linkage fields for job, customer, original estimate, approval estimate, and invoice.
 
 Bootstrap failures are returned per module so a partial setup cannot masquerade as a complete installation.
+
+## Record tenancy and relationship rules
+
+Every custom-object read, write, update, and delete is authorized through the signed active HighLevel location.
+
+Additional relationship rules apply:
+
+- time entries must reference a job in the active location;
+- materials must reference a job in the active location;
+- change orders must reference a job in the active location;
+- child-record searches validate the requested job before returning records;
+- partial record updates merge with existing properties so relationship IDs are not erased;
+- attempts to read or modify records from another location return `403` or `404`.
 
 ## API surface
 
@@ -176,7 +195,15 @@ GET/POST                  /api/highlevel/opportunities
 GET/POST/PUT/DELETE       /api/highlevel/estimates
 POST                      /api/highlevel/estimate-actions
 GET/POST                  /api/highlevel/invoices
-GET/POST/PUT/DELETE       /api/highlevel/records?object=jobs|time_entries|materials
+GET/POST/PUT/DELETE       /api/highlevel/records?object=jobs|time_entries|materials|change_orders
+```
+
+Invoice actions currently include:
+
+```text
+convert_estimate
+send_invoice
+record_payment
 ```
 
 The browser calls only FastTract APIs. It never calls `services.leadconnectorhq.com` with a secret token.
@@ -210,9 +237,10 @@ Ava may extract and organize user-provided information, but it must not silently
 - dates;
 - labor rates;
 - material prices;
+- change-order prices;
 - tax rates.
 
-Unknown prices remain zero and are visibly flagged for review. Sending, deleting, or otherwise changing customer-facing records requires an explicit user action.
+Unknown prices remain zero and are visibly flagged for review. Sending, deleting, recording payment, or otherwise changing customer-facing records requires an explicit user action.
 
 FastTract estimate rules include:
 
@@ -222,6 +250,77 @@ FastTract estimate rules include:
 - scope, assumptions, exclusions, timeline, payment terms, and change-order language;
 - native HighLevel estimate storage and delivery tracking.
 
+## Money workflow
+
+### Original accepted work
+
+The original-scope workflow is:
+
+```text
+Estimate draft
+  → owner review
+  → native HighLevel estimate sent
+  → customer acceptance
+  → FastTract job created
+  → native HighLevel invoice created
+  → invoice sent
+  → partial or final payment recorded
+  → paid
+```
+
+The FastTract job stores:
+
+- `customer_id`;
+- `estimate_id` for the original accepted estimate;
+- `invoice_id` for the primary invoice.
+
+FastTract creates the job before the invoice so scheduling, labor, materials, and later scope changes have an operating record to attach to. The Money workspace checks for an existing job and invoice link before offering another create action.
+
+### Change orders
+
+A change order never silently changes the original estimate. The workflow is:
+
+```text
+FastTract change-order draft
+  → owner reviews scope and verified price
+  → separate native HighLevel approval estimate created
+  → owner reviews and sends approval estimate
+  → customer accepts or declines
+  → accepted change converted to a separate native invoice
+  → payment recorded against that invoice
+```
+
+The change-order record stores:
+
+- linked job;
+- linked customer;
+- original estimate;
+- approval estimate;
+- resulting invoice;
+- status;
+- verified amount and tax rate;
+- requested and approved dates;
+- customer-facing scope;
+- internal notes.
+
+The native approval estimate is the source of truth for sent, accepted, declined, and invoiced status. Declined changes can be revised into a new draft while the declined estimate remains in HighLevel history.
+
+### Manual invoice payments
+
+FastTract records a manual payment only after a user explicitly confirms that funds were actually received. The server:
+
+- reloads the native invoice in the signed active location;
+- rejects an invoice from another location;
+- rejects zero or negative payments;
+- rejects payments above the current open balance;
+- validates the received date and rejects future dates;
+- validates payment method details;
+- supports cash, card, cheque, bank transfer, and other;
+- stores only the card brand and last four digits when card is selected;
+- updates the native HighLevel invoice payment state.
+
+The Money screen shows total, paid, due, payment progress, overdue state, a draft-reminder handoff to Ava, and the explicit Record Payment action.
+
 ## Responsive UX requirements
 
 - no horizontal page scrolling;
@@ -230,6 +329,7 @@ FastTract estimate rules include:
 - every button either performs an action or explains why the browser cannot support it;
 - loading, empty, partial-error, and retry states for every data screen;
 - job details open directly from the job list;
+- accepted work and change orders keep their related job, estimate, and invoice links visible;
 - HighLevel location changes cause FastTract to request fresh signed context.
 
 ## Repository verification
@@ -251,16 +351,16 @@ The repository still contains unrelated legacy lint debt outside the HighLevel w
 
 ## Ordered production activation
 
-The confirmation-gated workflow definitions are already on `main`. In GitHub Actions, open each workflow and select **Use workflow from: `chatgpt/fasttract-ghl-flawless`** so the still-unmerged feature branch is checked out and deployed. Run them in this exact order:
+Run the manual workflows in this exact order, selecting `chatgpt/fasttract-ghl-flawless` as the workflow ref until PR #15 passes the live gate:
 
 1. **Apply Supabase production migrations** — enter `MIGRATE`.
 2. **Deploy FastTract production** — enter `DEPLOY`.
 3. **Activate HighLevel production credentials** — enter `ACTIVATE`.
 4. Install the private Marketplace app into two App Test sub-accounts.
 5. Save two different encrypted signed contexts as `GHL_TEST_CONTEXT_A` and `GHL_TEST_CONTEXT_B` in the `highlevel-app-test` GitHub environment.
-6. **Test HighLevel location isolation** — enter `TEST`, again using `chatgpt/fasttract-ghl-flawless`.
+6. **Test HighLevel location isolation** — enter `TEST`.
 
-The activation workflow refuses to encrypt legacy tokens until the protected Vercel readiness endpoint proves that the new application code, database schema, secrets, and decryption layer are live. PR #15 remains unmerged until the live two-location release gate passes.
+The activation workflow refuses to encrypt legacy tokens until the protected Vercel readiness endpoint proves that the new application code, database schema, secrets, and decryption layer are live.
 
 ## Two-location release gate
 
@@ -269,6 +369,7 @@ The write-mode isolation harness creates temporary records in both locations:
 - customer;
 - lead/opportunity;
 - job custom-object record;
+- change-order custom-object record;
 - native estimate.
 
 It then verifies in both directions that:
@@ -277,6 +378,24 @@ It then verifies in both directions that:
 - neither location lists the other location's records;
 - cross-location direct reads fail;
 - cross-location direct writes fail;
-- temporary estimates, jobs, opportunities, and FastTract customer visibility are cleaned up in `finally`.
+- child records cannot reference a job outside the signed active location;
+- temporary estimates, change orders, jobs, opportunities, and FastTract customer visibility are cleaned up in `finally`.
 
-Do not make the Marketplace app public and do not merge/deploy additional production changes after a failed isolation result. Fix the failure and repeat the gate first.
+## Live Money release gate
+
+Before PR #15 is merged or the Marketplace app becomes public, verify in two genuine HighLevel App Test locations:
+
+1. Create and send an original estimate.
+2. Accept it through the customer-facing HighLevel estimate experience.
+3. Create the linked FastTract job.
+4. Create and send the primary native invoice.
+5. Record a partial payment and confirm amount paid and amount due update correctly.
+6. Record the final payment and confirm the native invoice becomes paid.
+7. Create a change order attached to the job.
+8. Create and send its separate approval estimate.
+9. Decline one test change, revise it, and verify the declined estimate remains in history.
+10. Accept another change, convert it to its separate invoice, and record payment.
+11. Confirm original scope, change-order scope, job costs, and invoice balances remain distinct but linked.
+12. Repeat the same checks in the second location and verify no identifiers or records cross locations.
+
+Do not make the Marketplace app public and do not merge/deploy additional production changes after a failed isolation, payment, financial-linkage, or responsive-layout result. Fix the failure and repeat the gate first.
