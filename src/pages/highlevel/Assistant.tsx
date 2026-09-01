@@ -29,16 +29,18 @@ import {
 } from "@/integrations/highlevel/client";
 import {
   avaIntentLabel,
+  avaIntentValues,
+  avaRiskValues,
   avaSuggestions,
   buildAvaBusinessSnapshot,
   normalizeAvaPlan,
   type AvaBusinessSnapshot,
   type AvaDraftResult,
-  type AvaIntent,
   type AvaPlan,
 } from "@/lib/highlevelAva";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AvaApprovalCenter } from "./AvaApprovalCenter";
 
 const emptySnapshot: AvaBusinessSnapshot = {
   openLeads: 0,
@@ -53,22 +55,6 @@ const emptySnapshot: AvaBusinessSnapshot = {
   topPriority: null,
 };
 
-const intentValues: AvaIntent[] = [
-  "create_estimate",
-  "create_job",
-  "create_lead",
-  "create_customer",
-  "review_leads",
-  "review_jobs",
-  "review_money",
-  "find_customer",
-  "add_time",
-  "add_material",
-  "update_job",
-  "follow_up_invoice",
-  "other",
-];
-
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -80,6 +66,8 @@ export default function HighLevelAssistant() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const incomingPrompt = searchParams.get("prompt") ?? "";
+  const incomingRevision = searchParams.get("revise") ?? "";
+  const incomingKey = `${incomingPrompt}:${incomingRevision}`;
   const [prompt, setPrompt] = useState(incomingPrompt);
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<AvaPlan | null>(null);
@@ -122,7 +110,7 @@ export default function HighLevelAssistant() {
 
   useEffect(() => {
     if (incomingPrompt) setPrompt(incomingPrompt);
-  }, [incomingPrompt]);
+  }, [incomingPrompt, incomingRevision]);
 
   const processPrompt = useCallback(async (text: string) => {
     const value = text.trim();
@@ -133,23 +121,62 @@ export default function HighLevelAssistant() {
     try {
       const response = await highLevel.aiFormFill<AvaDraftResult>({
         prompt: value,
-        formName: "FastTract Ava business request planner",
+        formName: "FastTract Ava controlled action planner",
         fields: [
           {
             name: "intent",
-            enum: intentValues,
+            enum: Array.from(avaIntentValues),
             description: "The user's primary contractor-business intent",
           },
-          { name: "summary", description: "A short plain-language restatement of what Ava understood. Never say the action is already complete." },
-          { name: "next_step", description: "The exact review or workspace step the contractor should take next" },
-          { name: "draft_content", description: "For customer follow-up or payment reminders, write the complete draft message. Otherwise return an empty string." },
-          { name: "missing_information", type: "json", description: "An array of important missing details. Return an empty array when nothing critical is missing." },
-          { name: "requires_approval", type: "boolean", description: "True when the request creates, changes, sends, deletes, or financially commits business data" },
+          {
+            name: "action_title",
+            description: "A short title for the proposed action. Never claim it already happened.",
+          },
+          {
+            name: "target_label",
+            description: "The customer, job, estimate, invoice, or other human-readable target only when explicitly identified. Never return an internal record id.",
+          },
+          {
+            name: "summary",
+            description: "A short plain-language restatement of what Ava understood. Never say the action is already complete.",
+          },
+          {
+            name: "next_step",
+            description: "The exact review or workspace step the contractor should take next",
+          },
+          {
+            name: "draft_content",
+            description: "For customer follow-up or payment reminders, write the complete draft message. Otherwise return an empty string.",
+          },
+          {
+            name: "proposed_changes",
+            type: "json",
+            description: "An array of up to 10 objects with label and value strings showing only user-supplied business values Ava proposes to carry into the final review. Never include routes, URLs, secrets, tokens, location ids, company ids, user ids, or record ids.",
+          },
+          {
+            name: "missing_information",
+            type: "json",
+            description: "An array of important missing details. Include any unknown customer, target record, measurement, date, price, tax, payment amount, or delivery choice required to safely finish the action.",
+          },
+          {
+            name: "approval_reason",
+            description: "Explain in one sentence why a human must review this proposal before the final business action.",
+          },
+          {
+            name: "risk_level",
+            enum: Array.from(avaRiskValues),
+            description: "review for read-only help, record_change for saved business data, customer_communication for anything sent to a customer, financial for pricing, invoices, change orders, or payments. The application may raise this risk but never lower it.",
+          },
+          {
+            name: "requires_approval",
+            type: "boolean",
+            description: "True when the request creates, changes, sends, deletes, or financially commits business data",
+          },
         ],
         context: {
           locationId: connection?.locationId,
           businessSnapshot: snapshot,
-          instruction: "Use plain contractor language. Treat the business snapshot as current aggregate context only. Never invent customer identities, measurements, dates, prices, tax rates, record IDs, or completed actions. For messages, draft only and explicitly wait for human approval before sending. FastTract chooses the final route deterministically after your response.",
+          instruction: "Use plain contractor language. Treat the business snapshot as current aggregate context only. Use only values the user supplied in the current request. Never invent customer identities, measurements, dates, prices, taxes, payment amounts, delivery choices, record IDs, routes, URLs, completed actions, or approval. Customer messages are drafts only. FastTract selects routes and minimum risk deterministically after your response, and all business changes require a separate human action.",
         },
       });
 
@@ -162,15 +189,16 @@ export default function HighLevelAssistant() {
   }, [connection?.locationId, snapshot]);
 
   useEffect(() => {
-    if (snapshotLoading || !incomingPrompt || autoRunRef.current === incomingPrompt) return;
-    autoRunRef.current = incomingPrompt;
+    if (snapshotLoading || !incomingPrompt || autoRunRef.current === incomingKey) return;
+    autoRunRef.current = incomingKey;
     void processPrompt(incomingPrompt);
-  }, [incomingPrompt, processPrompt, snapshotLoading]);
+  }, [incomingKey, incomingPrompt, processPrompt, snapshotLoading]);
 
   const suggestions = useMemo(() => avaSuggestions(snapshot), [snapshot]);
 
   const run = async (event?: FormEvent) => {
     event?.preventDefault();
+    autoRunRef.current = "";
     await processPrompt(prompt);
   };
 
@@ -179,6 +207,7 @@ export default function HighLevelAssistant() {
     autoRunRef.current = "";
     const next = new URLSearchParams(searchParams);
     next.delete("prompt");
+    next.delete("revise");
     setSearchParams(next, { replace: true });
   };
 
@@ -190,6 +219,15 @@ export default function HighLevelAssistant() {
     } catch {
       toast.error("The browser could not copy that draft. Select the text and copy it manually.");
     }
+  };
+
+  const openPlan = () => {
+    if (!plan) return;
+    if (plan.requiresApproval) {
+      document.getElementById("ava-approval-center")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    navigate(plan.route);
   };
 
   return (
@@ -205,7 +243,8 @@ export default function HighLevelAssistant() {
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Ava · FastTract AI</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">What should we handle, {firstName}?</h1>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Say it the way you would explain it to someone on your crew. Ava uses this sub-account’s live business pulse, prepares the work, and keeps you in control of every change.
+          Say it the way you would explain it to someone on your crew. Ava uses this sub-account’s live business pulse,
+          prepares a controlled proposal, and keeps you in charge of every save, send, and money action.
         </p>
       </div>
 
@@ -239,9 +278,13 @@ export default function HighLevelAssistant() {
           autoFocus={!incomingPrompt}
         />
         <div className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-3">
-          <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><ShieldCheck className="h-4 w-4 text-primary" /> Ava prepares work. You approve business changes before they are saved or sent.</p>
+          <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+            <ShieldCheck className="h-4 w-4 text-primary" /> Ava prepares proposals. You control the final business action.
+          </p>
           <div className="ml-auto flex gap-2">
-            <Button type="button" size="icon" variant="ghost" aria-label={voice.listening ? "Stop voice input" : "Speak to Ava"} onClick={voice.listening ? voice.stop : voice.start}><Mic className={voice.listening ? "h-5 w-5 animate-pulse text-primary" : "h-5 w-5"} /></Button>
+            <Button type="button" size="icon" variant="ghost" aria-label={voice.listening ? "Stop voice input" : "Speak to Ava"} onClick={voice.listening ? voice.stop : voice.start}>
+              <Mic className={voice.listening ? "h-5 w-5 animate-pulse text-primary" : "h-5 w-5"} />
+            </Button>
             <Button type="submit" disabled={loading || !prompt.trim()}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {loading ? "Planning…" : "Plan the work"}
@@ -269,7 +312,10 @@ export default function HighLevelAssistant() {
       {loading && (
         <div className="mx-auto mt-6 flex max-w-4xl items-center gap-4 rounded-2xl border border-primary/25 bg-card p-5 shadow-card">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Loader2 className="h-5 w-5 animate-spin" /></div>
-          <div><p className="font-semibold">Ava is organizing the request</p><p className="mt-1 text-sm text-muted-foreground">Checking the right workspace, approval level, and any important missing details.</p></div>
+          <div>
+            <p className="font-semibold">Ava is organizing the request</p>
+            <p className="mt-1 text-sm text-muted-foreground">Checking the correct workspace, minimum risk, approval level, and missing details.</p>
+          </div>
         </div>
       )}
 
@@ -307,13 +353,15 @@ export default function HighLevelAssistant() {
               {plan.requiresApproval && (
                 <p className="mt-5 flex items-start gap-2 rounded-lg border border-border bg-background/50 p-3 text-xs text-muted-foreground">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  This request can affect business records or customer communication. FastTract will keep it as a draft until you review and approve the final action.
+                  This request can affect business records, customer communication, or money. Save the proposal below, then approve it before opening the final review screen. Approval itself never performs the final action.
                 </p>
               )}
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <Button onClick={() => navigate(plan.route)}>
-                  {plan.actionLabel} <ArrowRight className="h-4 w-4" />
+                <Button onClick={openPlan}>
+                  {plan.requiresApproval ? <ShieldCheck className="h-4 w-4" /> : null}
+                  {plan.requiresApproval ? "Review approval proposal" : plan.actionLabel}
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" onClick={changeRequest}>Change request</Button>
                 <Button variant="ghost" onClick={() => void loadSnapshot()} disabled={snapshotLoading}>
@@ -325,6 +373,8 @@ export default function HighLevelAssistant() {
           </div>
         </div>
       )}
+
+      <AvaApprovalCenter plan={plan} />
     </div>
   );
 }

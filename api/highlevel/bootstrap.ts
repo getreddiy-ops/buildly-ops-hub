@@ -113,6 +113,38 @@ const FASTTRACT_OBJECTS: ObjectDefinition[] = [
       { key: "notes", name: "Internal Notes", dataType: "LARGE_TEXT", description: "Internal notes that are not customer-facing" },
     ],
   },
+  {
+    key: "custom_objects.ava_actions",
+    labels: { singular: "Ava Action", plural: "Ava Actions" },
+    description: "FastTract human-reviewed Ava proposals and approval history",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.ava_actions.action_title",
+      name: "Action Title",
+      dataType: "TEXT",
+    },
+    folderName: "FastTract Ava Approval Details",
+    fields: [
+      { key: "action_type", name: "Action Type", dataType: "TEXT", description: "Deterministic FastTract action category" },
+      { key: "status", name: "Approval Status", dataType: "TEXT", description: "Draft, approved, completed, or dismissed" },
+      { key: "risk_level", name: "Risk Level", dataType: "TEXT", description: "Review, record change, customer communication, or financial" },
+      { key: "source_prompt", name: "Source Request", dataType: "LARGE_TEXT", description: "Original user request supplied to Ava" },
+      { key: "summary", name: "Proposal Summary", dataType: "LARGE_TEXT", description: "Plain-language summary of the prepared action" },
+      { key: "next_step", name: "Final Review Step", dataType: "LARGE_TEXT", description: "Human-controlled workspace step required to finish the action" },
+      { key: "draft_content", name: "Customer Draft", dataType: "LARGE_TEXT", description: "Unsent customer-facing message prepared for review" },
+      { key: "target_label", name: "Human-readable Target", dataType: "TEXT", description: "Customer, job, estimate, or invoice label without an internal record id" },
+      { key: "proposed_changes", name: "Proposed Changes", dataType: "LARGE_TEXT", description: "Validated JSON summary of values proposed for final review" },
+      { key: "missing_information", name: "Missing Information", dataType: "LARGE_TEXT", description: "Validated JSON list of details that block approval" },
+      { key: "requires_approval", name: "Requires Approval", dataType: "TEXT", description: "Whether the proposal requires explicit human approval" },
+      { key: "requested_by", name: "Requested By", dataType: "TEXT", description: "Signed HighLevel user who created the proposal" },
+      { key: "requested_date", name: "Requested Date", dataType: "DATE", description: "Server-recorded date the proposal entered the queue" },
+      { key: "approved_by", name: "Approved By", dataType: "TEXT", description: "Signed HighLevel user who approved final review" },
+      { key: "approved_date", name: "Approved Date", dataType: "DATE", description: "Server-recorded approval date" },
+      { key: "completed_by", name: "Handled By", dataType: "TEXT", description: "Signed HighLevel user who marked the action handled" },
+      { key: "completed_date", name: "Handled Date", dataType: "DATE", description: "Server-recorded handled date" },
+      { key: "dismissed_by", name: "Dismissed By", dataType: "TEXT", description: "Signed HighLevel user who dismissed the proposal" },
+      { key: "dismissed_date", name: "Dismissed Date", dataType: "DATE", description: "Server-recorded dismissed date" },
+    ],
+  },
 ];
 
 function customFieldObjectKey(schemaKey: string) {
@@ -235,7 +267,7 @@ export default async function handler(req: any, res: any) {
       skipped,
       errors,
       nativeRecords: ["contacts", "opportunities", "estimates", "invoices", "calendars", "conversations"],
-      customRecords: ["jobs", "time_entries", "materials", "change_orders"],
+      customRecords: ["jobs", "time_entries", "materials", "change_orders", "ava_actions"],
       message: "FastTract is configured for this HighLevel sub-account.",
     });
   } catch (error) {
