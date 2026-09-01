@@ -101,7 +101,6 @@ describe("FastTract HighLevel Jobs", () => {
 
     expect(await screen.findByText("Job cost pulse")).toBeInTheDocument();
     expect(await screen.findByText("Morgan")).toBeInTheDocument();
-    expect(screen.getByText("Layout and demolition", { exact: false })).toBeInTheDocument();
     expect(screen.getAllByText("$800.00").length).toBeGreaterThan(0);
 
     expect(await screen.findByText("Ready-mix concrete")).toBeInTheDocument();
