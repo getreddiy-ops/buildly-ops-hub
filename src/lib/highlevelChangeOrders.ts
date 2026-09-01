@@ -125,13 +125,13 @@ export function linkedJobForChangeOrder(
 }
 
 export function changeOrderRecordPayload(
-  form: ChangeOrderForm,
+  form: Partial<ChangeOrderForm>,
   job: HighLevelRecord,
   existing?: HighLevelRecord | null,
 ) {
   return {
     properties: {
-      change_order_name: form.change_order_name.trim(),
+      change_order_name: form.change_order_name?.trim() ?? "",
       job_id: job.id,
       customer_id: readRecordString(job, jobPropertyKeys.customerId) || null,
       estimate_id: readRecordString(job, jobPropertyKeys.estimateId) || null,
@@ -148,8 +148,8 @@ export function changeOrderRecordPayload(
       approved_date: existing
         ? readRecordString(existing, changeOrderPropertyKeys.approvedDate) || null
         : null,
-      description: form.description.trim(),
-      notes: form.notes.trim() || null,
+      description: form.description?.trim() ?? "",
+      notes: form.notes?.trim() || null,
     },
   };
 }
