@@ -109,16 +109,39 @@ jobs:
           model_path.write_text(model_source.replace(old_model, new_model, 1), encoding='utf-8')
 
           workflow_path = Path('.github/workflows/test-highlevel-isolation.yml')
-          workflow_source = workflow_path.read_text(encoding='utf-8')
-          old_summary = '''          echo "### HighLevel two-location isolation: PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions." >> "$GITHUB_STEP_SUMMARY"'''
-          new_summary = '''          {
-            echo "### HighLevel two-location isolation: PASS"
-            echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions."
-          } >> "$GITHUB_STEP_SUMMARY"'''
-          if old_summary not in workflow_source:
-              raise SystemExit('Could not locate the isolation workflow summary block')
-          workflow_path.write_text(workflow_source.replace(old_summary, new_summary, 1), encoding='utf-8')
+          lines = workflow_path.read_text(encoding='utf-8').splitlines()
+          redirect = ' >> "$GITHUB_STEP_SUMMARY"'
+          repaired = []
+          changed = False
+          index = 0
+          while index < len(lines):
+              line = lines[index]
+              if line.strip().startswith('echo ') and line.strip().endswith(redirect.strip()):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  commands = []
+                  originals = []
+                  while index < len(lines):
+                      candidate = lines[index]
+                      stripped = candidate.strip()
+                      if not (stripped.startswith('echo ') and stripped.endswith(redirect.strip())):
+                          break
+                      commands.append(stripped[:-len(redirect.strip())])
+                      originals.append(candidate)
+                      index += 1
+                  if len(commands) > 1:
+                      repaired.append(f'{indent}{{')
+                      repaired.extend(f'{indent}  {command}' for command in commands)
+                      repaired.append(f'{indent}}}{redirect}')
+                      changed = True
+                  else:
+                      repaired.extend(originals)
+                  continue
+              repaired.append(line)
+              index += 1
+
+          if not changed:
+              raise SystemExit('No consecutive GitHub summary writes were found to group')
+          workflow_path.write_text('\n'.join(repaired) + '\n', encoding='utf-8')
           PY
           rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
 
