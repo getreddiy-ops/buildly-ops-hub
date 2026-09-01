@@ -163,7 +163,7 @@ export default async function handler(req: any, res: any) {
           : "";
         if (!estimateId) return json(res, 400, { error: "Missing estimate id" });
 
-        const result = await highLevelRequest(
+        const result = await highLevelRequest<any>(
           `/invoices/estimate/${encodeURIComponent(estimateId)}/invoice`,
           {
             method: "POST",
@@ -176,7 +176,11 @@ export default async function handler(req: any, res: any) {
             },
           },
         );
-        return json(res, 200, result);
+        const invoice = invoiceRecord(result);
+        if (!invoice?._id && !invoice?.id) {
+          throw new Error("HighLevel did not return the created invoice");
+        }
+        return json(res, 200, { invoice });
       }
 
       if (action === "send_invoice") {
