@@ -10,6 +10,7 @@ export const jobPropertyKeys = {
   notes: ["custom_objects.jobs.notes", "custom_object.jobs.notes", "notes"],
   customerId: ["custom_objects.jobs.customer_id", "custom_object.jobs.customer_id", "customer_id"],
   estimateId: ["custom_objects.jobs.estimate_id", "custom_object.jobs.estimate_id", "estimate_id"],
+  invoiceId: ["custom_objects.jobs.invoice_id", "custom_object.jobs.invoice_id", "invoice_id"],
 } as const;
 
 export const timePropertyKeys = {
