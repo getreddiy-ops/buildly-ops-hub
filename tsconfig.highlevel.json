@@ -15,6 +15,8 @@
     "src/layouts/HighLevelShell.tsx",
     "src/lib/highlevelAva.ts",
     "src/lib/highlevelAva.test.ts",
+    "src/lib/highlevelChangeOrders.ts",
+    "src/lib/highlevelChangeOrders.test.ts",
     "src/lib/highlevelDashboard.ts",
     "src/lib/highlevelDashboard.test.ts",
     "src/lib/highlevelJobWorkspace.ts",
