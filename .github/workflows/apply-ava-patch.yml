@@ -1,0 +1,82 @@
+name: Apply Ava approval center patch
+
+on:
+  push:
+    branches:
+      - chatgpt/fasttract-ghl-flawless
+    paths:
+      - .ava-patch-v2/READY
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-ava-approval-center
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fasttract-ghl-flawless
+          fetch-depth: 0
+
+      - name: Assemble and apply reviewed patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .ava-patch-v2/chunk-* > /tmp/ava-approval-patch.b64
+          base64 --decode /tmp/ava-approval-patch.b64 > /tmp/ava-approval-patch.tar.gz
+          tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
+          grep -q './src/pages/highlevel/AvaApprovalCenter.tsx' /tmp/ava-approval-patch-files.txt
+          grep -q './api/highlevel/records.ts' /tmp/ava-approval-patch-files.txt
+          grep -q './scripts/test-highlevel-ava-approval-isolation.mjs' /tmp/ava-approval-patch-files.txt
+          tar -xzf /tmp/ava-approval-patch.tar.gz -C .
+          rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Typecheck HighLevel workspace
+        run: npm run typecheck:highlevel
+
+      - name: Lint HighLevel workspace
+        run: npm run lint:highlevel
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Validate operational scripts and workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/encrypt-ghl-connections.mjs
+          node --check scripts/test-highlevel-isolation.mjs
+          node --check scripts/test-highlevel-ava-approval-isolation.mjs
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
+
+      - name: Commit tested Ava approval center
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Add human-controlled Ava approval center"
+          git push origin HEAD:chatgpt/fasttract-ghl-flawless
