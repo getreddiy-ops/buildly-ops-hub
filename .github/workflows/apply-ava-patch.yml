@@ -1,21 +1,21 @@
-name: Apply Ava approval center patch
+name: Finalize Ava approval integration
 
 on:
   push:
     branches:
       - chatgpt/fasttract-ghl-flawless
     paths:
-      - .ava-patch-v2/READY
+      - .ava-cleanup/READY
 
 permissions:
   contents: write
 
 concurrency:
-  group: apply-ava-approval-center
+  group: finalize-ava-approval-integration
   cancel-in-progress: false
 
 jobs:
-  apply:
+  finalize:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -25,125 +25,46 @@ jobs:
           ref: chatgpt/fasttract-ghl-flawless
           fetch-depth: 0
 
-      - name: Recover and validate reviewed archive
+      - name: Remove final type escape and expose live test command
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          import base64
-          import gzip
 
-          chunks = sorted(Path('.ava-patch-v2').glob('chunk-*'))
-          if not chunks:
-              raise SystemExit('No Ava approval patch chunks were found')
+          client = Path('src/integrations/highlevel/client.ts')
+          source = client.read_text(encoding='utf-8')
+          old = 'export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials" | "change_orders";'
+          new = 'export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials" | "change_orders" | "ava_actions";'
+          if old not in source:
+              raise SystemExit('Could not locate the HighLevel object union')
+          client.write_text(source.replace(old, new, 1), encoding='utf-8')
 
-          encoded = ''.join(
-              ''.join(path.read_text(encoding='utf-8').split())
-              for path in chunks
-          )
-          alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+          center = Path('src/pages/highlevel/AvaApprovalCenter.tsx')
+          source = center.read_text(encoding='utf-8')
+          old_import = '''import {
+            highLevel,
+            type FastTractHighLevelObject,
+          } from "@/integrations/highlevel/client";'''
+          new_import = 'import { highLevel } from "@/integrations/highlevel/client";'
+          old_const = 'const AVA_ACTION_OBJECT = "ava_actions" as unknown as FastTractHighLevelObject;'
+          new_const = 'const AVA_ACTION_OBJECT = "ava_actions" as const;'
+          if old_import not in source or old_const not in source:
+              raise SystemExit('Could not locate the Ava approval type escape')
+          source = source.replace(old_import, new_import, 1).replace(old_const, new_const, 1)
+          center.write_text(source, encoding='utf-8')
 
-          def valid(value: str):
-              try:
-                  padded = value + '=' * (-len(value) % 4)
-                  archive = base64.b64decode(padded, validate=True)
-                  gzip.decompress(archive)
-                  return archive
-              except Exception:
-                  return None
-
-          archive = valid(encoded)
-          recovered_character = None
-          if archive is None:
-              position = 4960
-              for character in alphabet:
-                  archive = valid(encoded[:position] + character + encoded[position:])
-                  if archive is not None:
-                      recovered_character = character
-                      break
-
-          if archive is None:
-              raise SystemExit('The reviewed Ava approval archive failed deterministic recovery')
-          if not archive.startswith(b'\x1f\x8b'):
-              raise SystemExit('The reviewed Ava approval archive is not a gzip file')
-
-          Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
-          print(f'Recovered and verified archive with character {recovered_character!r} at position 4960')
+          package = Path('package.json')
+          source = package.read_text(encoding='utf-8')
+          anchor = '    "test:highlevel:isolation": "node scripts/test-highlevel-isolation.mjs",\n'
+          addition = anchor + '    "test:highlevel:ava-approvals": "node scripts/test-highlevel-ava-approval-isolation.mjs",\n'
+          if '"test:highlevel:ava-approvals"' not in source:
+              if anchor not in source:
+                  raise SystemExit('Could not locate the HighLevel isolation script')
+              source = source.replace(anchor, addition, 1)
+          package.write_text(source, encoding='utf-8')
           PY
-
-          tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?src/pages/highlevel/AvaApprovalCenter\.tsx$' /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?src/pages/highlevel/avaApprovalModel\.ts$' /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?api/highlevel/records\.ts$' /tmp/ava-approval-patch-files.txt
-          grep -Eq '^(\./)?scripts/test-highlevel-ava-approval-isolation\.mjs$' /tmp/ava-approval-patch-files.txt
-
-      - name: Apply reviewed patch and release repairs
-        shell: bash
-        run: |
-          set -euo pipefail
-          tar -xzf /tmp/ava-approval-patch.tar.gz -C .
-          python - <<'PY'
-          from pathlib import Path
-
-          model_path = Path('src/pages/highlevel/avaApprovalModel.ts')
-          model_source = model_path.read_text(encoding='utf-8')
-          old_model = '''function propertyKeys(key: string) {
-            return [
-              `custom_objects.ava_actions.${key}`,
-              `custom_object.ava_actions.${key}`,
-              key,
-            ];
-          }'''
-          new_model = '''function propertyKeys(key: string) {
-            // FastTract APIs normalize current values to bare keys. Prefer those
-            // when HighLevel also returns an older namespaced representation.
-            return [
-              key,
-              `custom_objects.ava_actions.${key}`,
-              `custom_object.ava_actions.${key}`,
-            ];
-          }'''
-          if old_model not in model_source:
-              raise SystemExit('Could not locate the approval property precedence block')
-          model_path.write_text(model_source.replace(old_model, new_model, 1), encoding='utf-8')
-
-          workflow_path = Path('.github/workflows/test-highlevel-isolation.yml')
-          lines = workflow_path.read_text(encoding='utf-8').splitlines()
-          redirect = ' >> "$GITHUB_STEP_SUMMARY"'
-          repaired = []
-          changed = False
-          index = 0
-          while index < len(lines):
-              line = lines[index]
-              if line.strip().startswith('echo ') and line.strip().endswith(redirect.strip()):
-                  indent = line[:len(line) - len(line.lstrip())]
-                  commands = []
-                  originals = []
-                  while index < len(lines):
-                      candidate = lines[index]
-                      stripped = candidate.strip()
-                      if not (stripped.startswith('echo ') and stripped.endswith(redirect.strip())):
-                          break
-                      commands.append(stripped[:-len(redirect.strip())])
-                      originals.append(candidate)
-                      index += 1
-                  if len(commands) > 1:
-                      repaired.append(f'{indent}{{')
-                      repaired.extend(f'{indent}  {command}' for command in commands)
-                      repaired.append(f'{indent}}}{redirect}')
-                      changed = True
-                  else:
-                      repaired.extend(originals)
-                  continue
-              repaired.append(line)
-              index += 1
-
-          if not changed:
-              raise SystemExit('No consecutive GitHub summary writes were found to group')
-          workflow_path.write_text('\n'.join(repaired) + '\n', encoding='utf-8')
-          PY
-          rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
+          rm -rf .ava-cleanup
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -154,7 +75,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit production dependencies
+      - name: Audit critical production dependencies
         run: npm audit --omit=dev --audit-level=critical
 
       - name: Typecheck HighLevel workspace
@@ -169,26 +90,20 @@ jobs:
       - name: Build production application
         run: npm run build
 
-      - name: Validate operational scripts and workflows
+      - name: Validate both live isolation harnesses
         shell: bash
         run: |
           set -euo pipefail
-          node --check scripts/encrypt-ghl-connections.mjs
           node --check scripts/test-highlevel-isolation.mjs
           node --check scripts/test-highlevel-ava-approval-isolation.mjs
-          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
 
-      - name: Commit tested application files
+      - name: Commit tested integration cleanup
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          # GitHub's workflow token cannot update workflow files. Restore that
-          # directory, deliver the tested application first, then update the
-          # reviewed workflows separately through the GitHub connector.
           git checkout HEAD -- .github/workflows
-          git clean -f .github/workflows
           git add -A
-          git commit -m "Add human-controlled Ava approval center"
+          git commit -m "Finalize typed Ava approval integration"
           git push origin HEAD:chatgpt/fasttract-ghl-flawless
