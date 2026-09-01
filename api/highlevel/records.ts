@@ -39,10 +39,15 @@ function ensureRecordLocation(record: any, locationId: string) {
   }
 }
 
+function propertyRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 function normalizeProperties(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const source = propertyRecord(value);
   const normalized: Record<string, unknown> = {};
-  for (const [key, propertyValue] of Object.entries(value as Record<string, unknown>)) {
+  for (const [key, propertyValue] of Object.entries(source)) {
     const bareKey = key
       .replace(/^custom_objects\.[^.]+\./, "")
       .replace(/^custom_object\.[^.]+\./, "");
@@ -61,10 +66,18 @@ function normalizeRecordBody(value: unknown) {
   };
 }
 
+function mergeRecordBody(existingRecord: any, body: ReturnType<typeof normalizeRecordBody>) {
+  return {
+    ...body,
+    properties: {
+      ...normalizeProperties(existingRecord?.properties),
+      ...propertyRecord(body.properties),
+    },
+  };
+}
+
 function recordProperty(record: any, keys: string[]) {
-  const properties = record?.properties && typeof record.properties === "object"
-    ? record.properties as Record<string, unknown>
-    : {};
+  const properties = propertyRecord(record?.properties);
   for (const key of keys) {
     const value = properties[key];
     if (typeof value === "string" && value.trim()) return value.trim();
@@ -210,7 +223,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === "PUT") {
       if (!recordId) return json(res, 400, { error: "Missing record id" });
       const existingRecord = await getRecord(objectKey, recordId, token, locationId);
-      const body = normalizeRecordBody(req.body);
+      const body = mergeRecordBody(existingRecord, normalizeRecordBody(req.body));
       await validateLinkedJob(objectKey, body, token, locationId, existingRecord);
 
       const result = await highLevelRequest<any>(
