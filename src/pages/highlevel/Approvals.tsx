@@ -113,7 +113,7 @@ export default function HighLevelApprovals() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await highLevel.listRecords("approval_actions", { limit: 100 });
+      const result = await highLevel.listRecords("ava_actions", { limit: 100 });
       setRows(sortApprovals(result.records ?? []));
       setSetupRequired(false);
     } catch (error) {
@@ -172,7 +172,7 @@ export default function HighLevelApprovals() {
   ) => {
     setWorkingId(record.id);
     try {
-      const result = await highLevel.updateRecord("approval_actions", record.id, {
+      const result = await highLevel.updateRecord("ava_actions", record.id, {
         properties: {
           status,
           reviewed_date: ["in_review", "completed", "rejected"].includes(status) ? localDateValue() : null,

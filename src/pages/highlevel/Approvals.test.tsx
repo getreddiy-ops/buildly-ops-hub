@@ -80,7 +80,7 @@ describe("FastTract Ava approvals", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Begin review" }));
 
     await waitFor(() => expect(mockedHighLevel.updateRecord).toHaveBeenCalledWith(
-      "approval_actions",
+      "ava_actions",
       "approval-1",
       expect.objectContaining({
         properties: expect.objectContaining({ status: "in_review" }),
