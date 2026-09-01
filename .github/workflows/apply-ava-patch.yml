@@ -68,10 +68,14 @@ jobs:
                   total += len(piece)
                   offsets.append(total)
 
-              # A single character was lost while staging. Test only deterministic
-              # transport seams; never guess inside application source files.
               positions = []
+              # First try deterministic chunk transport seams.
               for position in [offsets[0], *offsets[1:-1], len(encoded)]:
+                  if position not in positions:
+                      positions.append(position)
+              # The current gzip expands through the deflate stream and fails at
+              # its trailer, so search only the final encoded checksum window.
+              for position in range(max(0, len(encoded) - 256), len(encoded) + 1):
                   if position not in positions:
                       positions.append(position)
 
@@ -95,7 +99,7 @@ jobs:
 
           Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
           if recovered:
-              print(f'Recovered one dropped base64 character at seam {recovered[0]}')
+              print(f'Recovered one dropped base64 character at position {recovered[0]}')
           print(f'Assembled {len(chunks)} chunks into a verified {len(archive)} byte archive')
           PY
 
