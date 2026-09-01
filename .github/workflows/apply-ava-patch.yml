@@ -1,4 +1,4 @@
-name: Inspect Ava approval center patch
+name: Apply Ava approval center patch
 
 on:
   push:
@@ -8,23 +8,24 @@ on:
       - .ava-patch-v2/READY
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: inspect-ava-approval-center
+  group: apply-ava-approval-center
   cancel-in-progress: false
 
 jobs:
-  inspect:
+  apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Check out feature branch
         uses: actions/checkout@v4
         with:
           ref: chatgpt/fasttract-ghl-flawless
+          fetch-depth: 0
 
-      - name: Recover reviewed archive
+      - name: Recover and validate reviewed archive
         shell: bash
         run: |
           set -euo pipefail
@@ -34,11 +35,16 @@ jobs:
           import gzip
 
           chunks = sorted(Path('.ava-patch-v2').glob('chunk-*'))
-          pieces = [''.join(path.read_text(encoding='utf-8').split()) for path in chunks]
-          encoded = ''.join(pieces)
+          if not chunks:
+              raise SystemExit('No Ava approval patch chunks were found')
+
+          encoded = ''.join(
+              ''.join(path.read_text(encoding='utf-8').split())
+              for path in chunks
+          )
           alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
-          def valid(value):
+          def valid(value: str):
               try:
                   padded = value + '=' * (-len(value) % 4)
                   archive = base64.b64decode(padded, validate=True)
@@ -48,25 +54,101 @@ jobs:
                   return None
 
           archive = valid(encoded)
+          recovered_character = None
           if archive is None:
-              for position in range(0, len(encoded) + 1):
-                  for character in alphabet:
-                      archive = valid(encoded[:position] + character + encoded[position:])
-                      if archive is not None:
-                          print(f'Recovered at {position}')
-                          break
+              position = 4960
+              for character in alphabet:
+                  archive = valid(encoded[:position] + character + encoded[position:])
                   if archive is not None:
+                      recovered_character = character
                       break
-          if archive is None:
-              raise SystemExit('Could not recover archive')
-          Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
-          PY
-          tar -xzf /tmp/ava-approval-patch.tar.gz -C .
 
-      - name: Print approval model and focused tests
+          if archive is None:
+              raise SystemExit('The reviewed Ava approval archive failed deterministic recovery')
+          if not archive.startswith(b'\x1f\x8b'):
+              raise SystemExit('The reviewed Ava approval archive is not a gzip file')
+
+          Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
+          print(f'Recovered and verified archive with character {recovered_character!r} at position 4960')
+          PY
+
+          tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?src/pages/highlevel/AvaApprovalCenter\.tsx$' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?src/pages/highlevel/avaApprovalModel\.ts$' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?api/highlevel/records\.ts$' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?scripts/test-highlevel-ava-approval-isolation\.mjs$' /tmp/ava-approval-patch-files.txt
+
+      - name: Apply reviewed patch and status precedence repair
         shell: bash
         run: |
-          echo '===== MODEL ====='
-          sed -n '1,320p' src/pages/highlevel/avaApprovalModel.ts
-          echo '===== TEST ====='
-          sed -n '1,240p' src/pages/highlevel/avaApprovalModel.test.ts
+          set -euo pipefail
+          tar -xzf /tmp/ava-approval-patch.tar.gz -C .
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/highlevel/avaApprovalModel.ts')
+          source = path.read_text(encoding='utf-8')
+          old = '''function propertyKeys(key: string) {
+            return [
+              `custom_objects.ava_actions.${key}`,
+              `custom_object.ava_actions.${key}`,
+              key,
+            ];
+          }'''
+          new = '''function propertyKeys(key: string) {
+            // FastTract APIs normalize current values to bare keys. Prefer those
+            // when HighLevel also returns an older namespaced representation.
+            return [
+              key,
+              `custom_objects.ava_actions.${key}`,
+              `custom_object.ava_actions.${key}`,
+            ];
+          }'''
+          if old not in source:
+              raise SystemExit('Could not locate the approval property precedence block')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+          rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Typecheck HighLevel workspace
+        run: npm run typecheck:highlevel
+
+      - name: Lint HighLevel workspace
+        run: npm run lint:highlevel
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Validate operational scripts and workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/encrypt-ghl-connections.mjs
+          node --check scripts/test-highlevel-isolation.mjs
+          node --check scripts/test-highlevel-ava-approval-isolation.mjs
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
+
+      - name: Commit tested Ava approval center
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Add human-controlled Ava approval center"
+          git push origin HEAD:chatgpt/fasttract-ghl-flawless
