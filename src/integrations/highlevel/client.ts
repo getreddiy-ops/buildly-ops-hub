@@ -1,4 +1,4 @@
-export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials" | "change_orders";
+export type FastTractHighLevelObject = "jobs" | "time_entries" | "materials" | "change_orders" | "ava_actions";
 
 export type HighLevelRecord<T = Record<string, unknown>> = {
   id: string;

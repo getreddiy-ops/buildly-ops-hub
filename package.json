@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:highlevel:isolation": "node scripts/test-highlevel-isolation.mjs",
+    "test:highlevel:ava-approvals": "node scripts/test-highlevel-ava-approval-isolation.mjs",
     "security:ghl:dry-run": "node scripts/encrypt-ghl-connections.mjs",
     "security:ghl:apply": "node scripts/encrypt-ghl-connections.mjs --apply"
   },

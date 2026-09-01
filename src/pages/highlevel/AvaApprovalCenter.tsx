@@ -14,10 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHighLevel } from "@/contexts/HighLevelContext";
-import {
-  highLevel,
-  type FastTractHighLevelObject,
-} from "@/integrations/highlevel/client";
+import { highLevel } from "@/integrations/highlevel/client";
 import { type AvaPlan, type AvaRiskLevel } from "@/lib/highlevelAva";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,7 +30,7 @@ import {
   type AvaApprovalStatus,
 } from "./avaApprovalModel";
 
-const AVA_ACTION_OBJECT = "ava_actions" as unknown as FastTractHighLevelObject;
+const AVA_ACTION_OBJECT = "ava_actions" as const;
 
 function formatDate(value: string) {
   if (!value) return "No date";
