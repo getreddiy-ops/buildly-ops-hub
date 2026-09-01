@@ -85,27 +85,25 @@ describe("FastTract HighLevel Jobs", () => {
     const jobCard = await screen.findByRole("button", { name: /Fletcher stamped patio/i });
     fireEvent.click(jobCard);
 
-    expect(await screen.findByText("Tracked cost")).toBeInTheDocument();
-    expect(screen.getAllByText("$1,400.00").length).toBeGreaterThan(0);
+    expect(await screen.findByText("Job cost pulse")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("$1,400.00").length).toBeGreaterThan(0));
 
     expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("jobs", { limit: 100 });
     expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("time_entries", { query: "job-1", limit: 100 });
     expect(mockedHighLevel.listRecords).toHaveBeenCalledWith("materials", { query: "job-1", limit: 100 });
   });
 
-  it("opens the job and exposes real crew-time and material details", async () => {
+  it("shows real crew-time and material details in the one-scroll job workspace", async () => {
     renderJobs();
 
     const jobCard = await screen.findByRole("button", { name: /Fletcher stamped patio/i });
     fireEvent.click(jobCard);
 
-    expect(await screen.findByText("Tracked cost")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Crew time/i }));
+    expect(await screen.findByText("Job cost pulse")).toBeInTheDocument();
     expect(await screen.findByText("Morgan")).toBeInTheDocument();
     expect(screen.getByText("Layout and demolition", { exact: false })).toBeInTheDocument();
     expect(screen.getAllByText("$800.00").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Materials$/i }));
     expect(await screen.findByText("Ready-mix concrete")).toBeInTheDocument();
     expect(screen.getByText("Local Ready Mix", { exact: false })).toBeInTheDocument();
     expect(screen.getAllByText("$600.00").length).toBeGreaterThan(0);
