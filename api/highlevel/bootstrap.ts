@@ -46,6 +46,7 @@ const FASTTRACT_OBJECTS: ObjectDefinition[] = [
       { key: "notes", name: "Scope and Notes", dataType: "LARGE_TEXT", description: "Job scope, access, and crew notes" },
       { key: "customer_id", name: "Customer ID", dataType: "TEXT", description: "Associated HighLevel contact id" },
       { key: "estimate_id", name: "Estimate ID", dataType: "TEXT", description: "Associated HighLevel estimate id" },
+      { key: "invoice_id", name: "Invoice ID", dataType: "TEXT", description: "Primary HighLevel invoice id for the original accepted scope" },
     ],
   },
   {
@@ -85,6 +86,29 @@ const FASTTRACT_OBJECTS: ObjectDefinition[] = [
       { key: "unit_cost", name: "Unit Cost", dataType: "MONETORY", description: "Material cost per unit" },
       { key: "supplier", name: "Supplier", dataType: "TEXT", description: "Material supplier" },
       { key: "notes", name: "Notes", dataType: "LARGE_TEXT", description: "Material notes" },
+    ],
+  },
+  {
+    key: "custom_objects.change_orders",
+    labels: { singular: "Change Order", plural: "Change Orders" },
+    description: "FastTract customer-approved changes to an active job scope",
+    primaryDisplayPropertyDetails: {
+      key: "custom_objects.change_orders.change_order_name",
+      name: "Change Order Name",
+      dataType: "TEXT",
+    },
+    folderName: "FastTract Change Order Details",
+    fields: [
+      { key: "job_id", name: "Job ID", dataType: "TEXT", description: "Associated FastTract job id" },
+      { key: "customer_id", name: "Customer ID", dataType: "TEXT", description: "Associated HighLevel contact id" },
+      { key: "estimate_id", name: "Original Estimate ID", dataType: "TEXT", description: "Original HighLevel estimate id" },
+      { key: "invoice_id", name: "Invoice ID", dataType: "TEXT", description: "Native HighLevel invoice created for the approved change" },
+      { key: "status", name: "Status", dataType: "TEXT", description: "Draft, sent, approved, declined, or invoiced" },
+      { key: "amount", name: "Amount", dataType: "MONETORY", description: "Customer-facing change order amount" },
+      { key: "requested_date", name: "Requested Date", dataType: "DATE", description: "Date the scope change was requested" },
+      { key: "approved_date", name: "Approved Date", dataType: "DATE", description: "Date the customer approved the change" },
+      { key: "description", name: "Scope Change", dataType: "LARGE_TEXT", description: "Customer-facing description of added, removed, or revised work" },
+      { key: "notes", name: "Internal Notes", dataType: "LARGE_TEXT", description: "Internal notes that are not customer-facing" },
     ],
   },
 ];
@@ -209,6 +233,7 @@ export default async function handler(req: any, res: any) {
       skipped,
       errors,
       nativeRecords: ["contacts", "opportunities", "estimates", "invoices", "calendars", "conversations"],
+      customRecords: ["jobs", "time_entries", "materials", "change_orders"],
       message: "FastTract is configured for this HighLevel sub-account.",
     });
   } catch (error) {
