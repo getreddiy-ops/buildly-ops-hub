@@ -101,7 +101,8 @@ const FASTTRACT_OBJECTS: ObjectDefinition[] = [
     fields: [
       { key: "job_id", name: "Job ID", dataType: "TEXT", description: "Associated FastTract job id" },
       { key: "customer_id", name: "Customer ID", dataType: "TEXT", description: "Associated HighLevel contact id" },
-      { key: "estimate_id", name: "Original Estimate ID", dataType: "TEXT", description: "Original HighLevel estimate id" },
+      { key: "estimate_id", name: "Original Estimate ID", dataType: "TEXT", description: "Original accepted HighLevel estimate id" },
+      { key: "approval_estimate_id", name: "Approval Estimate ID", dataType: "TEXT", description: "Native HighLevel estimate sent for customer approval of this change" },
       { key: "invoice_id", name: "Invoice ID", dataType: "TEXT", description: "Native HighLevel invoice created for the approved change" },
       { key: "status", name: "Status", dataType: "TEXT", description: "Draft, sent, approved, declined, or invoiced" },
       { key: "amount", name: "Amount", dataType: "MONETORY", description: "Customer-facing change order amount" },
