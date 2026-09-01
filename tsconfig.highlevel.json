@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "noEmit": true
+  },
+  "include": [
+    "src/vite-env.d.ts",
+    "api/highlevel/**/*.ts",
+    "src/components/AiFormHelper.tsx",
+    "src/components/StatusBadge.tsx",
+    "src/contexts/HighLevelContext.tsx",
+    "src/hooks/useBrowserSpeech.ts",
+    "src/integrations/highlevel/client.ts",
+    "src/layouts/HighLevelShell.tsx",
+    "src/lib/highlevelAva.ts",
+    "src/lib/highlevelAva.test.ts",
+    "src/lib/highlevelChangeOrders.ts",
+    "src/lib/highlevelChangeOrders.test.ts",
+    "src/lib/highlevelDashboard.ts",
+    "src/lib/highlevelDashboard.test.ts",
+    "src/lib/highlevelJobWorkspace.ts",
+    "src/lib/highlevelJobWorkspace.test.ts",
+    "src/lib/highlevelMoney.ts",
+    "src/lib/highlevelMoney.test.ts",
+    "src/pages/highlevel/**/*.tsx"
+  ]
+}

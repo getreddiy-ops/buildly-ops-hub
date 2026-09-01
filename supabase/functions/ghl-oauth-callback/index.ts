@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { encryptHighLevelCredential } from "../_shared/highlevel-credential-crypto.ts";
 
 const TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const DEFAULT_REDIRECT_URI =
@@ -97,11 +98,20 @@ Deno.serve(async (req) => {
       Date.now() + Math.max(0, token.expires_in ?? 86400) * 1000,
     ).toISOString();
     const connectionKey = `${userType.toLowerCase()}:${resourceId}`;
+    const encryptionKey = requiredSecret("GHL_TOKEN_ENCRYPTION_KEY");
+    const encryptedAt = new Date().toISOString();
+
+    const [accessToken, refreshToken] = await Promise.all([
+      encryptHighLevelCredential(token.access_token, encryptionKey),
+      encryptHighLevelCredential(token.refresh_token, encryptionKey),
+    ]);
 
     const { error } = await admin.from("ghl_connections").upsert({
       connection_key: connectionKey,
-      access_token: token.access_token,
-      refresh_token: token.refresh_token,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      credential_version: 1,
+      credentials_encrypted_at: encryptedAt,
       token_type: token.token_type ?? "Bearer",
       scope: token.scope ?? "",
       user_type: userType,
@@ -110,8 +120,8 @@ Deno.serve(async (req) => {
       ghl_user_id: token.userId ?? null,
       refresh_token_id: token.refreshTokenId ?? null,
       expires_at: expiresAt,
-      installed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      installed_at: encryptedAt,
+      updated_at: encryptedAt,
     }, { onConflict: "connection_key" });
 
     if (error) throw new Error(`Could not save HighLevel connection: ${error.message}`);

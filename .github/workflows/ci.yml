@@ -1,0 +1,58 @@
+name: FastTract CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "chatgpt/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate GitHub Actions workflows
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit critical production dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Typecheck HighLevel workspace
+        run: npm run typecheck:highlevel
+
+      - name: Lint HighLevel workspace
+        run: npm run lint:highlevel
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate operational scripts
+        run: |
+          node --check scripts/encrypt-ghl-connections.mjs
+          node --check scripts/test-highlevel-isolation.mjs
+          node --check scripts/test-highlevel-ava-approval-isolation.mjs
