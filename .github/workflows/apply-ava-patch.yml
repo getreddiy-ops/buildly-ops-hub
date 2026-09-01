@@ -178,12 +178,17 @@ jobs:
           node --check scripts/test-highlevel-ava-approval-isolation.mjs
           docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
 
-      - name: Commit tested Ava approval center
+      - name: Commit tested application files
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          # GitHub's workflow token cannot update workflow files. Restore that
+          # directory, deliver the tested application first, then update the
+          # reviewed workflows separately through the GitHub connector.
+          git checkout HEAD -- .github/workflows
+          git clean -f .github/workflows
           git add -A
           git commit -m "Add human-controlled Ava approval center"
           git push origin HEAD:chatgpt/fasttract-ghl-flawless
