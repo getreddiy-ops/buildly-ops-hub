@@ -25,7 +25,7 @@ jobs:
           ref: chatgpt/fasttract-ghl-flawless
           fetch-depth: 0
 
-      - name: Repair the approved object key and remove an unused placeholder
+      - name: Repair the approved object key, its test, and remove an unused placeholder
         shell: bash
         run: |
           set -euo pipefail
@@ -36,8 +36,15 @@ jobs:
           text = approvals.read_text()
           count = text.count('"approval_actions"')
           if count != 2:
-              raise SystemExit(f'Expected exactly 2 approval_actions references, found {count}')
+              raise SystemExit(f'Expected exactly 2 approval_actions references in Approvals.tsx, found {count}')
           approvals.write_text(text.replace('"approval_actions"', '"ava_actions"'))
+
+          approvals_test = Path('src/pages/highlevel/Approvals.test.tsx')
+          test_text = approvals_test.read_text()
+          test_count = test_text.count('"approval_actions"')
+          if test_count != 1:
+              raise SystemExit(f'Expected exactly 1 approval_actions reference in Approvals.test.tsx, found {test_count}')
+          approvals_test.write_text(test_text.replace('"approval_actions"', '"ava_actions"'))
 
           placeholder = Path('src/pages/highlevel/ApprovalCenterPanel.tsx')
           if placeholder.exists():
