@@ -1,0 +1,65 @@
+name: Test Ava approval isolation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type TEST_AVA to create temporary approval records in both App Test sub-accounts"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-highlevel-ava-approval-isolation
+  cancel-in-progress: false
+
+jobs:
+  ava-approval-isolation:
+    if: ${{ inputs.confirmation == 'TEST_AVA' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: highlevel-app-test
+    env:
+      FASTTRACT_BASE_URL: ${{ vars.FASTTRACT_PRODUCTION_URL }}
+      GHL_TEST_CONTEXT_A: ${{ secrets.GHL_TEST_CONTEXT_A }}
+      GHL_TEST_CONTEXT_B: ${{ secrets.GHL_TEST_CONTEXT_B }}
+      FASTTRACT_ISOLATION_RUN_ID: gha-ava-${{ github.run_id }}-${{ github.run_attempt }}
+      FASTTRACT_TEST_TIMEOUT_MS: "45000"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate Ava approval test configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FASTTRACT_BASE_URL"
+          test -n "$GHL_TEST_CONTEXT_A"
+          test -n "$GHL_TEST_CONTEXT_B"
+          test "$GHL_TEST_CONTEXT_A" != "$GHL_TEST_CONTEXT_B"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Ava approval harness syntax
+        run: node --check scripts/test-highlevel-ava-approval-isolation.mjs
+
+      - name: Run Ava approval two-location isolation test
+        run: npm run test:highlevel:ava-approvals
+
+      - name: Record Ava approval release-gate result
+        if: ${{ success() }}
+        run: |
+          {
+            echo "### Ava approval isolation: PASS"
+            echo "Approval records were location-isolated, minimum-risk gated, immutable after approval, blocked by missing information, and cleaned up successfully."
+          } >> "$GITHUB_STEP_SUMMARY"
