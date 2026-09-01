@@ -106,6 +106,7 @@ const FASTTRACT_OBJECTS: ObjectDefinition[] = [
       { key: "invoice_id", name: "Invoice ID", dataType: "TEXT", description: "Native HighLevel invoice created for the approved change" },
       { key: "status", name: "Status", dataType: "TEXT", description: "Draft, sent, approved, declined, or invoiced" },
       { key: "amount", name: "Amount", dataType: "MONETORY", description: "Customer-facing change order amount" },
+      { key: "tax_percent", name: "Tax Percent", dataType: "NUMERICAL", description: "Verified tax percentage used on the customer approval estimate" },
       { key: "requested_date", name: "Requested Date", dataType: "DATE", description: "Date the scope change was requested" },
       { key: "approved_date", name: "Approved Date", dataType: "DATE", description: "Date the customer approved the change" },
       { key: "description", name: "Scope Change", dataType: "LARGE_TEXT", description: "Customer-facing description of added, removed, or revised work" },
