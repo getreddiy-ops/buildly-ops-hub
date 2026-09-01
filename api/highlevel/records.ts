@@ -10,6 +10,7 @@ const OBJECT_KEYS: Record<string, string> = {
   jobs: "custom_objects.jobs",
   time_entries: "custom_objects.time_entries",
   materials: "custom_objects.materials",
+  change_orders: "custom_objects.change_orders",
 };
 
 const JOB_ID_KEYS = [
@@ -17,6 +18,8 @@ const JOB_ID_KEYS = [
   "custom_object.time_entries.job_id",
   "custom_objects.materials.job_id",
   "custom_object.materials.job_id",
+  "custom_objects.change_orders.job_id",
+  "custom_object.change_orders.job_id",
   "job_id",
 ];
 
@@ -133,7 +136,9 @@ async function searchLinkedJobRecords(
 export default async function handler(req: any, res: any) {
   const objectKey = resolveObjectKey(req.query?.object);
   if (!objectKey) {
-    return json(res, 400, { error: "Invalid object. Use jobs, time_entries, or materials." });
+    return json(res, 400, {
+      error: "Invalid object. Use jobs, time_entries, materials, or change_orders.",
+    });
   }
 
   try {
