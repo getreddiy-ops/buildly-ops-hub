@@ -83,6 +83,26 @@ async function getRecord(objectKey: string, recordId: string, token: string, loc
   return record;
 }
 
+async function validateLinkedJob(
+  objectKey: string,
+  body: ReturnType<typeof normalizeRecordBody>,
+  token: string,
+  locationId: string,
+  existingRecord?: any,
+) {
+  if (objectKey === OBJECT_KEYS.jobs) return;
+
+  const requestedJobId = recordProperty({ properties: body.properties }, JOB_ID_KEYS);
+  const existingJobId = existingRecord ? recordProperty(existingRecord, JOB_ID_KEYS) : "";
+  const jobId = requestedJobId || existingJobId;
+
+  if (!jobId) {
+    throw new Error("FastTract labor, material, and change-order records require a linked job");
+  }
+
+  await getRecord(OBJECT_KEYS.jobs, jobId, token, locationId);
+}
+
 async function searchRecordPage(
   objectKey: string,
   locationId: string,
@@ -116,6 +136,8 @@ async function searchLinkedJobRecords(
   locationId: string,
   token: string,
 ) {
+  await getRecord(OBJECT_KEYS.jobs, jobId, token, locationId);
+
   const all: any[] = [];
   let total = 0;
   let page = 1;
@@ -170,6 +192,8 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === "POST") {
       const body = normalizeRecordBody(req.body);
+      await validateLinkedJob(objectKey, body, token, locationId);
+
       const result = await highLevelRequest<any>(
         `/objects/${encodeURIComponent(objectKey)}/records`,
         {
@@ -185,8 +209,10 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === "PUT") {
       if (!recordId) return json(res, 400, { error: "Missing record id" });
-      await getRecord(objectKey, recordId, token, locationId);
+      const existingRecord = await getRecord(objectKey, recordId, token, locationId);
       const body = normalizeRecordBody(req.body);
+      await validateLinkedJob(objectKey, body, token, locationId, existingRecord);
+
       const result = await highLevelRequest<any>(
         `/objects/${encodeURIComponent(objectKey)}/records/${encodeURIComponent(recordId)}?locationId=${encodeURIComponent(locationId)}`,
         {
