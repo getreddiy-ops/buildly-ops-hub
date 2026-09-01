@@ -67,6 +67,12 @@ const statusRank: Record<FastTractChangeOrderStatus, number> = {
   declined: 4,
 };
 
+function storedChangeOrderStatus(record: HighLevelRecord): FastTractChangeOrderStatus {
+  const raw = readRecordString(record, changeOrderPropertyKeys.status).toLowerCase();
+  if (raw === "sent" || raw === "approved" || raw === "declined" || raw === "invoiced") return raw;
+  return "draft";
+}
+
 export function changeOrderName(record: HighLevelRecord) {
   return readRecordString(record, changeOrderPropertyKeys.name) || "Untitled change order";
 }
@@ -88,10 +94,7 @@ export function changeOrderStatus(
   if (approvalEstimate?.status === "accepted") return "approved";
   if (approvalEstimate?.status === "declined") return "declined";
   if (approvalEstimate?.status === "sent" || approvalEstimate?.status === "viewed") return "sent";
-
-  const raw = readRecordString(record, changeOrderPropertyKeys.status).toLowerCase();
-  if (raw === "sent" || raw === "approved" || raw === "declined" || raw === "invoiced") return raw;
-  return "draft";
+  return storedChangeOrderStatus(record);
 }
 
 export function changeOrderStatusLabel(status: FastTractChangeOrderStatus) {
@@ -138,9 +141,7 @@ export function changeOrderRecordPayload(
       invoice_id: existing
         ? readRecordString(existing, changeOrderPropertyKeys.invoiceId) || null
         : null,
-      status: existing
-        ? changeOrderStatus(existing)
-        : "draft",
+      status: existing ? storedChangeOrderStatus(existing) : "draft",
       amount: Math.round(Math.max(0, Number(form.amount) || 0) * 100) / 100,
       tax_percent: Math.round(Math.min(100, Math.max(0, Number(form.tax_percent) || 0)) * 100) / 100,
       requested_date: form.requested_date || null,
