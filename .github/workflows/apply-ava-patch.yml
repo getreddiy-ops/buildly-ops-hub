@@ -25,16 +25,48 @@ jobs:
           ref: chatgpt/fasttract-ghl-flawless
           fetch-depth: 0
 
-      - name: Assemble and apply reviewed patch
+      - name: Assemble and validate reviewed patch
         shell: bash
         run: |
           set -euo pipefail
-          cat .ava-patch-v2/chunk-* > /tmp/ava-approval-patch.b64
-          base64 --decode /tmp/ava-approval-patch.b64 > /tmp/ava-approval-patch.tar.gz
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          import re
+
+          chunks = sorted(Path('.ava-patch-v2').glob('chunk-*'))
+          if not chunks:
+              raise SystemExit('No Ava approval patch chunks were found')
+
+          raw = ''.join(path.read_text(encoding='utf-8') for path in chunks)
+          encoded = ''.join(raw.split())
+          invalid = [(index, value) for index, value in enumerate(encoded) if not re.fullmatch(r'[A-Za-z0-9+/=]', value)]
+          if invalid:
+              index, value = invalid[0]
+              raise SystemExit(f'Invalid base64 character at position {index}: {value!r}')
+
+          encoded += '=' * (-len(encoded) % 4)
+          try:
+              archive = base64.b64decode(encoded, validate=True)
+          except Exception as error:
+              raise SystemExit(f'Unable to decode Ava approval archive: {error}') from error
+
+          if not archive.startswith(b'\x1f\x8b'):
+              raise SystemExit('Decoded Ava approval archive is not a gzip file')
+
+          Path('/tmp/ava-approval-patch.tar.gz').write_bytes(archive)
+          print(f'Assembled {len(chunks)} chunks into a {len(archive)} byte archive')
+          PY
+
           tar -tzf /tmp/ava-approval-patch.tar.gz > /tmp/ava-approval-patch-files.txt
-          grep -q './src/pages/highlevel/AvaApprovalCenter.tsx' /tmp/ava-approval-patch-files.txt
-          grep -q './api/highlevel/records.ts' /tmp/ava-approval-patch-files.txt
-          grep -q './scripts/test-highlevel-ava-approval-isolation.mjs' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?src/pages/highlevel/AvaApprovalCenter\.tsx$' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?api/highlevel/records\.ts$' /tmp/ava-approval-patch-files.txt
+          grep -Eq '^(\./)?scripts/test-highlevel-ava-approval-isolation\.mjs$' /tmp/ava-approval-patch-files.txt
+
+      - name: Apply reviewed patch
+        shell: bash
+        run: |
+          set -euo pipefail
           tar -xzf /tmp/ava-approval-patch.tar.gz -C .
           rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
 
