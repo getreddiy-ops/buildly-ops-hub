@@ -55,5 +55,7 @@ jobs:
       - name: Record release-gate result
         if: ${{ success() }}
         run: |
-          echo "### HighLevel two-location isolation: PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### HighLevel two-location isolation: PASS"
+            echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions."
+          } >> "$GITHUB_STEP_SUMMARY"
