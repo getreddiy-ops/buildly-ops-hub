@@ -110,8 +110,22 @@ const emailA = "fasttract-isolation-a@fasttract.test";
 const emailB = "fasttract-isolation-b@fasttract.test";
 
 const created = {
-  A: { context: CONTEXT_A, contactIds: new Set(), leadId: null, jobId: null, estimateId: null },
-  B: { context: CONTEXT_B, contactIds: new Set(), leadId: null, jobId: null, estimateId: null },
+  A: {
+    context: CONTEXT_A,
+    contactIds: new Set(),
+    leadId: null,
+    jobId: null,
+    changeOrderId: null,
+    estimateId: null,
+  },
+  B: {
+    context: CONTEXT_B,
+    contactIds: new Set(),
+    leadId: null,
+    jobId: null,
+    changeOrderId: null,
+    estimateId: null,
+  },
 };
 
 async function bootstrap(label, context) {
@@ -169,6 +183,25 @@ async function createLocationFixtures(label, context, marker, email) {
   fixture.jobId = findId(jobPayload);
   assert.ok(fixture.jobId, `Location ${label} job did not return a record id`);
 
+  const changeOrderPayload = await expectSuccess(context, "/api/highlevel/records?object=change_orders", {
+    method: "POST",
+    body: {
+      properties: {
+        change_order_name: `${marker} Change Order`,
+        job_id: fixture.jobId,
+        customer_id: contactId,
+        status: "draft",
+        amount: 1,
+        tax_percent: 0,
+        requested_date: "2026-09-01",
+        description: `${marker} isolated scope change`,
+        notes: `Isolation change order ${RUN_ID}`,
+      },
+    },
+  });
+  fixture.changeOrderId = findId(changeOrderPayload);
+  assert.ok(fixture.changeOrderId, `Location ${label} change order did not return a record id`);
+
   const estimatePayload = await expectSuccess(context, "/api/highlevel/estimates", {
     method: "POST",
     body: {
@@ -187,7 +220,7 @@ async function createLocationFixtures(label, context, marker, email) {
   return { contactId };
 }
 
-async function verifyLists(label, context, ownMarker, otherMarker) {
+async function verifyLists(label, context, ownMarker, otherMarker, ownJobId) {
   const contacts = await expectSuccess(context, `/api/highlevel/contacts?q=${encodeURIComponent(RUN_ID)}&limit=100`);
   const contactItems = contacts?.contacts ?? [];
   assert.ok(includesMarker(contactItems, ownMarker, ["name"]), `Location ${label} cannot see its own customer`);
@@ -202,6 +235,20 @@ async function verifyLists(label, context, ownMarker, otherMarker) {
   const jobItems = jobs?.records ?? [];
   assert.ok(includesMarker(jobItems, ownMarker, ["properties.job_name", "properties.custom_objects.jobs.job_name"]), `Location ${label} cannot see its own job`);
   assert.ok(excludesMarker(jobItems, otherMarker, ["properties.job_name", "properties.custom_objects.jobs.job_name"]), `Location ${label} can see the other location's job`);
+
+  const changeOrders = await expectSuccess(
+    context,
+    `/api/highlevel/records?object=change_orders&q=${encodeURIComponent(ownJobId)}&limit=100`,
+  );
+  const changeOrderItems = changeOrders?.records ?? [];
+  assert.ok(
+    includesMarker(changeOrderItems, ownMarker, ["properties.change_order_name", "properties.custom_objects.change_orders.change_order_name"]),
+    `Location ${label} cannot see its own change order`,
+  );
+  assert.ok(
+    excludesMarker(changeOrderItems, otherMarker, ["properties.change_order_name", "properties.custom_objects.change_orders.change_order_name"]),
+    `Location ${label} can see the other location's change order`,
+  );
 
   const estimates = await expectSuccess(context, `/api/highlevel/estimates?q=${encodeURIComponent(RUN_ID)}&limit=100`);
   const estimateItems = estimates?.estimates ?? [];
@@ -231,6 +278,26 @@ async function verifyCrossLocationDenials(fromLabel, fromContext, targetLabel, t
     body: { properties: { job_name: `CROSS-JOB-${fromLabel}-TO-${targetLabel}`, status: "active" } },
   });
 
+  await expectIsolated(
+    fromContext,
+    `/api/highlevel/records?object=change_orders&id=${encodeURIComponent(target.changeOrderId)}`,
+  );
+  await expectIsolated(
+    fromContext,
+    `/api/highlevel/records?object=change_orders&id=${encodeURIComponent(target.changeOrderId)}`,
+    {
+      method: "PUT",
+      body: {
+        properties: {
+          change_order_name: `CROSS-CHANGE-${fromLabel}-TO-${targetLabel}`,
+          job_id: target.jobId,
+          amount: 999,
+          status: "approved",
+        },
+      },
+    },
+  );
+
   await expectIsolated(fromContext, `/api/highlevel/estimates?id=${encodeURIComponent(target.estimateId)}`, {
     method: "PUT",
     body: {
@@ -257,6 +324,13 @@ async function cleanupFixture(label, fixture) {
 
   if (fixture.estimateId) {
     await cleanup("estimate cleanup", `/api/highlevel/estimates?id=${encodeURIComponent(fixture.estimateId)}`, { method: "DELETE" });
+  }
+  if (fixture.changeOrderId) {
+    await cleanup(
+      "change order cleanup",
+      `/api/highlevel/records?object=change_orders&id=${encodeURIComponent(fixture.changeOrderId)}`,
+      { method: "DELETE" },
+    );
   }
   if (fixture.jobId) {
     await cleanup("job cleanup", `/api/highlevel/records?object=jobs&id=${encodeURIComponent(fixture.jobId)}`, { method: "DELETE" });
@@ -286,14 +360,14 @@ try {
   ]);
 
   await Promise.all([
-    verifyLists("A", CONTEXT_A, markerA, markerB),
-    verifyLists("B", CONTEXT_B, markerB, markerA),
+    verifyLists("A", CONTEXT_A, markerA, markerB, created.A.jobId),
+    verifyLists("B", CONTEXT_B, markerB, markerA, created.B.jobId),
   ]);
 
   await verifyCrossLocationDenials("A", CONTEXT_A, "B", created.B, fixtureA.contactId, markerA);
   await verifyCrossLocationDenials("B", CONTEXT_B, "A", created.A, fixtureB.contactId, markerB);
 
-  console.log("PASS: location-scoped lists and direct record operations are isolated in both directions");
+  console.log("PASS: customers, leads, jobs, change orders, and estimates are isolated in both directions");
 } catch (error) {
   failure = error;
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`);
