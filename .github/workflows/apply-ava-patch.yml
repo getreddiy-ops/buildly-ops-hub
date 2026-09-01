@@ -78,7 +78,7 @@ jobs:
           grep -Eq '^(\./)?api/highlevel/records\.ts$' /tmp/ava-approval-patch-files.txt
           grep -Eq '^(\./)?scripts/test-highlevel-ava-approval-isolation\.mjs$' /tmp/ava-approval-patch-files.txt
 
-      - name: Apply reviewed patch and status precedence repair
+      - name: Apply reviewed patch and release repairs
         shell: bash
         run: |
           set -euo pipefail
@@ -86,16 +86,16 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          path = Path('src/pages/highlevel/avaApprovalModel.ts')
-          source = path.read_text(encoding='utf-8')
-          old = '''function propertyKeys(key: string) {
+          model_path = Path('src/pages/highlevel/avaApprovalModel.ts')
+          model_source = model_path.read_text(encoding='utf-8')
+          old_model = '''function propertyKeys(key: string) {
             return [
               `custom_objects.ava_actions.${key}`,
               `custom_object.ava_actions.${key}`,
               key,
             ];
           }'''
-          new = '''function propertyKeys(key: string) {
+          new_model = '''function propertyKeys(key: string) {
             // FastTract APIs normalize current values to bare keys. Prefer those
             // when HighLevel also returns an older namespaced representation.
             return [
@@ -104,9 +104,21 @@ jobs:
               `custom_object.ava_actions.${key}`,
             ];
           }'''
-          if old not in source:
+          if old_model not in model_source:
               raise SystemExit('Could not locate the approval property precedence block')
-          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          model_path.write_text(model_source.replace(old_model, new_model, 1), encoding='utf-8')
+
+          workflow_path = Path('.github/workflows/test-highlevel-isolation.yml')
+          workflow_source = workflow_path.read_text(encoding='utf-8')
+          old_summary = '''          echo "### HighLevel two-location isolation: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions." >> "$GITHUB_STEP_SUMMARY"'''
+          new_summary = '''          {
+            echo "### HighLevel two-location isolation: PASS"
+            echo "Customer, lead, job, change-order, and estimate lists plus direct read/write attempts were isolated in both directions."
+          } >> "$GITHUB_STEP_SUMMARY"'''
+          if old_summary not in workflow_source:
+              raise SystemExit('Could not locate the isolation workflow summary block')
+          workflow_path.write_text(workflow_source.replace(old_summary, new_summary, 1), encoding='utf-8')
           PY
           rm -rf .ava-patch .ava-patch-v2 .github/workflows/apply-ava-patch.yml
 
