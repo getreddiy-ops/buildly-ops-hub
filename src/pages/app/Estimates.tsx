@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -22,82 +20,96 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { FileText, MoreHorizontal, Plus, Trash2, Send } from "lucide-react";
+import { FileText, MoreHorizontal, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
-import { SendDocumentDialog } from "@/components/SendDocumentDialog";
-import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  highLevel,
+  type HighLevelContact,
+  type HighLevelEstimate,
+} from "@/integrations/highlevel/client";
 import { estimateKnowledgeRules, estimateKnowledgeTemplates } from "@/lib/estimateKnowledge";
 
-type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
-type EstStatus = Database["public"]["Enums"]["estimate_status"];
-type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type LineItem = {
-  id?: string;
   description: string;
   quantity: number;
   unit_price: number;
 };
 
-const STATUSES: EstStatus[] = ["draft", "sent", "approved", "rejected"];
-
 const headerSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
-  customer_id: z.string().uuid("Pick a customer"),
-  status: z.enum(["draft", "sent", "approved", "rejected"]),
+  customer_id: z.string().trim().min(1, "Pick a customer"),
   tax: z.number().min(0).max(100),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  notes: z.string().trim().max(4000).optional().or(z.literal("")),
 });
 
 const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
+function estimateId(estimate: HighLevelEstimate) {
+  return estimate._id;
+}
+
+function estimateTaxPercent(estimate: HighLevelEstimate) {
+  const raw = estimate.meta?.taxPercent;
+  return typeof raw === "number" ? raw : Number(raw) || 0;
+}
+
 export default function Estimates() {
-  const { activeOrg, user } = useAuth();
-  const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [rows, setRows] = useState<(Estimate & { customers?: { name: string } | null })[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [rows, setRows] = useState<HighLevelEstimate[]>([]);
+  const [customers, setCustomers] = useState<HighLevelContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [sending, setSending] = useState<any | null>(null);
-  const [editing, setEditing] = useState<Estimate | null>(null);
+  const [editing, setEditing] = useState<HighLevelEstimate | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [status, setStatus] = useState<EstStatus>("draft");
   const [taxPct, setTaxPct] = useState<number>(0);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: 1, unit_price: 0 }]);
 
   const subtotal = useMemo(
-    () => items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0),
+    () => items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0),
     [items],
   );
   const taxAmt = subtotal * (Number(taxPct) || 0) / 100;
   const total = subtotal + taxAmt;
 
   const load = async () => {
-    if (!activeOrg) return;
     setLoading(true);
-    const [{ data: ests, error }, { data: custs }] = await Promise.all([
-      supabase.from("estimates").select("*, customers(name,email,phone)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
-      supabase.from("customers").select("*").eq("organization_id", activeOrg.organization_id).order("name"),
-    ]);
-    if (error) toast.error(error.message);
-    setRows((ests ?? []) as any);
-    setCustomers(custs ?? []);
-    setLoading(false);
+    try {
+      const [estimateResult, customerResult] = await Promise.all([
+        highLevel.listEstimates({ limit: 100, status: "all" }),
+        highLevel.listContacts({ limit: 100 }),
+      ]);
+      setRows(Array.isArray(estimateResult.estimates) ? estimateResult.estimates : []);
+      setCustomers(customerResult.contacts ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load HighLevel estimates");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, [activeOrg?.organization_id]);
+  useEffect(() => { load(); }, []);
 
   const resetForm = () => {
-    setTitle(""); setCustomerId(""); setStatus("draft"); setTaxPct(0); setNotes("");
+    setTitle("");
+    setCustomerId("");
+    setTaxPct(0);
+    setNotes("");
     setItems([{ description: "", quantity: 1, unit_price: 0 }]);
   };
-  const openNew = () => { setEditing(null); resetForm(); setOpen(true); };
+
+  const openNew = () => {
+    setEditing(null);
+    resetForm();
+    setOpen(true);
+  };
+
   const applyTemplate = (templateId: string) => {
     const template = estimateKnowledgeTemplates.find((item) => item.id === templateId);
     if (!template) return;
@@ -107,97 +119,116 @@ export default function Estimates() {
     toast.success(`${template.name} starting point loaded`);
   };
 
-  const openEdit = async (e: Estimate) => {
-    setEditing(e);
-    setTitle(e.title); setCustomerId(e.customer_id ?? ""); setStatus(e.status);
-    const sub = Number(e.subtotal) || 0;
-    setTaxPct(sub > 0 ? Math.round((Number(e.tax) / sub) * 10000) / 100 : 0);
-    setNotes(e.notes ?? "");
-    const { data: li } = await supabase
-      .from("estimate_line_items").select("*").eq("estimate_id", e.id).order("position");
-    setItems((li ?? []).map((r) => ({
-      id: r.id, description: r.description ?? "",
-      quantity: Number(r.quantity), unit_price: Number(r.unit_price),
-    })));
+  const openEdit = (estimate: HighLevelEstimate) => {
+    setEditing(estimate);
+    setTitle(estimate.name ?? "");
+    setCustomerId(estimate.contactDetails?.id ?? "");
+    setTaxPct(estimateTaxPercent(estimate));
+    setNotes(estimate.termsNotes ?? "");
+    const estimateItems = Array.isArray(estimate.items) ? estimate.items : [];
+    setItems(
+      estimateItems.length
+        ? estimateItems.map((item) => ({
+            description: item.description || item.name || "",
+            quantity: Number(item.qty) || 1,
+            unit_price: Number(item.amount) || 0,
+          }))
+        : [{ description: "", quantity: 1, unit_price: 0 }],
+    );
     setOpen(true);
   };
 
   useEffect(() => {
     const editId = searchParams.get("edit");
     if (!editId || !rows.length) return;
-    const target = rows.find((r) => r.id === editId);
+    const target = rows.find((row) => estimateId(row) === editId);
     if (target) {
       openEdit(target);
-      searchParams.delete("edit");
-      setSearchParams(searchParams, { replace: true });
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, searchParams]);
-
+  }, [rows]);
 
   const save = async () => {
-    const parsed = headerSchema.safeParse({ title, customer_id: customerId, status, tax: Number(taxPct), notes });
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
-    const valid = items.filter((i) => i.description.trim());
-    if (valid.length === 0) { toast.error("Add at least one line item"); return; }
-    if (!activeOrg || !user) return;
-    setSaving(true);
-
-    const header = {
-      title: parsed.data.title,
-      customer_id: parsed.data.customer_id,
-      status: parsed.data.status,
-      subtotal, tax: taxAmt, total,
-      notes: parsed.data.notes || null,
-    };
-
-    let estimateId: string;
-    if (editing) {
-      const { error } = await supabase.from("estimates").update(header).eq("id", editing.id);
-      if (error) { setSaving(false); return toast.error(error.message); }
-      estimateId = editing.id;
-      await supabase.from("estimate_line_items").delete().eq("estimate_id", estimateId);
-    } else {
-      const { data, error } = await supabase.from("estimates")
-        .insert({ ...header, organization_id: activeOrg.organization_id, created_by: user.id })
-        .select("id").single();
-      if (error || !data) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
-      estimateId = data.id;
+    const parsed = headerSchema.safeParse({
+      title,
+      customer_id: customerId,
+      tax: Number(taxPct),
+      notes,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
     }
 
-    const liPayload = valid.map((i, idx) => ({
-      estimate_id: estimateId,
-      description: i.description,
-      quantity: Number(i.quantity) || 0,
-      unit_price: Number(i.unit_price) || 0,
-      total: (Number(i.quantity) || 0) * (Number(i.unit_price) || 0),
-      position: idx,
-    }));
-    const { error: liErr } = await supabase.from("estimate_line_items").insert(liPayload);
-    setSaving(false);
-    if (liErr) return toast.error(liErr.message);
+    const validItems = items.filter((item) => item.description.trim());
+    if (!validItems.length) {
+      toast.error("Add at least one line item");
+      return;
+    }
 
-    toast.success(editing ? "Estimate updated" : "Estimate created");
-    setOpen(false);
-    load();
+    setSaving(true);
+    try {
+      const payload = {
+        title: parsed.data.title,
+        customer_id: parsed.data.customer_id,
+        tax_percent: parsed.data.tax,
+        notes: parsed.data.notes || null,
+        line_items: validItems.map((item) => ({
+          description: item.description.trim(),
+          quantity: Number(item.quantity) || 0,
+          unit_price: Number(item.unit_price) || 0,
+        })),
+      };
+
+      if (editing) await highLevel.updateEstimate(estimateId(editing), payload);
+      else await highLevel.createEstimate(payload);
+
+      toast.success(editing ? "Estimate updated in HighLevel" : "Estimate created in HighLevel");
+      setOpen(false);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save estimate");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this estimate?")) return;
-    const { error } = await supabase.from("estimates").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Estimate deleted");
-    load();
+    if (!confirm("Delete this estimate from HighLevel?")) return;
+    try {
+      await highLevel.deleteEstimate(id);
+      toast.success("Estimate deleted from HighLevel");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete estimate");
+    }
   };
 
-  const setItem = (idx: number, patch: Partial<LineItem>) =>
-    setItems((s) => s.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  const send = async (estimate: HighLevelEstimate, channel: "sms_and_email" | "email" | "sms") => {
+    const id = estimateId(estimate);
+    setSendingId(id);
+    try {
+      await highLevel.sendEstimate(id, { channel, name: estimate.name });
+      toast.success(channel === "sms_and_email" ? "Estimate sent by SMS and email" : `Estimate sent by ${channel}`);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send estimate");
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const setItem = (index: number, patch: Partial<LineItem>) =>
+    setItems((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
 
   return (
     <div>
       <PageHeader
         title="Estimates"
-        description="Drafts, sent, approved, rejected."
+        description="Native HighLevel estimates—created, sent, viewed and accepted without leaving FastTract."
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -212,134 +243,117 @@ export default function Estimates() {
                     fields={[
                       { name: "title", description: "Short estimate title" },
                       { name: "customer_name", description: "Match an existing customer by name" },
-                      { name: "tax_percent", type: "number", description: "Tax percentage (0-100)" },
+                      { name: "tax_percent", type: "number", description: "Tax percentage from 0 to 100" },
                       { name: "notes" },
-                      { name: "line_items", description: "JSON array of {description, quantity, unit_price} for each item" },
+                      { name: "line_items", description: "JSON array of {description, quantity, unit_price}" },
                     ]}
-                    context={{ customers: customers.map((c) => ({ id: c.id, name: c.name })) }}
-                    onFill={(v: any) => {
-                      if (v.title) setTitle(String(v.title));
-                      if (v.notes) setNotes(String(v.notes));
-                      if (v.tax_percent !== undefined) setTaxPct(Number(v.tax_percent) || 0);
-                      if (v.customer_name) {
-                        const m = customers.find(
-                          (c) => c.name.toLowerCase() === String(v.customer_name).toLowerCase(),
+                    context={{ customers: customers.map((customer) => ({ id: customer.id, name: customer.name })) }}
+                    onFill={(values: any) => {
+                      if (values.title) setTitle(String(values.title));
+                      if (values.notes) setNotes(String(values.notes));
+                      if (values.tax_percent !== undefined) setTaxPct(Number(values.tax_percent) || 0);
+                      if (values.customer_name) {
+                        const match = customers.find((customer) =>
+                          (customer.name ?? "").toLowerCase() === String(values.customer_name).toLowerCase(),
                         );
-                        if (m) setCustomerId(m.id);
+                        if (match) setCustomerId(match.id);
                       }
-                      if (v.line_items) {
+                      if (values.line_items) {
                         try {
-                          const arr = typeof v.line_items === "string" ? JSON.parse(v.line_items) : v.line_items;
-                          if (Array.isArray(arr) && arr.length) {
-                            setItems(
-                              arr.map((it: any) => ({
-                                description: String(it.description ?? ""),
-                                quantity: Number(it.quantity) || 1,
-                                unit_price: Number(it.unit_price) || 0,
-                              })),
-                            );
+                          const parsedItems = typeof values.line_items === "string" ? JSON.parse(values.line_items) : values.line_items;
+                          if (Array.isArray(parsedItems) && parsedItems.length) {
+                            setItems(parsedItems.map((item: any) => ({
+                              description: String(item.description ?? ""),
+                              quantity: Number(item.quantity) || 1,
+                              unit_price: Number(item.unit_price) || 0,
+                            })));
                           }
-                        } catch { /* ignore */ }
+                        } catch { /* keep current rows */ }
                       }
                     }}
                   />
                 </div>
               </DialogHeader>
+
               <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-1">
                 {!editing && (
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <Label className="text-xs text-muted-foreground">1. Start with the closest job type</Label>
+                    <Label className="text-xs text-muted-foreground">Start with the closest job type</Label>
                     <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {estimateKnowledgeTemplates.map((template) => (
-                        <Button key={template.id} type="button" variant="outline" className="h-auto justify-start py-2 text-left" onClick={() => applyTemplate(template.id)}>
-                          <span><span className="block text-xs font-semibold">{template.name}</span><span className="block text-[11px] font-normal text-muted-foreground">{template.trade}</span></span>
+                        <Button
+                          key={template.id}
+                          type="button"
+                          variant="outline"
+                          className="h-auto justify-start py-2 text-left"
+                          onClick={() => applyTemplate(template.id)}
+                        >
+                          <span>
+                            <span className="block text-xs font-semibold">{template.name}</span>
+                            <span className="block text-[11px] font-normal text-muted-foreground">{template.trade}</span>
+                          </span>
                         </Button>
                       ))}
                     </div>
                   </div>
                 )}
+
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+                  <Field label="Title"><Input value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
                   <Field label="Customer">
-                    <div className="flex gap-2">
-                      <Select value={customerId} onValueChange={setCustomerId}>
-                        <SelectTrigger className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                        <SelectContent>
-                          {customers.length === 0
-                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
-                            : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <QuickCreateCustomerButton
-                        label="New"
-                        onCreated={async (c) => { await load(); setCustomerId(c.id); }}
-                      />
-                    </div>
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Status">
-                    <Select value={status} onValueChange={(v) => setStatus(v as EstStatus)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
+                    <Select value={customerId} onValueChange={setCustomerId}>
+                      <SelectTrigger><SelectValue placeholder="Select HighLevel customer" /></SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>{customer.name || customer.email || customer.phone || "Customer"}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
-                  </Field>
-                  <Field label="Tax %">
-                    <Input type="number" min={0} step="0.01" value={taxPct}
-                      onChange={(e) => setTaxPct(parseFloat(e.target.value) || 0)} />
                   </Field>
                 </div>
 
+                <Field label="Tax %">
+                  <Input type="number" min={0} max={100} step="0.01" value={taxPct} onChange={(event) => setTaxPct(parseFloat(event.target.value) || 0)} />
+                </Field>
+
                 <div>
                   <div className="mb-2 flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground">2. Price the work phases</Label>
-                    <Button size="sm" variant="outline"
-                      onClick={() => setItems((s) => [...s, { description: "", quantity: 1, unit_price: 0 }])}>
+                    <Label className="text-xs text-muted-foreground">Line items</Label>
+                    <Button size="sm" variant="outline" onClick={() => setItems((current) => [...current, { description: "", quantity: 1, unit_price: 0 }])}>
                       <Plus className="h-3.5 w-3.5" /> Add row
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    {items.map((it, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2">
-                        <Input className="col-span-6" placeholder="Description"
-                          value={it.description} onChange={(e) => setItem(idx, { description: e.target.value })} />
-                        <Input className="col-span-2" type="number" min={0} step="0.01" placeholder="Qty"
-                          value={it.quantity} onChange={(e) => setItem(idx, { quantity: parseFloat(e.target.value) || 0 })} />
-                        <Input className="col-span-3" type="number" min={0} step="0.01" placeholder="Unit price"
-                          value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: parseFloat(e.target.value) || 0 })} />
-                        <Button className="col-span-1" size="icon" variant="ghost"
-                          onClick={() => setItems((s) => s.filter((_, i) => i !== idx))}>
+                    {items.map((item, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2">
+                        <Input className="col-span-6" placeholder="Description" value={item.description} onChange={(event) => setItem(index, { description: event.target.value })} />
+                        <Input className="col-span-2" type="number" min={0} step="0.01" placeholder="Qty" value={item.quantity} onChange={(event) => setItem(index, { quantity: parseFloat(event.target.value) || 0 })} />
+                        <Input className="col-span-3" type="number" min={0} step="0.01" placeholder="Unit price" value={item.unit_price} onChange={(event) => setItem(index, { unit_price: parseFloat(event.target.value) || 0 })} />
+                        <Button className="col-span-1" size="icon" variant="ghost" onClick={() => setItems((current) => current.filter((_, i) => i !== index))} aria-label="Remove line item">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="ml-auto w-64 space-y-1 text-sm">
-                  <Row label="Subtotal" value={fmt(subtotal)} />
-                  <Row label={`Tax (${taxPct || 0}%)`} value={fmt(taxAmt)} />
-                  <div className="border-t border-border pt-1"><Row label="Total" value={fmt(total)} bold /></div>
-                </div>
-
-                <Field label="3. Scope, timeline, terms, exclusions, and changes"><Textarea rows={9} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
-                <div className="rounded-lg border border-border p-3">
-                  <Label className="text-xs text-muted-foreground">Ready-to-send check</Label>
-                  <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-                    <span className={customerId ? "text-emerald-600" : ""}>{customerId ? "✓" : "○"} Customer selected</span>
-                    <span className={title.trim() ? "text-emerald-600" : ""}>{title.trim() ? "✓" : "○"} Job-specific title</span>
-                    <span className={items.some((item) => item.description.trim() && item.unit_price > 0) ? "text-emerald-600" : ""}>{items.some((item) => item.description.trim() && item.unit_price > 0) ? "✓" : "○"} Work is priced</span>
-                    <span className={notes.includes("SCOPE OF WORK") && notes.includes("EXCLUSIONS") ? "text-emerald-600" : ""}>{notes.includes("SCOPE OF WORK") && notes.includes("EXCLUSIONS") ? "✓" : "○"} Scope and exclusions included</span>
+                  <div className="mt-3 rounded-md bg-muted/40 p-3 text-sm">
+                    <div className="flex justify-between"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>Tax ({taxPct || 0}%)</span><span>{fmt(taxAmt)}</span></div>
+                    <div className="mt-1 flex justify-between font-semibold"><span>Total</span><span>{fmt(total)}</span></div>
                   </div>
                 </div>
-                <details className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer font-medium text-foreground">Your estimating knowledge</summary>
-                  <ul className="mt-2 space-y-1">{estimateKnowledgeRules.map((rule) => <li key={rule}>✓ {rule}</li>)}</ul>
-                </details>
+
+                <Field label="Terms / notes"><Textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} /></Field>
+
+                {estimateKnowledgeRules.length > 0 && (
+                  <div className="rounded-md border border-border p-3 text-xs text-muted-foreground">
+                    FastTract keeps your estimating rules available to the AI while HighLevel owns the customer-facing estimate record.
+                  </div>
+                )}
               </div>
+
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save draft"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -349,14 +363,18 @@ export default function Estimates() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={FileText} title="No estimates yet" description="Build your first estimate to send to a customer."
-          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New estimate</Button>} />
+        <EmptyState
+          icon={FileText}
+          title="No estimates yet"
+          description="Create a HighLevel estimate from FastTract and send it by email or SMS."
+          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New estimate</Button>}
+        />
       ) : (
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
+                <TableHead>Estimate</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -364,46 +382,42 @@ export default function Estimates() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((e) => (
-                <TableRow
-                  key={e.id}
-                  className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => nav(`/app/estimates/${e.id}`)}
-                >
-                  <TableCell className="font-medium">{e.title}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{e.customers?.name ?? "—"}</TableCell>
-                  <TableCell><StatusBadge status={e.status} /></TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(Number(e.total))}</TableCell>
-                  <TableCell onClick={(ev) => ev.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" aria-label="Estimate actions"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSending(e)}><Send className="mr-2 h-4 w-4" /> Send</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEdit(e)}>Edit</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => remove(e.id)}>Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {rows.map((estimate) => {
+                const id = estimateId(estimate);
+                return (
+                  <TableRow key={id}>
+                    <TableCell className="font-medium">{estimate.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{estimate.contactDetails?.name || "—"}</TableCell>
+                    <TableCell><StatusBadge status={estimate.status || "draft"} /></TableCell>
+                    <TableCell className="text-right font-medium">{fmt(Number(estimate.total) || 0)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="ghost" aria-label="Estimate actions"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(estimate)}>Edit</DropdownMenuItem>
+                          {!['accepted', 'declined', 'invoiced'].includes(estimate.status || '') && (
+                            <>
+                              <DropdownMenuItem disabled={sendingId === id} onClick={() => send(estimate, "sms_and_email")}>
+                                <Send className="h-4 w-4" /> Send SMS + email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem disabled={sendingId === id} onClick={() => send(estimate, "email")}>Send email</DropdownMenuItem>
+                              <DropdownMenuItem disabled={sendingId === id} onClick={() => send(estimate, "sms")}>Send SMS</DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => remove(id)}>Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       )}
-
-      <SendDocumentDialog
-        open={!!sending}
-        onOpenChange={(o) => !o && setSending(null)}
-        docType="estimate"
-        docId={sending?.id ?? ""}
-        defaultEmail={sending?.customers?.email}
-        defaultPhone={sending?.customers?.phone}
-        customerName={sending?.customers?.name}
-        onSent={() => { setSending(null); load(); }}
-      />
     </div>
   );
 }
@@ -413,14 +427,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="grid gap-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       {children}
-    </div>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className={`flex justify-between ${bold ? "font-semibold" : "text-muted-foreground"}`}>
-      <span>{label}</span><span className="tabular-nums text-foreground">{value}</span>
     </div>
   );
 }

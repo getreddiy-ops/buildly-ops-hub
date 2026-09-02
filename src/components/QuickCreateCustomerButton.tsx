@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { highLevel } from "@/integrations/highlevel/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +17,8 @@ type Props = {
 };
 
 /**
- * Small reusable "Add customer" button + dialog for pages that build on top
- * of an existing customer (Estimates, Invoices, Contracts, Jobs, etc.).
- * Inserts into `customers` for the active org and returns the new row to the
- * parent so it can refresh its list and auto-select the new customer.
+ * Reusable HighLevel customer creator for pages that need to attach work to a
+ * contact (Estimates, Invoices, Contracts, Jobs, etc.).
  */
 export function QuickCreateCustomerButton({
   onCreated,
@@ -29,7 +26,6 @@ export function QuickCreateCustomerButton({
   variant = "outline",
   label = "New customer",
 }: Props) {
-  const { activeOrg } = useAuth();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "" });
@@ -37,27 +33,30 @@ export function QuickCreateCustomerButton({
   const reset = () => setForm({ name: "", email: "", phone: "", address: "" });
 
   const save = async () => {
-    if (!activeOrg) return;
     const name = form.name.trim();
     if (!name) return toast.error("Name is required");
+
     setSaving(true);
-    const { data, error } = await supabase
-      .from("customers")
-      .insert({
-        organization_id: activeOrg.organization_id,
+    try {
+      const result = await highLevel.upsertContact({
         name,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         address: form.address.trim() || null,
-      })
-      .select("id,name")
-      .single();
-    setSaving(false);
-    if (error || !data) return toast.error(error?.message ?? "Could not create customer");
-    toast.success("Customer created");
-    onCreated(data);
-    reset();
-    setOpen(false);
+      });
+
+      const customer = result.contact;
+      if (!customer?.id) throw new Error("HighLevel did not return a customer id");
+
+      toast.success("Customer created in HighLevel");
+      onCreated({ id: customer.id, name: customer.name || name });
+      reset();
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create customer");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

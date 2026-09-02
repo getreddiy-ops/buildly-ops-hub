@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -24,10 +22,14 @@ import {
 import { MoreHorizontal, Plus, Users, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  highLevel,
+  type FastTractLead,
+  type FastTractLeadStatus,
+} from "@/integrations/highlevel/client";
 
-type Lead = Database["public"]["Tables"]["leads"]["Row"];
-type LeadStatus = Database["public"]["Enums"]["lead_status"];
+type Lead = FastTractLead;
+type LeadStatus = FastTractLeadStatus;
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
 
@@ -44,7 +46,6 @@ const schema = z.object({
 const empty = { name: "", email: "", phone: "", address: "", source: "", status: "new" as LeadStatus, notes: "" };
 
 export default function Leads() {
-  const { activeOrg, user } = useAuth();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -53,81 +54,109 @@ export default function Leads() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    if (!activeOrg) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("organization_id", activeOrg.organization_id)
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
-    setLoading(false);
+    try {
+      const result = await highLevel.listLeads({ limit: 100 });
+      setRows(result.leads ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load leads");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, [activeOrg?.organization_id]);
+  useEffect(() => { load(); }, []);
 
   const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
-  const openEdit = (l: Lead) => {
+  const openEdit = async (l: Lead) => {
     setEditing(l);
     setForm({
-      name: l.name ?? "", email: l.email ?? "", phone: l.phone ?? "",
-      address: l.address ?? "", source: l.source ?? "",
-      status: l.status, notes: l.notes ?? "",
+      name: l.name ?? "",
+      email: l.email ?? "",
+      phone: l.phone ?? "",
+      address: l.address ?? "",
+      source: l.source ?? "",
+      status: l.status,
+      notes: l.notes ?? "",
     });
     setOpen(true);
+
+    try {
+      const result = await highLevel.getLead(l.id);
+      const detail = result.lead;
+      setEditing(detail);
+      setForm({
+        name: detail.name ?? "",
+        email: detail.email ?? "",
+        phone: detail.phone ?? "",
+        address: detail.address ?? "",
+        source: detail.source ?? "",
+        status: detail.status,
+        notes: detail.notes ?? "",
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load lead details");
+    }
   };
 
   const save = async () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
-    if (!activeOrg || !user) return;
     setSaving(true);
-    const d = parsed.data;
-    const payload = {
-      name: d.name,
-      status: d.status,
-      email: d.email || null,
-      phone: d.phone || null,
-      address: d.address || null,
-      source: d.source || null,
-      notes: d.notes || null,
-    };
-    const res = editing
-      ? await supabase.from("leads").update(payload).eq("id", editing.id)
-      : await supabase.from("leads").insert({ ...payload, organization_id: activeOrg.organization_id, created_by: user.id });
-    setSaving(false);
-    if (res.error) { toast.error(res.error.message); return; }
-    toast.success(editing ? "Lead updated" : "Lead created");
-    setOpen(false);
-    load();
+
+    try {
+      const d = parsed.data;
+      const payload = {
+        name: d.name,
+        status: d.status,
+        email: d.email || null,
+        phone: d.phone || null,
+        address: d.address || null,
+        source: d.source || null,
+        notes: d.notes || null,
+        noteId: editing?.note_id || null,
+      };
+
+      if (editing) await highLevel.updateLead(editing.id, payload);
+      else await highLevel.createLead(payload);
+
+      toast.success(editing ? "Lead updated in HighLevel" : "Lead created in HighLevel");
+      setOpen(false);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save lead");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this lead?")) return;
-    const { error } = await supabase.from("leads").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Lead deleted");
-    load();
+    if (!confirm("Delete this opportunity from the FastTract HighLevel pipeline?")) return;
+    try {
+      await highLevel.deleteLead(id);
+      toast.success("Lead removed from the FastTract pipeline");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete lead");
+    }
   };
 
   const convertToCustomer = async (l: Lead) => {
-    if (!activeOrg) return;
-    const { error: cErr } = await supabase.from("customers").insert({
-      organization_id: activeOrg.organization_id,
-      name: l.name, email: l.email, phone: l.phone, address: l.address,
-    });
-    if (cErr) return toast.error(cErr.message);
-    await supabase.from("leads").update({ status: "won" }).eq("id", l.id);
-    toast.success("Converted to customer");
-    load();
+    try {
+      await highLevel.convertLead(l.id);
+      toast.success("Converted to customer in HighLevel");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to convert lead");
+    }
   };
 
   return (
     <div>
       <PageHeader
         title="Leads"
-        description="Track prospects from first contact to signed estimate."
+        description="Your FastTract HighLevel sales pipeline."
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -182,7 +211,7 @@ export default function Leads() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={Users} title="No leads yet" description="Add your first lead to start tracking prospects."
+        <EmptyState icon={Users} title="No leads yet" description="Add your first lead to start the HighLevel pipeline."
           action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New lead</Button>} />
       ) : (
         <div className="rounded-lg border border-border">
@@ -212,9 +241,11 @@ export default function Leads() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEdit(l)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => convertToCustomer(l)}>
-                          <UserCheck className="h-4 w-4" /> Convert to customer
-                        </DropdownMenuItem>
+                        {l.status !== "won" && (
+                          <DropdownMenuItem onClick={() => convertToCustomer(l)}>
+                            <UserCheck className="h-4 w-4" /> Convert to customer
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(l.id)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
