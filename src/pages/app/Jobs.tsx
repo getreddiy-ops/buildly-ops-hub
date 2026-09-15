@@ -25,6 +25,7 @@ import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-r
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { syncToGhl } from "@/lib/ghl";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"];
@@ -130,11 +131,12 @@ export default function Jobs() {
       scheduled_end: d.scheduled_end ? new Date(d.scheduled_end).toISOString() : null,
     };
     const res = editing
-      ? await supabase.from("jobs").update(payload).eq("id", editing.id)
-      : await supabase.from("jobs").insert({ ...payload, organization_id: activeOrg.organization_id, created_by: user.id });
+      ? await supabase.from("jobs").update(payload).eq("id", editing.id).select("id").single()
+      : await supabase.from("jobs").insert({ ...payload, organization_id: activeOrg.organization_id, created_by: user.id }).select("id").single();
     setSaving(false);
     if (res.error) return toast.error(res.error.message);
     toast.success(editing ? "Job updated" : "Job created");
+    if (res.data) syncToGhl(activeOrg.organization_id, "job", res.data.id);
     setOpen(false);
     load();
   };

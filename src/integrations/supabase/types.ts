@@ -218,6 +218,7 @@ export type Database = {
           address: string | null
           created_at: string
           email: string | null
+          ghl_contact_id: string | null
           id: string
           name: string
           notes: string | null
@@ -229,6 +230,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          ghl_contact_id?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -240,6 +242,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          ghl_contact_id?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -682,6 +685,7 @@ export type Database = {
           customer_id: string | null
           description: string | null
           estimate_id: string | null
+          ghl_appointment_id: string | null
           id: string
           latitude: number | null
           longitude: number | null
@@ -700,6 +704,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           estimate_id?: string | null
+          ghl_appointment_id?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
@@ -718,6 +723,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           estimate_id?: string | null
+          ghl_appointment_id?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
@@ -759,6 +765,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           email: string | null
+          ghl_contact_id: string | null
           id: string
           name: string
           notes: string | null
@@ -774,6 +781,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          ghl_contact_id?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -789,6 +797,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          ghl_contact_id?: string | null
           id?: string
           name?: string
           notes?: string | null

@@ -15,6 +15,9 @@ vi.mock("@/integrations/supabase/client", () => ({
       }),
       update: () => ({ eq: async () => ({ error: null }) }),
     }),
+    functions: {
+      invoke: async () => ({ data: { connected: false }, error: null }),
+    },
   },
 }));
 vi.mock("@/contexts/AuthContext", () => ({

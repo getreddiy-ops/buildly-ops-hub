@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { verifyOAuthState } from "../_shared/ghl.ts";
 
 const TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 const DEFAULT_REDIRECT_URI =
@@ -50,9 +51,20 @@ Deno.serve(async (req) => {
 
   const providerError = requestUrl.searchParams.get("error");
   const code = requestUrl.searchParams.get("code");
+  const state = requestUrl.searchParams.get("state");
   if (providerError || !code) {
     console.error("HighLevel authorization did not return a code", providerError);
     return redirect(errorUrl);
+  }
+
+  let organizationId: string | null = null;
+  const stateSecret = Deno.env.get("GHL_STATE_SECRET");
+  if (state && stateSecret) {
+    organizationId = await verifyOAuthState(stateSecret, state);
+    if (!organizationId) {
+      console.error("HighLevel OAuth callback received an invalid or expired state");
+      return redirect(errorUrl);
+    }
   }
 
   try {
@@ -98,8 +110,20 @@ Deno.serve(async (req) => {
     ).toISOString();
     const connectionKey = `${userType.toLowerCase()}:${resourceId}`;
 
+    // A reconnect without a valid `state` (e.g. HighLevel-initiated re-auth)
+    // should not clobber an org link established by an earlier connect.
+    if (!organizationId) {
+      const { data: existing } = await admin
+        .from("ghl_connections")
+        .select("organization_id")
+        .eq("connection_key", connectionKey)
+        .maybeSingle();
+      organizationId = existing?.organization_id ?? null;
+    }
+
     const { error } = await admin.from("ghl_connections").upsert({
       connection_key: connectionKey,
+      organization_id: organizationId,
       access_token: token.access_token,
       refresh_token: token.refresh_token,
       token_type: token.token_type ?? "Bearer",
