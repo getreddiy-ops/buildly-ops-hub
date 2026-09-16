@@ -43,10 +43,7 @@ export default function GhlCommandCenter() {
     if (!raw) setCommand("");
     try {
       const { data, error } = await supabase.functions.invoke("ghl-command", {
-        body: {
-          organizationId: activeOrg.organization_id,
-          command: value,
-        },
+        body: { organizationId: activeOrg.organization_id, command: value },
       });
 
       if (error) {
@@ -56,15 +53,13 @@ export default function GhlCommandCenter() {
           try {
             const body = await context.clone().json();
             message = body?.error || message;
-          } catch {
-            // Keep SDK error message.
-          }
+          } catch {}
         }
         throw new Error(message);
       }
       if (data?.error) throw new Error(data.error);
 
-      const message = data?.message || "Done in GHL.";
+      const message = data?.message || "Done.";
       setHistory((h) => [{ command: value, ok: true, message, action: data?.action }, ...h]);
       toast.success(message);
     } catch (e: any) {
@@ -84,16 +79,16 @@ export default function GhlCommandCenter() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <PageHeader
-        title="GHL Command Center"
-        description="Type a plain-English command. FastTract writes it directly to GoHighLevel."
+        title="FastTract Command Center"
+        description="Run everyday business actions in plain English — customers, time clock, estimates, invoices, and messages."
       />
 
       <Card className="p-4 md:p-6">
         <div className="mb-4 flex items-center gap-2">
           <TerminalSquare className="h-5 w-5 text-primary" />
           <div>
-            <p className="font-semibold">FastTract → GHL</p>
-            <p className="text-sm text-muted-foreground">Authenticated through your FastTract login.</p>
+            <p className="font-semibold">FastTract Actions</p>
+            <p className="text-sm text-muted-foreground">Securely connected to your business account.</p>
           </div>
         </div>
 
@@ -108,7 +103,7 @@ export default function GhlCommandCenter() {
           />
           <Button type="submit" disabled={running || !command.trim()} className="h-12 px-6">
             {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Run in GHL
+            Run
           </Button>
         </form>
 
