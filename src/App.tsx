@@ -51,6 +51,7 @@ import FieldMap from "./pages/field/FieldMap";
 import FieldCrew from "./pages/field/FieldCrew";
 import FieldAssistant from "./pages/field/FieldAssistant";
 import Assistant from "./pages/app/Assistant";
+import GhlCommandCenter from "./pages/app/GhlCommandCenter";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
 import BusinessProfile from "./pages/app/BusinessProfile";
@@ -62,7 +63,6 @@ import Vendors from "./pages/app/Vendors";
 import Materials from "./pages/app/Materials";
 import Calendar from "./pages/app/Calendar";
 import { BrandingProvider } from "./components/BrandingProvider";
-
 
 import { PaywallGate } from "./components/PaywallGate";
 import AgentOverview from "./pages/agent/AgentOverview";
@@ -98,7 +98,6 @@ const App = () => (
         <AuthProvider>
           <GoogleAdsTracker />
           <Routes>
-            {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
@@ -139,7 +138,6 @@ const App = () => (
                 <Route index element={<Dashboard />} />
               </Route>
             )}
-            {/* Main app (office) */}
             <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
@@ -148,7 +146,6 @@ const App = () => (
               <Route path="estimates/:id" element={<EstimateDetail />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="contracts" element={<Contracts />} />
-
               <Route path="jobs" element={<Jobs />} />
               <Route path="crew" element={<Crew />} />
               <Route path="vendors" element={<Vendors />} />
@@ -158,21 +155,16 @@ const App = () => (
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
               <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
+              <Route path="command-center" element={<GhlCommandCenter />} />
               <Route path="phone-assistant" element={<PaywallGate feature="Phone Assistant" requires="premium"><PhoneAssistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
               <Route path="billing" element={<Billing />} />
               <Route path="business-profile" element={<BusinessProfile />} />
               <Route path="branding" element={<Branding />} />
-              <Route
-                path="developer"
-                element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>}
-              />
-
+              <Route path="developer" element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>} />
               <Route path="settings" element={<Preferences />} />
-
             </Route>
 
-            {/* Field app (mobile) */}
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
               <Route index element={<FieldClock />} />
               <Route path="jobs" element={<FieldJobs />} />
@@ -183,7 +175,6 @@ const App = () => (
               <Route path="profile" element={<FieldProfile />} />
             </Route>
 
-            {/* Agent portal */}
             <Route path="/agent" element={<RequireAuth><RequireAgent><AgentShell /></RequireAgent></RequireAuth>}>
               <Route index element={<AgentOverview />} />
               <Route path="clients" element={<AgentClients />} />
@@ -191,7 +182,6 @@ const App = () => (
               <Route path="payouts" element={<AgentPayouts />} />
             </Route>
 
-            {/* Platform admin */}
             <Route path="/admin" element={<RequireAuth><RequirePlatformAdmin><AdminShell /></RequirePlatformAdmin></RequireAuth>}>
               <Route index element={<AdminOverview />} />
               <Route path="organizations" element={<AdminOrgs />} />
@@ -201,7 +191,6 @@ const App = () => (
               <Route path="ai-usage" element={<AdminAiUsage />} />
             </Route>
 
-            {/* Super admin ops console (Midnight Indigo) */}
             <Route path="/super" element={<RequireAuth><RequirePlatformAdmin><SuperShell /></RequirePlatformAdmin></RequireAuth>}>
               <Route index element={<SuperOverview />} />
               <Route path="controls" element={<SuperControls />} />
