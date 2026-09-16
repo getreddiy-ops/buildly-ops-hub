@@ -84,6 +84,7 @@ import SuperLive from "./pages/super/SuperLive";
 import { Messages, FieldProfile } from "./pages/stubs";
 import Preferences from "./pages/app/Preferences";
 import Unsubscribe from "./pages/Unsubscribe";
+import PublicEstimate from "./pages/PublicEstimate";
 import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/e/:token" element={<PublicEstimate />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

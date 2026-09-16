@@ -169,9 +169,12 @@ async function processAppointmentEvent(
   );
 }
 
+const VALID_LEAD_STATUSES = new Set(['new', 'contacted', 'qualified', 'won', 'lost']);
+
 async function processOpportunityEvent(
   admin: SupabaseClient,
   organizationId: string,
+  pipelineStageMap: Record<string, string>,
   payload: Json,
 ) {
   const opp = extractOpportunity(payload);
@@ -187,11 +190,22 @@ async function processOpportunityEvent(
 
   const patch: Record<string, unknown> = {};
   if (opp.stage) patch.ghl_pipeline_stage = opp.stage;
-  // Only "won"/"lost" map onto FastTract's lead_status enum; every other
-  // GHL pipeline movement is reflected via ghl_pipeline_stage only, so we
-  // never overwrite a status FastTract itself is actively managing (e.g.
-  // "qualified") with a guess at what an arbitrary GHL stage name means.
-  if (opp.status === 'won' || opp.status === 'lost') patch.status = opp.status;
+
+  // A contractor can explicitly map their own GHL pipeline stage names onto
+  // FastTract's lead_status enum (see Preferences -> GoHighLevel -> Pipeline
+  // stage mapping). Without that config, only "won"/"lost" ever map onto
+  // lead_status -- every other stage movement is reflected via
+  // ghl_pipeline_stage only, so we never overwrite a status FastTract itself
+  // is actively managing (e.g. "qualified") with a guess at what an
+  // arbitrary, unconfigured GHL stage name means.
+  const mappedStatus = opp.stage
+    ? Object.entries(pipelineStageMap).find(([key]) => key.toLowerCase() === opp.stage!.toLowerCase())?.[1]
+    : undefined;
+  if (mappedStatus && VALID_LEAD_STATUSES.has(mappedStatus)) {
+    patch.status = mappedStatus;
+  } else if (opp.status === 'won' || opp.status === 'lost') {
+    patch.status = opp.status;
+  }
 
   if (Object.keys(patch).length === 0) return;
   await admin.from('leads').update(patch).eq('id', lead.id);
@@ -212,7 +226,7 @@ async function processEvent(
   } else if (eventType.startsWith('Appointment')) {
     await processAppointmentEvent(admin, connection.organization_id, payload);
   } else if (eventType.startsWith('Opportunity')) {
-    await processOpportunityEvent(admin, connection.organization_id, payload);
+    await processOpportunityEvent(admin, connection.organization_id, connection.pipeline_stage_map ?? {}, payload);
   }
 }
 

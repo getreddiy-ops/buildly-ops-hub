@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import {
-  disconnectGhl, getGhlStatus, setGhlCalendar, startGhlConnect, type GhlStatus,
+  disconnectGhl, getGhlStatus, setGhlCalendar, setGhlPipelineStageMap, startGhlConnect, type GhlStatus,
 } from "@/lib/ghl";
 
 type BusinessProfile = Record<string, unknown> | null;
@@ -44,6 +45,7 @@ export default function Preferences() {
   const [ghlLoading, setGhlLoading] = useState(true);
   const [ghlBusy, setGhlBusy] = useState(false);
   const [calendarInput, setCalendarInput] = useState("");
+  const [pipelineMapInput, setPipelineMapInput] = useState("");
 
   const loadGhlStatus = async () => {
     if (!activeOrg) return;
@@ -52,6 +54,9 @@ export default function Preferences() {
       const status = await getGhlStatus(activeOrg.organization_id);
       setGhlStatusState(status);
       setCalendarInput(status.defaultCalendarId ?? "");
+      setPipelineMapInput(
+        Object.entries(status.pipelineStageMap ?? {}).map(([stage, s]) => `${stage} = ${s}`).join("\n"),
+      );
     } catch (error) {
       console.error("Could not load HighLevel status:", error);
     }
@@ -108,6 +113,24 @@ export default function Preferences() {
       await loadGhlStatus();
     } catch (error) {
       toast.error((error as Error).message || "Could not save the calendar");
+    }
+    setGhlBusy(false);
+  };
+
+  const saveGhlPipelineMap = async () => {
+    if (!activeOrg) return;
+    const map: Record<string, string> = {};
+    for (const line of pipelineMapInput.split("\n")) {
+      const [stage, status] = line.split("=").map((part) => part?.trim());
+      if (stage && status) map[stage] = status;
+    }
+    setGhlBusy(true);
+    try {
+      await setGhlPipelineStageMap(activeOrg.organization_id, map);
+      toast.success("Pipeline stage mapping saved");
+      await loadGhlStatus();
+    } catch (error) {
+      toast.error((error as Error).message || "Could not save the pipeline mapping");
     }
     setGhlBusy(false);
   };
@@ -560,6 +583,28 @@ export default function Preferences() {
                 <p className="text-xs text-muted-foreground">
                   Jobs with a schedule sync to this GoHighLevel calendar as appointments. Find the
                   calendar ID in GoHighLevel under Settings → Calendars.
+                </p>
+              </div>
+            )}
+            {isOrgAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="ghl_pipeline_map">Pipeline stage mapping</Label>
+                <Textarea
+                  id="ghl_pipeline_map"
+                  rows={4}
+                  placeholder={"Estimate Sent = contacted\nJob Won = won\nJob Lost = lost"}
+                  value={pipelineMapInput}
+                  onChange={(e) => setPipelineMapInput(e.target.value)}
+                  disabled={ghlBusy}
+                />
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={saveGhlPipelineMap} disabled={ghlBusy}>Save mapping</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  One per line: <code>Your GHL stage name = status</code>, where status is one of new,
+                  contacted, qualified, won, lost. Without a mapping, only GHL's own "won"/"lost"
+                  opportunity outcome updates a lead's status here — every other stage move is still
+                  recorded, just not auto-applied to status.
                 </p>
               </div>
             )}

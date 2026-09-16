@@ -8,6 +8,7 @@ export type GhlStatus = {
   companyId: string | null;
   installedAt: string | null;
   defaultCalendarId: string | null;
+  pipelineStageMap: Record<string, string>;
 };
 
 export async function getGhlStatus(organizationId: string): Promise<GhlStatus> {
@@ -40,6 +41,14 @@ export async function setGhlCalendar(organizationId: string, calendarId: string)
     body: { organizationId, action: "set_calendar", calendarId },
   });
   if (error) throw error;
+}
+
+export async function setGhlPipelineStageMap(organizationId: string, pipelineStageMap: Record<string, string>): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("ghl-connection", {
+    body: { organizationId, action: "set_pipeline_map", pipelineStageMap },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
 }
 
 // Fire-and-forget: push a just-created/updated record to GHL. Failures are

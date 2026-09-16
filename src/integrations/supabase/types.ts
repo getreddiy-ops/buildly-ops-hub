@@ -387,13 +387,20 @@ export type Database = {
       }
       estimates: {
         Row: {
+          accepted_at: string | null
+          accepted_by_name: string | null
           created_at: string
           created_by: string | null
           customer_id: string | null
+          deposit_collected: boolean
+          deposit_collected_at: string | null
+          deposit_required: number | null
           id: string
           lead_id: string | null
           notes: string | null
           organization_id: string
+          share_token: string | null
+          signature_text: string | null
           status: Database["public"]["Enums"]["estimate_status"]
           subtotal: number
           tax: number
@@ -402,13 +409,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by_name?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          deposit_collected?: boolean
+          deposit_collected_at?: string | null
+          deposit_required?: number | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           organization_id: string
+          share_token?: string | null
+          signature_text?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
           subtotal?: number
           tax?: number
@@ -417,13 +431,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by_name?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          deposit_collected?: boolean
+          deposit_collected_at?: string | null
+          deposit_required?: number | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           organization_id?: string
+          share_token?: string | null
+          signature_text?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
           subtotal?: number
           tax?: number
