@@ -76,6 +76,19 @@ function extractContact(payload: Json) {
   };
 }
 
+function extractOpportunity(payload: Json) {
+  const o = pick(payload.opportunity as Json, payload);
+  return {
+    ghlOpportunityId: str(o.id) ?? str(o.opportunityId),
+    contactId: str(o.contactId),
+    // GHL opportunities carry both a coarse status (open/won/lost/abandoned)
+    // and a pipeline-specific stage name/id — we keep the stage as free text
+    // rather than force-fitting it into FastTract's fixed lead_status enum.
+    status: str(o.status)?.toLowerCase() ?? null,
+    stage: str(o.pipelineStageName) ?? str(o.stageName) ?? str(o.pipelineStageId) ?? null,
+  };
+}
+
 function extractAppointment(payload: Json) {
   const a = pick(payload.appointment as Json, payload);
   return {
@@ -156,6 +169,34 @@ async function processAppointmentEvent(
   );
 }
 
+async function processOpportunityEvent(
+  admin: SupabaseClient,
+  organizationId: string,
+  payload: Json,
+) {
+  const opp = extractOpportunity(payload);
+  if (!opp.contactId) return;
+
+  const { data: lead } = await admin
+    .from('leads')
+    .select('id, status')
+    .eq('organization_id', organizationId)
+    .eq('ghl_contact_id', opp.contactId)
+    .maybeSingle();
+  if (!lead) return;
+
+  const patch: Record<string, unknown> = {};
+  if (opp.stage) patch.ghl_pipeline_stage = opp.stage;
+  // Only "won"/"lost" map onto FastTract's lead_status enum; every other
+  // GHL pipeline movement is reflected via ghl_pipeline_stage only, so we
+  // never overwrite a status FastTract itself is actively managing (e.g.
+  // "qualified") with a guess at what an arbitrary GHL stage name means.
+  if (opp.status === 'won' || opp.status === 'lost') patch.status = opp.status;
+
+  if (Object.keys(patch).length === 0) return;
+  await admin.from('leads').update(patch).eq('id', lead.id);
+}
+
 async function processEvent(
   admin: SupabaseClient,
   eventType: string,
@@ -170,6 +211,8 @@ async function processEvent(
     await processContactEvent(admin, connection.organization_id, payload);
   } else if (eventType.startsWith('Appointment')) {
     await processAppointmentEvent(admin, connection.organization_id, payload);
+  } else if (eventType.startsWith('Opportunity')) {
+    await processOpportunityEvent(admin, connection.organization_id, payload);
   }
 }
 

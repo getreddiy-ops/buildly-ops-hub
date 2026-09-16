@@ -181,12 +181,20 @@ Deno.serve(async (req) => {
     }
     // --- End gate ---
 
-    const { data: materials } = await admin
-      .from("materials")
-      .select("id, name, unit, unit_cost, category")
-      .eq("organization_id", organizationId)
-      .order("name")
-      .limit(300);
+    const [{ data: materials }, { data: orgRow }] = await Promise.all([
+      admin
+        .from("materials")
+        .select("id, name, unit, unit_cost, category")
+        .eq("organization_id", organizationId)
+        .order("name")
+        .limit(300),
+      admin.from("organizations").select("business_profile").eq("id", organizationId).maybeSingle(),
+    ]);
+
+    const bp = (orgRow?.business_profile ?? {}) as Record<string, unknown>;
+    const overagePct = Number(bp.material_overage_pct ?? 10);
+    const laborRate = Number(bp.default_labor_rate ?? 100);
+    const estimatingDefaultsText = `\n\nThis contractor's estimating defaults: apply a ${overagePct}% material overage to quantities you calculate from measurements (round up), and use $${laborRate}/hr as the default labor rate when a line item is for labor rather than materials.`;
 
     const materialsText = materials?.length
       ? `\n\nThis contractor's material price list (id, name, unit, unit cost) — match line items against these when reasonable:\n${
@@ -199,7 +207,7 @@ Deno.serve(async (req) => {
       .join("\n");
 
     const userContent: ContentPart[] = [
-      { type: "text", text: `${contextText || "No additional job context given."}${materialsText}` },
+      { type: "text", text: `${contextText || "No additional job context given."}${estimatingDefaultsText}${materialsText}` },
       ...images.map((url): ContentPart => ({ type: "image_url", image_url: { url } })),
     ];
 

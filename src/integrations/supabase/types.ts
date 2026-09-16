@@ -766,6 +766,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           ghl_contact_id: string | null
+          ghl_pipeline_stage: string | null
           id: string
           name: string
           notes: string | null
@@ -782,6 +783,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           ghl_contact_id?: string | null
+          ghl_pipeline_stage?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -798,6 +800,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           ghl_contact_id?: string | null
+          ghl_pipeline_stage?: string | null
           id?: string
           name?: string
           notes?: string | null
