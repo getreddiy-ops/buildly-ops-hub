@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   BarChart3, BriefcaseBusiness, CalendarDays, ChevronDown, ClipboardCheck,
   FileText, LogOut, Menu, PhoneCall, Receipt, Settings, Sparkles, Users,
-  Wrench, Clock3, Boxes, BadgeDollarSign, UserRoundCog, ShieldCheck,
+  Wrench, Clock3, Boxes, BadgeDollarSign, UserRoundCog, ShieldCheck, TerminalSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
@@ -27,6 +27,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/app", label: "My day", icon: CalendarDays },
       { to: "/app/assistant", label: "Agent conversations", icon: Sparkles },
+      { to: "/app/command-center", label: "GHL command center", icon: TerminalSquare },
       { to: "/app/approvals", label: "Approvals", icon: ClipboardCheck },
       { to: "/app/calendar", label: "Time off", icon: Clock3 },
     ],
