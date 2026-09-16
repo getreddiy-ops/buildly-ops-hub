@@ -117,9 +117,10 @@ function businessDetails(loc: any) {
 }
 
 function contactDetails(c: any) {
+  const fallbackName = [str(c.firstName), str(c.lastName)].filter(Boolean).join(" ") || "Customer";
   return {
     id: c.id,
-    name: str(c.name) ?? [str(c.firstName), str(c.lastName)].filter(Boolean).join(" ") || "Customer",
+    name: str(c.name) ?? fallbackName,
     phoneNo: str(c.phone) ?? undefined,
     email: str(c.email) ?? undefined,
     companyName: str(c.companyName) ?? undefined,
