@@ -19,6 +19,8 @@ project_id = "ohqopzyggxmwentbgivb"
     verify_jwt = true
   [functions.ghl-connection]
     verify_jwt = true
+  [functions.ghl-invoice-sync]
+    verify_jwt = true
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]

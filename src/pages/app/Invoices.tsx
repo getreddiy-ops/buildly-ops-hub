@@ -22,11 +22,15 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
+import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send, Link2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { toLocalDateInputValue } from "@/lib/local-date";
+import {
+  linkGhlInvoice, syncGhlInvoice, pushGhlInvoiceUpdate, pushGhlInvoiceCreate, sendGhlInvoicePush,
+  availableGhlSendChannels, type GhlSendChannel,
+} from "@/lib/ghl";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -45,6 +49,14 @@ export default function Invoices() {
   const [sending, setSendingDoc] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkingGhl, setLinkingGhl] = useState<any | null>(null);
+  const [ghlInvoiceIdInput, setGhlInvoiceIdInput] = useState("");
+  const [ghlBusyId, setGhlBusyId] = useState<string | null>(null);
+  const [pushingGhl, setPushingGhl] = useState<any | null>(null);
+  const [ghlPushKind, setGhlPushKind] = useState<"update" | "create" | "send" | null>(null);
+  const [ghlPushPreview, setGhlPushPreview] = useState<Record<string, unknown> | null>(null);
+  const [sendingGhl, setSendingGhl] = useState<any | null>(null);
+  const [ghlChannel, setGhlChannel] = useState<GhlSendChannel>("email");
 
   const [number, setNumber] = useState("");
   const [customerId, setCustomerId] = useState("");
@@ -162,6 +174,123 @@ export default function Invoices() {
     load();
   };
 
+  const submitGhlLink = async () => {
+    if (!activeOrg || !linkingGhl || !ghlInvoiceIdInput.trim()) return;
+    setGhlBusyId(linkingGhl.id);
+    try {
+      await linkGhlInvoice(activeOrg.organization_id, "invoice", linkingGhl.id, ghlInvoiceIdInput.trim());
+      toast.success("Linked to HighLevel invoice");
+      setLinkingGhl(null);
+      setGhlInvoiceIdInput("");
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not link HighLevel invoice");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const runGhlSync = async (inv: any) => {
+    if (!activeOrg) return;
+    setGhlBusyId(inv.id);
+    try {
+      await syncGhlInvoice(activeOrg.organization_id, "invoice", inv.id);
+      toast.success("Synced with HighLevel");
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not sync with HighLevel");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const openGhlUpdatePreview = async (inv: any) => {
+    if (!activeOrg) return;
+    setGhlBusyId(inv.id);
+    try {
+      const result = await pushGhlInvoiceUpdate(activeOrg.organization_id, inv.id, false);
+      if ("pending" in result) {
+        setPushingGhl(inv);
+        setGhlPushKind("update");
+        setGhlPushPreview(result.preview);
+      }
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not preview HighLevel update");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const openGhlCreatePreview = async (inv: any) => {
+    if (!activeOrg) return;
+    setGhlBusyId(inv.id);
+    try {
+      const result = await pushGhlInvoiceCreate(activeOrg.organization_id, inv.id, false);
+      if ("pending" in result) {
+        setPushingGhl(inv);
+        setGhlPushKind("create");
+        setGhlPushPreview(result.preview);
+      }
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not preview HighLevel invoice creation");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const openGhlSendChannelPicker = (inv: any) => {
+    const channels = availableGhlSendChannels(inv.customers);
+    if (channels.length === 0) {
+      toast.error("This customer has no email or phone on file — add one before sending");
+      return;
+    }
+    setSendingGhl(inv);
+    setGhlChannel(channels.includes("email") ? "email" : channels[0]);
+  };
+
+  const openGhlSendPreview = async () => {
+    if (!activeOrg || !sendingGhl) return;
+    setGhlBusyId(sendingGhl.id);
+    try {
+      const result = await sendGhlInvoicePush(activeOrg.organization_id, sendingGhl.id, ghlChannel, false);
+      if ("pending" in result) {
+        setPushingGhl(sendingGhl);
+        setGhlPushKind("send");
+        setGhlPushPreview(result.preview);
+        setSendingGhl(null);
+      }
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not preview sending this HighLevel invoice");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const confirmGhlPush = async () => {
+    if (!activeOrg || !pushingGhl || !ghlPushKind) return;
+    setGhlBusyId(pushingGhl.id);
+    try {
+      if (ghlPushKind === "update") {
+        await pushGhlInvoiceUpdate(activeOrg.organization_id, pushingGhl.id, true);
+        toast.success("Pushed to HighLevel");
+      } else if (ghlPushKind === "create") {
+        await pushGhlInvoiceCreate(activeOrg.organization_id, pushingGhl.id, true);
+        toast.success("Created in HighLevel");
+      } else {
+        await sendGhlInvoicePush(activeOrg.organization_id, pushingGhl.id, ghlChannel, true);
+        toast.success("Sent via HighLevel");
+      }
+      setPushingGhl(null);
+      setGhlPushKind(null);
+      setGhlPushPreview(null);
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not complete this HighLevel action");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
   const openPreview = async (inv: any) => {
     const { data: li } = await supabase.from("invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
     setPreviewing({ ...inv, line_items: li ?? [] });
@@ -204,7 +333,15 @@ export default function Invoices() {
                   <TableCell className="text-sm text-muted-foreground">{inv.customers?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm">{inv.issue_date}</TableCell>
                   <TableCell className="text-sm">{inv.due_date ?? "—"}</TableCell>
-                  <TableCell><StatusBadge status={inv.status} /></TableCell>
+                  <TableCell>
+                    <StatusBadge status={inv.status} />
+                    {inv.ghl_invoice_id && (
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        HighLevel: {inv.ghl_invoice_status ?? "linked"}
+                        {inv.ghl_last_synced_at && ` · synced ${new Date(inv.ghl_last_synced_at).toLocaleString()}`}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(Number(inv.total))}</TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -215,6 +352,29 @@ export default function Invoices() {
                         <DropdownMenuItem onClick={() => openPreview(inv)}><Eye className="mr-2 h-4 w-4" /> Preview</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setSendingDoc(inv)}><Send className="mr-2 h-4 w-4" /> Send</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(inv)}>Edit</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {inv.ghl_invoice_id ? (
+                          <>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => runGhlSync(inv)}>
+                              <RefreshCw className="mr-2 h-4 w-4" /> Sync HighLevel status
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => openGhlUpdatePreview(inv)}>
+                              Update HighLevel invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => openGhlSendChannelPicker(inv)}>
+                              <Send className="mr-2 h-4 w-4" /> Send via HighLevel
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => openGhlCreatePreview(inv)}>
+                              Create in HighLevel
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setLinkingGhl(inv); setGhlInvoiceIdInput(""); }}>
+                              <Link2 className="mr-2 h-4 w-4" /> Link existing HighLevel invoice
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(inv.id)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -350,6 +510,86 @@ export default function Invoices() {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Link to an existing HighLevel invoice */}
+      <Dialog open={!!linkingGhl} onOpenChange={(o) => !o && setLinkingGhl(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Link HighLevel invoice</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              FastTract can't create HighLevel invoices yet, so create the invoice in HighLevel first,
+              then paste its invoice ID here to link payment status back to this invoice.
+            </p>
+            <Field label="HighLevel invoice ID">
+              <Input value={ghlInvoiceIdInput} onChange={(e) => setGhlInvoiceIdInput(e.target.value)} placeholder="e.g. 64f1c2..." />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLinkingGhl(null)}>Cancel</Button>
+            <Button onClick={submitGhlLink} disabled={!ghlInvoiceIdInput.trim() || ghlBusyId === linkingGhl?.id}>
+              {ghlBusyId === linkingGhl?.id ? "Linking…" : "Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Choose a channel before previewing a HighLevel send */}
+      <Dialog open={!!sendingGhl} onOpenChange={(o) => !o && setSendingGhl(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Send via HighLevel</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>Send by</Label>
+            <Select value={ghlChannel} onValueChange={(v) => setGhlChannel(v as GhlSendChannel)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {availableGhlSendChannels(sendingGhl?.customers).map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c === "email" ? "Email" : c === "sms" ? "SMS" : "Email + SMS"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSendingGhl(null)}>Cancel</Button>
+            <Button onClick={openGhlSendPreview} disabled={ghlBusyId === sendingGhl?.id}>
+              {ghlBusyId === sendingGhl?.id ? "Loading…" : "Preview"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview + confirm creating/updating/sending this invoice in HighLevel */}
+      <Dialog open={!!pushingGhl} onOpenChange={(o) => { if (!o) { setPushingGhl(null); setGhlPushKind(null); setGhlPushPreview(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {ghlPushKind === "create" ? "Create HighLevel invoice"
+                : ghlPushKind === "send" ? "Send HighLevel invoice"
+                : "Update HighLevel invoice"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {ghlPushKind === "create"
+                ? "Not yet applied. This will create a new HighLevel invoice with the details below."
+                : ghlPushKind === "send"
+                  ? "Not yet applied. This will send the linked HighLevel invoice to the customer shown below."
+                  : "Not yet applied. This will overwrite the linked HighLevel invoice's name, dates, line items, and contact/business details with what's shown below."}
+              {" "}Review, then confirm.
+            </p>
+            <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted p-3 text-xs">
+              {JSON.stringify(ghlPushPreview, null, 2)}
+            </pre>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setPushingGhl(null); setGhlPushKind(null); setGhlPushPreview(null); }}>Cancel</Button>
+            <Button onClick={confirmGhlPush} disabled={ghlBusyId === pushingGhl?.id}>
+              {ghlBusyId === pushingGhl?.id ? "Working…" : "Confirm"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

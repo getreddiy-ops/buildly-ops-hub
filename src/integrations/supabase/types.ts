@@ -395,6 +395,12 @@ export type Database = {
           deposit_collected: boolean
           deposit_collected_at: string | null
           deposit_required: number | null
+          ghl_invoice_id: string | null
+          ghl_invoice_status: string | null
+          ghl_invoice_url: string | null
+          ghl_last_synced_at: string | null
+          ghl_paid_at: string | null
+          ghl_sent_at: string | null
           id: string
           lead_id: string | null
           notes: string | null
@@ -417,6 +423,12 @@ export type Database = {
           deposit_collected?: boolean
           deposit_collected_at?: string | null
           deposit_required?: number | null
+          ghl_invoice_id?: string | null
+          ghl_invoice_status?: string | null
+          ghl_invoice_url?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_paid_at?: string | null
+          ghl_sent_at?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
@@ -439,6 +451,12 @@ export type Database = {
           deposit_collected?: boolean
           deposit_collected_at?: string | null
           deposit_required?: number | null
+          ghl_invoice_id?: string | null
+          ghl_invoice_status?: string | null
+          ghl_invoice_url?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_paid_at?: string | null
+          ghl_sent_at?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
@@ -569,6 +587,12 @@ export type Database = {
           customer_id: string | null
           due_date: string | null
           estimate_id: string | null
+          ghl_invoice_id: string | null
+          ghl_invoice_status: string | null
+          ghl_invoice_url: string | null
+          ghl_last_synced_at: string | null
+          ghl_paid_at: string | null
+          ghl_sent_at: string | null
           id: string
           issue_date: string
           job_id: string | null
@@ -590,6 +614,12 @@ export type Database = {
           customer_id?: string | null
           due_date?: string | null
           estimate_id?: string | null
+          ghl_invoice_id?: string | null
+          ghl_invoice_status?: string | null
+          ghl_invoice_url?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_paid_at?: string | null
+          ghl_sent_at?: string | null
           id?: string
           issue_date?: string
           job_id?: string | null
@@ -611,6 +641,12 @@ export type Database = {
           customer_id?: string | null
           due_date?: string | null
           estimate_id?: string | null
+          ghl_invoice_id?: string | null
+          ghl_invoice_status?: string | null
+          ghl_invoice_url?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_paid_at?: string | null
+          ghl_sent_at?: string | null
           id?: string
           issue_date?: string
           job_id?: string | null
