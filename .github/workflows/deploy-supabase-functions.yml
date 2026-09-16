@@ -33,7 +33,7 @@ jobs:
     environment: production
     env:
       PROJECT_ID: ohqopzyggxmwentbgivb
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN || secrets.TOKEN }}
       # GoHighLevel
       GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
       GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
