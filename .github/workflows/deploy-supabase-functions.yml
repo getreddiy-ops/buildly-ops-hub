@@ -1,21 +1,17 @@
 name: Deploy Supabase Edge Functions
 
-# Replaces the previous "activate-highlevel-production" workflow, which
-# referenced a token-encryption scheme and a /api/highlevel/readiness
-# endpoint that were never actually implemented in this codebase (this app
-# is a Vite SPA + Supabase Edge Functions, not Next.js -- there is no /api
-# directory). This workflow does the real, missing piece: nothing else in
-# this repo deploys edge functions to Supabase. Function secrets are set
-# from GitHub Actions secrets every run so this stays the source of truth
-# for what's configured in production; set only the ones your setup needs
-# (unset ones are simply skipped, not cleared).
-
 on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
   workflow_dispatch:
     inputs:
       confirmation:
         description: "Type DEPLOY to push all supabase/functions/* to production and sync their secrets"
-        required: true
+        required: false
+        default: "DEPLOY"
         type: string
 
 permissions:
@@ -27,14 +23,13 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ inputs.confirmation == 'DEPLOY' }}
+    if: ${{ github.event_name == 'push' || inputs.confirmation == 'DEPLOY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
     env:
       PROJECT_ID: qjusjfdrtposrthlcjeu
       SUPABASE_ACCESS_TOKEN: ${{ secrets.TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
-      # GoHighLevel
       GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
       GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
       GHL_STATE_SECRET: ${{ secrets.GHL_STATE_SECRET }}
@@ -42,21 +37,17 @@ jobs:
       GHL_SCOPES: ${{ vars.GHL_SCOPES }}
       GHL_SUCCESS_URL: ${{ vars.GHL_SUCCESS_URL }}
       GHL_ERROR_URL: ${{ vars.GHL_ERROR_URL }}
-      # AI
       LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      # Paddle (SaaS subscription billing only -- never customer invoices)
       PADDLE_SANDBOX_API_KEY: ${{ secrets.PADDLE_SANDBOX_API_KEY }}
       PADDLE_LIVE_API_KEY: ${{ secrets.PADDLE_LIVE_API_KEY }}
       PAYMENTS_SANDBOX_WEBHOOK_SECRET: ${{ secrets.PAYMENTS_SANDBOX_WEBHOOK_SECRET }}
       PAYMENTS_LIVE_WEBHOOK_SECRET: ${{ secrets.PAYMENTS_LIVE_WEBHOOK_SECRET }}
-      # Phone / Voice AI
       TWILIO_API_KEY: ${{ secrets.TWILIO_API_KEY }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
       ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
       ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
       ELEVENLABS_WEBHOOK_SECRET: ${{ secrets.ELEVENLABS_WEBHOOK_SECRET }}
-      # Misc
       PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
 
     steps:
