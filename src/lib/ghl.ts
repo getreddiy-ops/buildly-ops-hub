@@ -9,6 +9,7 @@ export type GhlStatus = {
   installedAt: string | null;
   defaultCalendarId: string | null;
   pipelineStageMap: Record<string, string>;
+  defaultSenderUserId: string | null;
 };
 
 export async function getGhlStatus(organizationId: string): Promise<GhlStatus> {
@@ -46,6 +47,30 @@ export async function setGhlCalendar(organizationId: string, calendarId: string)
 export async function setGhlPipelineStageMap(organizationId: string, pipelineStageMap: Record<string, string>): Promise<void> {
   const { data, error } = await supabase.functions.invoke("ghl-connection", {
     body: { organizationId, action: "set_pipeline_map", pipelineStageMap },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
+export type GhlLocationUser = { id: string; name?: string; email?: string };
+
+// The HighLevel users assigned to this org's connected location, so the
+// org can pick which one Send Invoice records as the sender (there's no
+// safe way to infer this -- see the comment above GhlInvoice in
+// supabase/functions/_shared/ghl.ts).
+export async function listGhlUsers(organizationId: string): Promise<GhlLocationUser[]> {
+  const { data, error } = await supabase.functions.invoke("ghl-connection", {
+    body: { organizationId, action: "list_users" },
+  });
+  if (error) throw error;
+  const result = data as { error?: string; users?: GhlLocationUser[] };
+  if (result?.error) throw new Error(result.error);
+  return result?.users ?? [];
+}
+
+export async function setGhlSenderUserId(organizationId: string, senderUserId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("ghl-connection", {
+    body: { organizationId, action: "set_sender_user_id", senderUserId },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
@@ -114,4 +139,59 @@ export async function pushGhlInvoiceUpdate(
   if (result?.error) throw new Error(result.error);
   if (result?.pending) return { pending: true, preview: result.preview!, message: result.message! };
   return { updated: true };
+}
+
+// Creates this invoice in HighLevel for the first time. FastTract can't
+// create a HighLevel invoice for a customer that isn't fully synced there
+// yet (name/phone/email + a linked HighLevel contact, plus an email
+// address -- both required by HighLevel's Create Invoice); the edge
+// function reports exactly what's missing rather than guessing.
+export async function pushGhlInvoiceCreate(
+  organizationId: string,
+  id: string,
+  confirm: boolean,
+): Promise<GhlInvoicePushPreview | { created: true }> {
+  const { data, error } = await supabase.functions.invoke("ghl-invoice-sync", {
+    body: { organizationId, action: "create", kind: "invoice", id, confirm },
+  });
+  if (error) throw error;
+  const result = data as { error?: string; pending?: true; preview?: Record<string, unknown>; message?: string; created?: true };
+  if (result?.error) throw new Error(result.error);
+  if (result?.pending) return { pending: true, preview: result.preview!, message: result.message! };
+  return { created: true };
+}
+
+export type GhlSendChannel = "email" | "sms" | "sms_and_email";
+
+// Never returns a channel the customer lacks contact info for -- both the
+// UI (which channel picker to show) and the "no duplicate/silent sends"
+// requirement depend on this. The edge function re-validates this
+// server-side too; this is the client-side half of the same rule.
+export function availableGhlSendChannels(customer: { email?: string | null; phone?: string | null } | null | undefined): GhlSendChannel[] {
+  const hasEmail = !!customer?.email;
+  const hasPhone = !!customer?.phone;
+  const channels: GhlSendChannel[] = [];
+  if (hasEmail) channels.push("email");
+  if (hasPhone) channels.push("sms");
+  if (hasEmail && hasPhone) channels.push("sms_and_email");
+  return channels;
+}
+
+// Sends an already-created/linked HighLevel invoice to the customer.
+// FastTract never silently picks a channel the customer lacks contact info
+// for -- the edge function validates this server-side too, not just here.
+export async function sendGhlInvoicePush(
+  organizationId: string,
+  id: string,
+  channel: GhlSendChannel,
+  confirm: boolean,
+): Promise<GhlInvoicePushPreview | { sent: true }> {
+  const { data, error } = await supabase.functions.invoke("ghl-invoice-sync", {
+    body: { organizationId, action: "send", kind: "invoice", id, channel, confirm },
+  });
+  if (error) throw error;
+  const result = data as { error?: string; pending?: true; preview?: Record<string, unknown>; message?: string; sent?: true };
+  if (result?.error) throw new Error(result.error);
+  if (result?.pending) return { pending: true, preview: result.preview!, message: result.message! };
+  return { sent: true };
 }

@@ -11,12 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import {
-  disconnectGhl, getGhlStatus, setGhlCalendar, setGhlPipelineStageMap, startGhlConnect, type GhlStatus,
+  disconnectGhl, getGhlStatus, listGhlUsers, setGhlCalendar, setGhlPipelineStageMap, setGhlSenderUserId,
+  startGhlConnect, type GhlLocationUser, type GhlStatus,
 } from "@/lib/ghl";
 
 type BusinessProfile = Record<string, unknown> | null;
@@ -46,6 +50,9 @@ export default function Preferences() {
   const [ghlBusy, setGhlBusy] = useState(false);
   const [calendarInput, setCalendarInput] = useState("");
   const [pipelineMapInput, setPipelineMapInput] = useState("");
+  const [ghlUsers, setGhlUsers] = useState<GhlLocationUser[]>([]);
+  const [ghlUsersLoading, setGhlUsersLoading] = useState(false);
+  const [senderUserId, setSenderUserId] = useState("");
 
   const loadGhlStatus = async () => {
     if (!activeOrg) return;
@@ -54,9 +61,19 @@ export default function Preferences() {
       const status = await getGhlStatus(activeOrg.organization_id);
       setGhlStatusState(status);
       setCalendarInput(status.defaultCalendarId ?? "");
+      setSenderUserId(status.defaultSenderUserId ?? "");
       setPipelineMapInput(
         Object.entries(status.pipelineStageMap ?? {}).map(([stage, s]) => `${stage} = ${s}`).join("\n"),
       );
+      if (status.connected) {
+        setGhlUsersLoading(true);
+        try {
+          setGhlUsers(await listGhlUsers(activeOrg.organization_id));
+        } catch (usersError) {
+          console.error("Could not list HighLevel users:", usersError);
+        }
+        setGhlUsersLoading(false);
+      }
     } catch (error) {
       console.error("Could not load HighLevel status:", error);
     }
@@ -64,6 +81,19 @@ export default function Preferences() {
   };
 
   useEffect(() => { loadGhlStatus(); }, [activeOrg?.organization_id]);
+
+  const saveGhlSenderUserId = async (value: string) => {
+    if (!activeOrg) return;
+    setSenderUserId(value);
+    setGhlBusy(true);
+    try {
+      await setGhlSenderUserId(activeOrg.organization_id, value);
+      toast.success("Default HighLevel sender saved");
+    } catch (error) {
+      toast.error((error as Error).message || "Could not save the default sender");
+    }
+    setGhlBusy(false);
+  };
 
   useEffect(() => {
     const ghlParam = searchParams.get("ghl");
@@ -605,6 +635,27 @@ export default function Preferences() {
                   contacted, qualified, won, lost. Without a mapping, only GHL's own "won"/"lost"
                   opportunity outcome updates a lead's status here — every other stage move is still
                   recorded, just not auto-applied to status.
+                </p>
+              </div>
+            )}
+            {isOrgAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="ghl_sender">Default sender for HighLevel invoices</Label>
+                <Select value={senderUserId} onValueChange={saveGhlSenderUserId} disabled={ghlBusy || ghlUsersLoading}>
+                  <SelectTrigger id="ghl_sender">
+                    <SelectValue placeholder={ghlUsersLoading ? "Loading HighLevel users…" : "Select a HighLevel user"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ghlUsers.length === 0
+                      ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No HighLevel users found</div>
+                      : ghlUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.name ?? u.email ?? u.id}</SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Required before an invoice can be sent from FastTract — HighLevel records this user as the
+                  invoice's sender.
                 </p>
               </div>
             )}
