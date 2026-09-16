@@ -10,7 +10,7 @@
   "mcp": {
     "server": {
       "name": "fasttract-mcp",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "title": "FastTract MCP"
     },
     "tools": [
@@ -52,6 +52,46 @@
             "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
           },
           "required": ["name"],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_estimate",
+        "title": "Create estimate in HighLevel",
+        "description": "Preview, then create a FastTract estimate and create the matching estimate in GoHighLevel.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "customer_id": { "type": "string", "format": "uuid" },
+            "customer_name": { "type": "string", "description": "Customer name to resolve when customer_id is not supplied." },
+            "lead_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["draft", "sent", "accepted", "declined"], "default": "draft" },
+            "tax": { "type": "number", "minimum": 0, "default": 0 },
+            "notes": { "type": "string" },
+            "line_items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": { "type": "string", "minLength": 1 },
+                  "quantity": { "type": "number", "exclusiveMinimum": 0 },
+                  "unit_price": { "type": "number", "minimum": 0 }
+                },
+                "required": ["description", "quantity", "unit_price"],
+                "additionalProperties": false
+              }
+            },
+            "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
+          },
+          "required": ["title", "line_items"],
           "additionalProperties": false
         },
         "outputSchema": null
