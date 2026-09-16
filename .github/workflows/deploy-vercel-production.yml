@@ -1,19 +1,24 @@
 name: Deploy FastTract production
 
-# FastTract is a Vite + React single-page app (see vercel.json:
-# "framework": "vite"), not a Next.js app -- there are no /api routes and no
-# server runtime to configure. If this repo is connected to a Vercel project
-# through Vercel's native GitHub integration, Vercel already builds and
-# deploys on every push to main with zero input from this workflow; this
-# workflow exists as an explicit, auditable, confirmation-gated alternative
-# for pushing a specific commit to production on demand.
-
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - ".env"
+      - ".env.production"
+      - ".github/workflows/deploy-vercel-production.yml"
   workflow_dispatch:
     inputs:
       confirmation:
         description: "Type DEPLOY to build and deploy FastTract to production"
-        required: true
+        required: false
+        default: "DEPLOY"
         type: string
 
 permissions:
@@ -25,7 +30,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ inputs.confirmation == 'DEPLOY' }}
+    if: ${{ github.event_name == 'push' || inputs.confirmation == 'DEPLOY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -33,11 +38,9 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      # Frontend VITE_* values are committed in .env / .env.production (they
-      # are an anon/public Supabase key and a publishable Paddle token, safe
-      # to ship in the client bundle) -- Vite picks them up automatically, no
-      # secret injection needed here. Override via Vercel project env vars
-      # only if you need a different value than what's committed.
+      VITE_SUPABASE_PROJECT_ID: qjusjfdrtposrthlcjeu
+      VITE_SUPABASE_URL: https://qjusjfdrtposrthlcjeu.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zx4gzhfijwHArY8ZqUNsUA_0C7xRkE_
 
     steps:
       - name: Check out repository
@@ -56,11 +59,12 @@ jobs:
           test -n "$VERCEL_TOKEN"
           test -n "$VERCEL_ORG_ID"
           test -n "$VERCEL_PROJECT_ID"
+          test "$VITE_SUPABASE_PROJECT_ID" = "qjusjfdrtposrthlcjeu"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint, typecheck and test (fail fast before touching production)
+      - name: Lint, test and build
         run: |
           npm run lint
           npm test
