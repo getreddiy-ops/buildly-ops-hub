@@ -37,6 +37,7 @@ export default function Preferences() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(null);
+  const [setupCounts, setSetupCounts] = useState({ materials: 0, crew: 0, phoneAssistant: false });
 
   const isOrgAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const [ghlStatus, setGhlStatusState] = useState<GhlStatus | null>(null);
@@ -139,6 +140,23 @@ export default function Preferences() {
     })();
   }, [activeOrg]);
 
+  useEffect(() => {
+    if (!activeOrg) return;
+    (async () => {
+      const orgId = activeOrg.organization_id;
+      const [materials, crew, phoneAssistant] = await Promise.all([
+        supabase.from("materials").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("organization_members").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("phone_assistants").select("id").eq("organization_id", orgId).maybeSingle(),
+      ]);
+      setSetupCounts({
+        materials: materials.count ?? 0,
+        crew: crew.count ?? 0,
+        phoneAssistant: !!phoneAssistant.data,
+      });
+    })();
+  }, [activeOrg]);
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
@@ -170,10 +188,13 @@ export default function Preferences() {
       { label: "Business phone on file", done: hasPhone, to: "/app/branding" },
       { label: "Invoice defaults set", done: hasInvoiceDefaults, to: "/app/branding" },
       { label: "Business profile filled in", done: hasBusinessProfile, to: "/app/business-profile" },
+      { label: "Materials price list started", done: setupCounts.materials > 0, to: "/app/materials" },
+      { label: "Crew or teammate invited", done: setupCounts.crew > 1, to: "/app/crew" },
+      { label: "Phone assistant configured", done: setupCounts.phoneAssistant, to: "/app/phone-assistant" },
     ];
     const done = items.filter((i) => i.done).length;
     return { items, done, total: items.length, pct: Math.round((done / items.length) * 100) };
-  }, [branding, invoiceDefaults, businessProfile]);
+  }, [branding, invoiceDefaults, businessProfile, setupCounts]);
 
   const orgName = activeOrg?.organization?.name ?? branding?.name ?? "Your business";
 

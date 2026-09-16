@@ -25,10 +25,12 @@ import { Briefcase, MoreHorizontal, Plus, Users as UsersIcon, X } from "lucide-r
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { JobsCalendar } from "@/components/JobsCalendar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { syncToGhl } from "@/lib/ghl";
 import type { Database } from "@/integrations/supabase/types";
 
-type Job = Database["public"]["Tables"]["jobs"]["Row"];
+type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
 type JobStatus = Database["public"]["Enums"]["job_status"];
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 
@@ -60,6 +62,7 @@ export default function Jobs() {
   const [members, setMembers] = useState<{ user_id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"list" | "calendar">("list");
   const [editing, setEditing] = useState<Job | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
@@ -263,11 +266,22 @@ export default function Jobs() {
         }
       />
 
+      {rows.length > 0 && (
+        <Tabs value={view} onValueChange={(v) => setView(v as "list" | "calendar")} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="list">List</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
         <EmptyState icon={Briefcase} title="No jobs scheduled" description="Create a job and assign crew to it."
           action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New job</Button>} />
+      ) : view === "calendar" ? (
+        <JobsCalendar jobs={rows} onSelectJob={openEdit} />
       ) : (
         <div className="rounded-lg border border-border">
           <Table>

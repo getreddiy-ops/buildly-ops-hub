@@ -31,12 +31,18 @@ type Question = {
 const QUESTIONS: Question[] = [
   { id: "businessName", prompt: () => "What is your business name?", placeholder: "Your company name" },
   { id: "industry", prompt: ({ businessName }) => `What industry is ${businessName || "your business"} in?`, placeholder: "For example, roofing, landscaping, or accounting" },
+  { id: "serviceArea", prompt: ({ businessName }) => `Where does ${businessName || "your business"} take jobs?`, placeholder: "e.g. within 40 miles of Dallas, TX" },
   { id: "phone", prompt: () => "What is the best business phone number?", placeholder: "(555) 555-0123" },
   { id: "website", prompt: () => "What is your website address?", placeholder: "yourcompany.com", optional: true },
   { id: "userName", prompt: () => "Last question—what should I call you?", placeholder: "Your preferred name" },
 ];
 
-const INTRO = "Hi, I’m Ava, your FastTract AI assistant. I only need five quick answers to create your business workspace and finish setting up your login. If you share a website, I’ll also pull in your brand and prepare ideas for improving it. Ready?";
+// Sensible starting points for estimating — always editable afterward in
+// Business Profile → Pricing & payments. Never invented per-job; these are
+// just the defaults a new org starts with.
+const ESTIMATING_DEFAULTS = { material_overage_pct: 10, material_markup_pct: 20, default_labor_rate: 100 };
+
+const INTRO = "Hi, I’m Ava, your FastTract AI assistant. I only need a few quick answers to create your business workspace and finish setting up your login. If you share a website, I’ll also pull in your brand and prepare ideas for improving it. Ready?";
 
 const emptyBrand: BrandScan = {
   companyName: "", website: "", primaryColor: "#ff5a2a", secondaryColor: "#241812", logo: null,
@@ -92,7 +98,7 @@ function Onboarding() {
     if (!saved) return;
     try {
       const draft = JSON.parse(saved);
-      if (draft.version !== 3) {
+      if (draft.version !== 4) {
         localStorage.removeItem(draftKey);
         return;
       }
@@ -106,7 +112,7 @@ function Onboarding() {
 
   useEffect(() => {
     if (!started || !consentMemory) return;
-    localStorage.setItem(draftKey, JSON.stringify({ version: 3, answers, step, started, consentMemory, brand }));
+    localStorage.setItem(draftKey, JSON.stringify({ version: 4, answers, step, started, consentMemory, brand }));
   }, [answers, step, started, consentMemory, brand, draftKey]);
 
   useEffect(() => {
@@ -231,7 +237,7 @@ function Onboarding() {
     if (!user) return;
     setSaving(true);
     const businessProfile = {
-      onboarding_version: 3,
+      onboarding_version: 4,
       assistant: { name: "Ava", labeled_as_ai: true, memory_consent: consentMemory },
       business: { industry: answers.industry },
       website_review: {
@@ -240,8 +246,10 @@ function Onboarding() {
         refresh_recommendation_requested: answers.website !== "Skipped",
         status: answers.website === "Skipped" ? "waiting_for_website" : "ready_to_review",
       },
-      setup: { intro_complete: true, login_ready: true, question_count: 5 },
+      setup: { intro_complete: true, login_ready: true, question_count: QUESTIONS.length },
       workspace: ["Home", "Work", "Money", "Business"],
+      service_area: answers.serviceArea === "Skipped" ? null : answers.serviceArea,
+      ...ESTIMATING_DEFAULTS,
     };
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
@@ -281,6 +289,7 @@ function Onboarding() {
         { knowledge_key: "business.industry", content: answers.industry },
         { knowledge_key: "business.phone", content: answers.phone },
         { knowledge_key: "business.website", content: website },
+        { knowledge_key: "business.service_area", content: answers.serviceArea === "Skipped" ? "Not provided" : answers.serviceArea },
         { knowledge_key: "owner.preferred_name", content: answers.userName },
       ].map((entry) => ({
         ...entry,
@@ -291,7 +300,7 @@ function Onboarding() {
         metadata: {
           captured_at: new Date().toISOString(),
           consent: "conversational_memory",
-          onboarding_version: 3,
+          onboarding_version: 4,
         },
       }));
       const { error: knowledgeError } = await supabase
@@ -351,7 +360,7 @@ function Onboarding() {
               {!isPreview && <button className="text-xs text-white/65 hover:text-white" onClick={signOut}>Sign out</button>}
             </div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-5xl">Let’s set up your business through a conversation.</h1>
-            <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. Five quick questions and your FastTract workspace is ready. If you have a website, I’ll use it to match your brand and suggest improvements.</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/75 md:mt-4 md:text-base">Hi, I’m Ava. A few quick questions and your FastTract workspace is ready. If you have a website, I’ll use it to match your brand and suggest improvements.</p>
             <div className="mt-4 space-y-3 rounded-2xl bg-white/[0.06] p-3.5 md:mt-6 md:p-4">
               <label className="flex cursor-pointer items-start gap-3 text-sm text-white/85">
                 <input type="checkbox" checked={consentMic} onChange={(e) => setConsentMic(e.target.checked)} className="mt-0.5 h-5 w-5 accent-orange-500" />
@@ -432,10 +441,10 @@ function Onboarding() {
             </div>
           ) : reviewing ? (
             <div className="mx-auto w-full max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Five answers · your approval</p>
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Your answers · approval</p>
               <h2 className="mt-3 text-2xl font-semibold leading-tight md:text-4xl">{prompt}</h2>
               <div className="mt-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm">
-                {[["Business", answers.businessName], ["Industry", answers.industry], ["Phone", answers.phone], ["Website", answers.website], ["Your name", answers.userName]].map(([label, value]) => (
+                {[["Business", answers.businessName], ["Industry", answers.industry], ["Service area", answers.serviceArea], ["Phone", answers.phone], ["Website", answers.website], ["Your name", answers.userName]].map(([label, value]) => (
                   <div key={label} className="flex gap-4 border-b border-white/[0.07] py-2 last:border-0"><span className="w-20 shrink-0 text-white/45">{label}</span><span>{value || "Not provided"}</span></div>
                 ))}
               </div>
