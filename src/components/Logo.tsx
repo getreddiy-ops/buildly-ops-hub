@@ -1,18 +1,17 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import logoMark from "@/assets/fasttract-logo.png";
+import logoLockup from "@/assets/fasttract-logo-v2.png";
 
 export function Logo({ className, to = "/" }: { className?: string; to?: string }) {
   return (
-    <Link to={to} className={cn("flex items-center gap-2 font-semibold tracking-tight", className)}>
+    <Link to={to} className={cn("flex items-center", className)} aria-label="FastTract home">
       <img
-        src={logoMark}
+        src={logoLockup}
         alt="FastTract"
-        width={32}
-        height={32}
-        className="h-8 w-8 object-contain"
+        width={190}
+        height={64}
+        className="h-10 w-auto object-contain sm:h-11"
       />
-      <span className="text-base">Fast<span className="text-primary">Tract</span></span>
     </Link>
   );
 }

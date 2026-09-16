@@ -50,16 +50,14 @@ export function MarketingShell({ children }: { children: ReactNode }) {
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo to="/" />
         <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
-          <Link to="/features" className="hover:text-foreground">Features</Link>
-          <Link to="/ai-photo-estimator" className="hover:text-foreground">AI Estimator</Link>
-          <Link to="/ai-phone-agent" className="hover:text-foreground">AI Phone</Link>
-          <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
-          <Link to="/blog" className="hover:text-foreground">Blog</Link>
-          <Link to="/contact" className="hover:text-foreground">Contact</Link>
+          <a href="#how-it-works" className="hover:text-foreground">How it works</a>
+          <a href="#fasttract-system" className="hover:text-foreground">The system</a>
+          <a href="#built-for-contractors" className="hover:text-foreground">For contractors</a>
+          <Link to="/contact" className="hover:text-foreground">Talk to us</Link>
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" asChild><Link to="/login">Sign in</Link></Button>
-          <Button asChild><Link to="/signup">Start Free</Link></Button>
+          <Button asChild><Link to="/contact">Get early access</Link></Button>
         </div>
       </header>
 
@@ -70,7 +68,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           <div>
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              FastTract by Lynchmarc LLC — the personal AI operating system for small businesses.
+              The AI-first operating system that helps contractors turn leads into finished, paid work.
             </p>
           </div>
           {footerCols.map((col) => (
@@ -100,8 +98,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 export function CTARow() {
   return (
     <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-      <Button size="lg" asChild><Link to="/signup">Start Free</Link></Button>
-      <Button size="lg" variant="outline" asChild><Link to="/contact">Book a Demo</Link></Button>
+      <Button size="lg" asChild><Link to="/contact">Get early access</Link></Button>
+      <Button size="lg" variant="outline" asChild><Link to="/demo">See FastTract work</Link></Button>
       <Button size="lg" variant="ghost" asChild><Link to="/ai-photo-estimator">Try AI Estimate Lab</Link></Button>
     </div>
   );

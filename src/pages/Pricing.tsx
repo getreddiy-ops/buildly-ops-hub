@@ -1,184 +1,38 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Check } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
-import { useSubscription } from "@/hooks/useSubscription";
-import { toast } from "sonner";
-import { TIERS, type Tier } from "@/lib/tiers";
-import { cn } from "@/lib/utils";
 import { SEO } from "@/components/SEO";
 
-type PlanDef = {
-  tier: Tier;
-  tagline: string;
-  features: string[];
-  highlight?: boolean;
-};
-
-const PLANS: PlanDef[] = [
-  {
-    tier: "base",
-    tagline: "Run your business from one organized workspace.",
-    features: [
-      "Leads, customers & estimates",
-      "Jobs, scheduling & crew management",
-      "GPS-verified time tracking",
-      "Boss-approved hours & job costing",
-      "Mobile field app",
-      "Unlimited crew members",
-    ],
-  },
-  {
-    tier: "plus",
-    tagline: "Everything in FastTract, plus the AI admin assistant.",
-    highlight: true,
-    features: [
-      "Everything in FastTract",
-      "AI admin assistant",
-      "Voice-to-form: talk and it fills fields & estimates",
-      "Draft estimates & schedule jobs by chat or voice",
-      "Confirm-before-write safety",
-    ],
-  },
-  {
-    tier: "premium",
-    tagline: "Plus the AI phone answering assistant.",
-    features: [
-      "Everything in Plus",
-      "AI phone answering assistant",
-      "Captures leads 24/7",
-      "Books appointments on your calendar",
-      "Call transcripts & summaries",
-    ],
-  },
+const INCLUDED = [
+  "Lead capture and customer follow-up",
+  "Estimates, jobs, invoices, and payments",
+  "Scheduling, conversations, and reviews",
+  "AI assistance built around contractor workflows",
 ];
 
 export default function Pricing() {
-  const { user, activeOrg } = useAuth();
-  const navigate = useNavigate();
-  const { openCheckout, loading } = usePaddleCheckout();
-  const { isActive } = useSubscription();
-
-  const onCta = async (tier: Tier) => {
-    if (!user) { navigate("/signup"); return; }
-    if (!activeOrg) { navigate("/onboarding"); return; }
-    if (isActive) { navigate("/app/billing"); return; }
-    if (activeOrg.role !== "owner") {
-      toast.error("Only the organization owner can subscribe.");
-      return;
-    }
-    try {
-      await openCheckout({
-        priceId: TIERS[tier].priceId,
-        customerEmail: user.email ?? undefined,
-        customData: { userId: user.id, orgId: activeOrg.organization_id },
-        displayMode: "overlay",
-        successUrl: `${window.location.origin}/app/billing?checkout=success`,
-      });
-    } catch {
-      // usePaddleCheckout already surfaced a toast with the real message.
-    }
-  };
-
-  const productLd = Object.values(TIERS).map((t) => ({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: `FastTract — ${t.name}`,
-    description: `FastTract ${t.name} plan at $${t.price}/month.`,
-    brand: { "@type": "Brand", name: "FastTract" },
-    offers: {
-      "@type": "Offer",
-      price: String(t.price),
-      priceCurrency: "USD",
-      url: "https://fasttract.org/pricing",
-      availability: "https://schema.org/InStock",
-    },
-  }));
-
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title="Pricing — FastTract"
-        description="Simple monthly FastTract plans for small businesses. Base includes core operations, Plus adds Ava, and Premium adds AI phone answering."
-        path="/pricing"
-        jsonLd={productLd}
-      />
+      <SEO title="FastTract Access" description="Request early access to FastTract, the contractor operating system that carries every job from the first call to final payment." path="/pricing" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Button variant="ghost" asChild><Link to="/">Back</Link></Button>
       </header>
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your business.</h1>
-          <p className="mt-3 text-muted-foreground">Try any plan free for 7 days. Monthly billing per company. Cancel anytime.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Card required · No charge until the trial ends</p>
+      <main className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
+        <span className="rounded-full border border-primary/25 bg-primary/5 px-4 py-2 text-sm font-medium text-primary">Founding customer access</span>
+        <h1 className="mt-7 text-4xl font-semibold tracking-tight sm:text-5xl">The right FastTract setup starts with your business.</h1>
+        <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">We are onboarding contractors personally while the final plans and provisioning flow are completed. No public price or trial promise will be shown until the full customer journey is ready.</p>
+        <div className="mx-auto mt-10 max-w-xl rounded-2xl border bg-card p-8 text-left shadow-card">
+          <h2 className="text-lg font-semibold">The operating system we are building includes</h2>
+          <ul className="mt-5 space-y-4">
+            {INCLUDED.map((feature) => (
+              <li key={feature} className="flex gap-3 text-sm"><Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span>{feature}</span></li>
+            ))}
+          </ul>
+          <Button className="mt-8 w-full" size="lg" asChild><Link to="/contact">Request early access</Link></Button>
         </div>
-        <h2 className="mb-6 text-center text-xl font-medium tracking-tight">Plans</h2>
-        <div className="grid gap-6 md:grid-cols-3">
-          {PLANS.map((plan) => {
-            const t = TIERS[plan.tier];
-            return (
-              <div
-                key={plan.tier}
-                className={cn(
-                  "flex flex-col rounded-xl border bg-card p-8 shadow-card",
-                  plan.highlight && "border-primary ring-1 ring-primary",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                    {t.name}
-                  </h3>
-                  {plan.highlight && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                      Popular
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-5xl font-semibold">${t.price}</span>
-                  <span className="text-sm text-muted-foreground">/ mo</span>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{plan.tagline}</p>
-                <ul className="mt-6 space-y-3">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-8 w-full"
-                  size="lg"
-                  variant={plan.highlight ? "default" : "outline"}
-                  onClick={() => onCta(plan.tier)}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening checkout…</>
-                  ) : "Start 7-day free trial"}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-
-      </section>
-
-      <footer className="mt-20 border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-          <div>© {new Date().getFullYear()} Lynchmarc LLC · FastTract</div>
-          <nav className="flex flex-wrap items-center gap-4">
-            <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
-            <Link to="/privacy" className="hover:text-foreground">Privacy Notice</Link>
-            <Link to="/refunds" className="hover:text-foreground">Refund Policy</Link>
-            <Link to="/contact" className="hover:text-foreground">Contact</Link>
-          </nav>
-        </div>
-      </footer>
+      </main>
     </div>
   );
 }

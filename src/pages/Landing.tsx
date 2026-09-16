@@ -6,118 +6,61 @@ import { FAQ } from "@/components/marketing/FAQ";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  ArrowRight, Bot, Calculator, Check, CheckCircle2, ClipboardCheck,
-  FileSignature, FileText, Phone, Receipt, ShieldCheck, Sparkles, Users2,
+  ArrowRight, Bot, CalendarDays, Check, CheckCircle2, ClipboardCheck,
+  FileSignature, Phone, Receipt, ShieldCheck, Users2, WalletCards,
 } from "lucide-react";
 
 const tourSteps = [
-  {
-    label: "1. Capture the lead",
-    title: "Driveway replacement",
-    detail: "Sarah Miller · Portland, OR · 20′ × 40′",
-    status: "Qualified",
-    icon: Phone,
-  },
-  {
-    label: "2. Build the estimate",
-    title: "AI draft ready to review",
-    detail: "Labor, materials, markup, tax, and scope organized",
-    status: "$10,432",
-    icon: Calculator,
-  },
-  {
-    label: "3. Send and track",
-    title: "Professional proposal sent",
-    detail: "Customer opened it 8 minutes ago",
-    status: "Viewed",
-    icon: FileSignature,
-  },
+  { label: "New lead", title: "Driveway replacement", detail: "Caller captured, qualified, and ready for follow-up", status: "Qualified", icon: Phone },
+  { label: "Estimate", title: "Scope and numbers organized", detail: "Labor, materials, protection, and payment terms ready to review", status: "Draft ready", icon: ClipboardCheck },
+  { label: "Get paid", title: "Job complete", detail: "Invoice sent, payment tracked, and review follow-up prepared", status: "On track", icon: WalletCards },
 ];
 
-const estimateLines = [
-  ["Excavation & prep", "$1,850"],
-  ["Base rock", "$620"],
-  ["Forms & reinforcement", "$1,520"],
-  ["Concrete placement", "$3,420"],
-  ["Finish work & control joints", "$1,500"],
-  ["Supplies, cleanup & adjustments", "$1,522"],
-];
-
-const capabilities = [
-  { icon: Bot, title: "Home", text: "Ask Ava what needs attention and get a clear, personalized business overview." },
-  { icon: Users2, title: "Work", text: "Keep leads, customers, follow-ups, scheduling, jobs, and invoices moving." },
-  { icon: Receipt, title: "Money", text: "Understand income, expenses, payments, reports, and tax reserves in plain English." },
-  { icon: ClipboardCheck, title: "Business", text: "Organize your company profile, team, documents, integrations, and settings." },
+const pillars = [
+  { icon: Users2, title: "Leads", text: "Every call, form, and conversation lands in one clear follow-up path." },
+  { icon: CalendarDays, title: "Jobs", text: "Move from estimate appointment to scheduled work without losing the details." },
+  { icon: Receipt, title: "Money", text: "Create estimates and invoices, track what is owed, and know what needs attention." },
+  { icon: Bot, title: "AI", text: "Ask FastTract what to do next instead of digging through complicated software." },
 ];
 
 const faqItems = [
-  { q: "What is FastTract?", a: "FastTract is an AI-powered operating system for small businesses. Your personal assistant, Ava, helps organize customers, work, money, follow-up, documents, scheduling, and everyday business details." },
-  { q: "What kinds of businesses can use it?", a: "FastTract adapts to the company it meets during onboarding. Contractors have purpose-built estimating and job tools, while the same Home, Work, Money, and Business foundation supports service, retail, professional, and local businesses." },
-  { q: "Can Ava take actions for me?", a: "Yes, but important actions remain under your control. Ava prepares the work and asks for approval before sending, filing, paying, or changing anything important." },
-  { q: "What does the trial include?", a: "You can start a 7-day trial on any plan. A card is required, but you are not charged until the trial ends. Cancel anytime." },
+  { q: "What is FastTract?", a: "FastTract is an AI-first business operating system for contractors and home-service companies. It brings leads, customers, estimates, jobs, communication, invoices, payments, and follow-up into one simpler experience." },
+  { q: "Do I have to learn another complicated CRM?", a: "No. FastTract is designed around the work contractors actually do: answer the lead, schedule the estimate, win the job, finish the work, get paid, and earn the next referral." },
+  { q: "Can FastTract answer my business phone?", a: "AI phone answering is part of the product direction. Availability and usage depend on the setup selected for each business, and nothing is activated without a clear cost review." },
+  { q: "Will AI send prices or messages without me?", a: "Important actions stay under your control. FastTract can prepare the next step, while you decide what gets approved and sent." },
 ];
 
 const softwareSchema = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "FastTract",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description: "A personal AI business assistant for customers, work, money, follow-up, scheduling, documents, and daily operations.",
-  offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
-  brand: { "@type": "Brand", name: "FastTract" },
-  url: "https://fasttract.org/",
+  "@context": "https://schema.org", "@type": "SoftwareApplication", name: "FastTract",
+  applicationCategory: "BusinessApplication", operatingSystem: "Web",
+  description: "An AI-first operating system for contractor leads, estimates, jobs, communication, invoicing, payments, and follow-up.",
+  brand: { "@type": "Brand", name: "FastTract" }, url: "https://fasttract.org/",
 };
-
-function TrialNote() {
-  return <p className="mt-3 text-xs text-muted-foreground">7-day trial · Card required · No charge until the trial ends · Cancel anytime</p>;
-}
 
 function ProductTour() {
   const [active, setActive] = useState(0);
   const item = tourSteps[active];
   const Icon = item.icon;
-
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-2xl sm:p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">FastTract product tour</p>
-          <p className="mt-1 text-sm text-muted-foreground">From new lead to sent estimate</p>
-        </div>
+    <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-card/95 p-5 shadow-2xl sm:p-7">
+      <div className="absolute right-0 top-0 h-28 w-28 rounded-bl-full bg-[hsl(var(--brand-gold))]/15" />
+      <div className="relative mb-6 flex items-start justify-between gap-4">
+        <div><p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Today in FastTract</p><p className="mt-2 text-sm text-muted-foreground">One straight line from lead to paid.</p></div>
         <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">Live workflow</span>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3" role="tablist" aria-label="Product workflow">
+      <div className="grid gap-2 sm:grid-cols-3" role="tablist" aria-label="FastTract workflow">
         {tourSteps.map((step, index) => (
-          <button
-            key={step.label}
-            type="button"
-            role="tab"
-            aria-selected={active === index}
-            onClick={() => setActive(index)}
-            className={`rounded-lg border p-3 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-              active === index ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {step.label}
+          <button key={step.label} type="button" role="tab" aria-selected={active === index} onClick={() => setActive(index)}
+            className={`rounded-xl border px-3 py-3 text-left text-xs font-medium transition ${active === index ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            {index + 1}. {step.label}
           </button>
         ))}
       </div>
-      <div className="mt-4 min-h-48 rounded-xl border border-border bg-background/70 p-5" role="tabpanel">
-        <div className="flex items-start justify-between gap-4">
-          <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary/15 text-primary"><Icon className="h-5 w-5" /></div>
-          <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary">{item.status}</span>
-        </div>
-        <p className="mt-6 text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-        <h2 className="mt-1 text-xl font-semibold">{item.title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
-        <div className="mt-5 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-          <CheckCircle2 className="h-4 w-4 text-primary" /> Saved to the customer record
-        </div>
+      <div className="mt-4 min-h-56 rounded-2xl border border-border bg-background/70 p-6" role="tabpanel">
+        <div className="flex items-start justify-between gap-4"><div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/15 text-primary"><Icon className="h-6 w-6" /></div><span className="rounded-full bg-[hsl(var(--brand-gold))]/15 px-3 py-1 text-xs font-semibold text-[hsl(var(--brand-gold))]">{item.status}</span></div>
+        <h2 className="mt-7 text-2xl font-semibold">{item.title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+        <div className="mt-6 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-primary" /> Everything stays connected to the customer record</div>
       </div>
-      <Button variant="outline" className="mt-4 w-full" asChild>
-        <Link to="/demo">See the complete product tour <ArrowRight className="ml-2 h-4 w-4" /></Link>
-      </Button>
     </div>
   );
 }
@@ -125,133 +68,49 @@ function ProductTour() {
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => {
-    if (!loading && user) navigate("/app", { replace: true });
-  }, [user, loading, navigate]);
-
+  useEffect(() => { if (!loading && user) navigate("/app", { replace: true }); }, [user, loading, navigate]);
   return (
     <MarketingShell>
-      <SEO
-        title="FastTract | Your Personal AI Business Assistant"
-        description="Meet Ava, the personal AI assistant that learns your business and helps manage customers, work, money, follow-up, scheduling, documents, and everyday operations."
-        path="/"
-        jsonLd={softwareSchema}
-      />
+      <SEO title="FastTract | The Contractor Business Operating System" description="Turn leads into scheduled, finished, paid work with one simple AI-first contractor operating system." path="/" jsonLd={softwareSchema} />
 
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-20 lg:pt-20">
-        <div>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" /> One personal AI assistant for your whole business
-          </div>
-          <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Run your business. <span className="text-gradient-primary">Let Ava handle the busywork.</span>
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            FastTract gives every business a personal AI assistant that learns how you work, keeps customers and money organized, answers questions, follows up, and helps get everyday work done.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
-            <Button size="lg" variant="outline" asChild><Link to="/demo">Watch product tour</Link></Button>
-          </div>
-          <TrialNote />
-        </div>
-        <ProductTour />
-      </section>
-
-      <section className="border-y border-border bg-background/40">
-        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-3 sm:px-6 lg:px-8">
-          {[
-            [ShieldCheck, "Ava prepares it. You approve it.", "Important work is never sent, filed, paid, or changed without your approval."],
-            [Users2, "One connected business", "Keep customers, conversations, files, work, money, and follow-up together."],
-            [Bot, "Learns how you work", "Ava starts with five onboarding answers and builds approved knowledge over time."],
-          ].map(([Icon, title, text]) => {
-            const TrustIcon = Icon as typeof ShieldCheck;
-            return (
-              <div key={title as string} className="flex gap-3 rounded-xl border border-border bg-card p-4">
-                <TrustIcon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                <div><h2 className="text-sm font-semibold">{title as string}</h2><p className="mt-1 text-xs text-muted-foreground">{text as string}</p></div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.24),transparent_58%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.03fr_.97fr] lg:px-8 lg:pb-24 lg:pt-24">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">From a conversation to finished work</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Tell Ava what you need. Review the result.</h2>
-            <p className="mt-4 text-muted-foreground">
-              Ava uses your approved business knowledge to prepare the next useful action. For a contractor, that may be a complete estimate. For another business, it may be customer follow-up, scheduling, an invoice, or a money summary.
-            </p>
-            <ul className="mt-6 space-y-3 text-sm">
-              {["Use your private labor and material rates", "Review quantities, exclusions, and payment terms", "Convert an approved estimate into the next job step"].map((text) => (
-                <li key={text} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 text-primary" />{text}</li>
-              ))}
-            </ul>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary">Built for contractors who would rather build than babysit software</div>
+            <h1 className="max-w-3xl text-balance text-5xl font-black leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-7xl">From the first call to the <span className="text-primary">final payment.</span></h1>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">FastTract gives contractors one clear place to capture leads, build estimates, schedule jobs, communicate with customers, send invoices, collect payments, and ask AI what needs attention next.</p>
+            <div className="mt-9 flex flex-wrap gap-3"><Button size="lg" asChild><Link to="/contact">Get early access <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button size="lg" variant="outline" asChild><Link to="/demo">See how it works</Link></Button></div>
+            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">{["No CRM maze", "One connected customer record", "You approve important actions"].map((text) => <span key={text} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" />{text}</span>)}</div>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-7">
-            <div className="flex items-start justify-between border-b border-border pb-5">
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Estimate ES-1042</p><h3 className="mt-1 text-lg font-semibold">Driveway replacement · 20′ × 40′</h3><p className="mt-1 text-xs text-muted-foreground">Portland, Oregon</p></div>
-              <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs text-amber-400">Draft</span>
-            </div>
-            <div className="divide-y divide-border">
-              {estimateLines.map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-3 text-sm"><span>{label}</span><span className="font-medium">{value}</span></div>)}
-            </div>
-            <div className="flex justify-between border-t border-border pt-4 text-lg font-bold"><span>Total</span><span>$10,432</span></div>
-            <div className="mt-5 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> AI-assisted draft—contractor review required before sending.</div>
-          </div>
+          <ProductTour />
         </div>
       </section>
 
-      <section className="border-y border-border bg-background/40">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Four simple areas. Everything else fits underneath.</h2>
-            <p className="mt-4 text-muted-foreground">The dashboard stays approachable while Ava works across the whole company with you.</p>
-          </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {capabilities.map((item) => (
-              <div key={item.title} className="rounded-xl border border-border bg-card p-5">
-                <item.icon className="h-5 w-5 text-primary" />
-                <h3 className="mt-4 font-semibold">{item.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{item.text}</p>
-              </div>
-            ))}
-          </div>
+      <section id="how-it-works" className="border-y border-border bg-background/45">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">The work, not the software</p><h2 className="mt-4 text-4xl font-bold tracking-tight">FastTract follows the way a good contractor already thinks.</h2></div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">{[
+            ["01", "Win the opportunity", "Capture the lead, respond quickly, qualify the work, and schedule the estimate."],
+            ["02", "Run the job", "Keep scope, schedule, customer communication, costs, and job details in one place."],
+            ["03", "Close the loop", "Invoice, track payment, request an honest review, and create the next referral opportunity."],
+          ].map(([number, title, text]) => <div key={number} className="rounded-2xl border border-border bg-card p-6"><span className="text-sm font-black text-[hsl(var(--brand-gold))]">{number}</span><h3 className="mt-5 text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{text}</p></div>)}</div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Simple monthly pricing</p>
-            <h2 className="mt-3 text-3xl font-bold">Start with the plan that fits your office.</h2>
-            <p className="mt-4 text-muted-foreground">Every plan starts with a 7-day trial. A card is required; billing begins only after the trial ends.</p>
-            <Button className="mt-6" asChild><Link to="/pricing">Compare all plan features <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[["FastTract", "$69", "Core operations"], ["Plus", "$169", "AI admin assistant"], ["Premium", "$269", "AI phone answering"]].map(([name, price, detail]) => (
-              <div key={name} className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold">{name}</h3><p className="mt-4 text-3xl font-bold">{price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p><p className="mt-2 text-xs text-muted-foreground">{detail}</p>
-              </div>
-            ))}
-          </div>
+      <section id="fasttract-system" className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center"><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Simple on top. Powerful underneath.</p><h2 className="mt-4 text-4xl font-bold tracking-tight">Four places to look. One system doing the work.</h2><p className="mt-4 text-muted-foreground">FastTract keeps the customer experience focused while the CRM, calendars, communication, estimates, invoices, payments, and automations stay connected behind it.</p></div>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{pillars.map((item) => <div key={item.title} className="group rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/50"><item.icon className="h-6 w-6 text-primary" /><h3 className="mt-5 text-lg font-semibold">{item.title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.text}</p></div>)}</div>
+      </section>
+
+      <section id="built-for-contractors" className="border-y border-border bg-primary/5">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-24 sm:px-6 lg:grid-cols-2 lg:px-8">
+          <div><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Ask FastTract</p><h2 className="mt-4 text-4xl font-bold tracking-tight">Talk to the business instead of clicking through it.</h2><p className="mt-5 text-lg leading-8 text-muted-foreground">“Who needs a follow-up?” “What estimates are still waiting?” “What jobs do I have tomorrow?” FastTract is being built so the answer is clear—and the next action is ready.</p><div className="mt-8 rounded-2xl border border-primary/30 bg-card p-5"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-full bg-primary/15 text-primary"><Bot className="h-5 w-5" /></div><div><p className="text-sm font-semibold">Ask FastTract…</p><p className="text-xs text-muted-foreground">Show me every estimate waiting on a decision.</p></div></div></div></div>
+          <div className="space-y-4">{[[ShieldCheck, "You stay in control", "FastTract prepares important work and keeps approval with the owner."], [FileSignature, "Built around real scope", "Estimates keep quantities, protection, exclusions, payment terms, and customer expectations visible."], [Phone, "Never lose the next job", "Lead capture, missed-call follow-up, scheduling, and customer history stay connected."]].map(([Icon, title, text]) => { const I = Icon as typeof ShieldCheck; return <div key={title as string} className="flex gap-4 rounded-2xl border border-border bg-card p-5"><I className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h3 className="font-semibold">{title as string}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{text as string}</p></div></div>; })}</div>
         </div>
       </section>
 
-      <section className="border-y border-border bg-primary/5">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold">You do not have to run the business alone.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">Meet Ava, answer five quick questions, and start with a workspace that already understands the basics of your company.</p>
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
-            <Button size="lg" variant="outline" asChild><Link to="/demo">See FastTract in action</Link></Button>
-          </div>
-          <TrialNote />
-        </div>
-      </section>
-
+      <section className="mx-auto max-w-5xl px-4 py-24 text-center sm:px-6 lg:px-8"><h2 className="text-4xl font-bold tracking-tight">A better way to run the company you worked so hard to build.</h2><p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">FastTract is opening carefully to contractors who want a simpler, AI-first business system.</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Button size="lg" asChild><Link to="/contact">Get early access</Link></Button><Button size="lg" variant="outline" asChild><Link to="/login">Already have access? Sign in</Link></Button></div></section>
       <FAQ items={faqItems} />
     </MarketingShell>
   );
