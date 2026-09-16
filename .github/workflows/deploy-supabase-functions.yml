@@ -66,7 +66,7 @@ jobs:
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.118.0-beta.49
 
       - name: Validate required credentials
         shell: bash
