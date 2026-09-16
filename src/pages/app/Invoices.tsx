@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { toLocalDateInputValue } from "@/lib/local-date";
-import { linkGhlInvoice, syncGhlInvoice } from "@/lib/ghl";
+import { linkGhlInvoice, syncGhlInvoice, pushGhlInvoiceUpdate } from "@/lib/ghl";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -49,6 +49,8 @@ export default function Invoices() {
   const [linkingGhl, setLinkingGhl] = useState<any | null>(null);
   const [ghlInvoiceIdInput, setGhlInvoiceIdInput] = useState("");
   const [ghlBusyId, setGhlBusyId] = useState<string | null>(null);
+  const [pushingGhl, setPushingGhl] = useState<any | null>(null);
+  const [ghlPushPreview, setGhlPushPreview] = useState<Record<string, unknown> | null>(null);
 
   const [number, setNumber] = useState("");
   const [customerId, setCustomerId] = useState("");
@@ -196,6 +198,38 @@ export default function Invoices() {
     }
   };
 
+  const openGhlPushPreview = async (inv: any) => {
+    if (!activeOrg) return;
+    setGhlBusyId(inv.id);
+    try {
+      const result = await pushGhlInvoiceUpdate(activeOrg.organization_id, inv.id, false);
+      if ("pending" in result) {
+        setPushingGhl(inv);
+        setGhlPushPreview(result.preview);
+      }
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not preview HighLevel update");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const confirmGhlPush = async () => {
+    if (!activeOrg || !pushingGhl) return;
+    setGhlBusyId(pushingGhl.id);
+    try {
+      await pushGhlInvoiceUpdate(activeOrg.organization_id, pushingGhl.id, true);
+      toast.success("Pushed to HighLevel");
+      setPushingGhl(null);
+      setGhlPushPreview(null);
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not push to HighLevel");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
   const openPreview = async (inv: any) => {
     const { data: li } = await supabase.from("invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
     setPreviewing({ ...inv, line_items: li ?? [] });
@@ -259,9 +293,14 @@ export default function Invoices() {
                         <DropdownMenuItem onClick={() => openEdit(inv)}>Edit</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {inv.ghl_invoice_id ? (
-                          <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => runGhlSync(inv)}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Sync HighLevel status
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => runGhlSync(inv)}>
+                              <RefreshCw className="mr-2 h-4 w-4" /> Sync HighLevel status
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => openGhlPushPreview(inv)}>
+                              <Send className="mr-2 h-4 w-4" /> Update HighLevel invoice
+                            </DropdownMenuItem>
+                          </>
                         ) : (
                           <DropdownMenuItem onClick={() => { setLinkingGhl(inv); setGhlInvoiceIdInput(""); }}>
                             <Link2 className="mr-2 h-4 w-4" /> Link HighLevel invoice
@@ -422,6 +461,28 @@ export default function Invoices() {
             <Button variant="ghost" onClick={() => setLinkingGhl(null)}>Cancel</Button>
             <Button onClick={submitGhlLink} disabled={!ghlInvoiceIdInput.trim() || ghlBusyId === linkingGhl?.id}>
               {ghlBusyId === linkingGhl?.id ? "Linking…" : "Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview + confirm pushing this invoice's data to HighLevel */}
+      <Dialog open={!!pushingGhl} onOpenChange={(o) => { if (!o) { setPushingGhl(null); setGhlPushPreview(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Update HighLevel invoice</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Not yet applied. This will overwrite the linked HighLevel invoice's name, dates, line items,
+              and contact/business details with what's shown below. Review, then confirm.
+            </p>
+            <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted p-3 text-xs">
+              {JSON.stringify(ghlPushPreview, null, 2)}
+            </pre>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setPushingGhl(null); setGhlPushPreview(null); }}>Cancel</Button>
+            <Button onClick={confirmGhlPush} disabled={ghlBusyId === pushingGhl?.id}>
+              {ghlBusyId === pushingGhl?.id ? "Pushing…" : "Confirm & push"}
             </Button>
           </DialogFooter>
         </DialogContent>

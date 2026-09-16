@@ -89,3 +89,29 @@ export async function syncGhlInvoice(organizationId: string, kind: GhlInvoiceKin
   if (error) throw error;
   if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 }
+
+export type GhlInvoicePushPreview = {
+  pending: true;
+  preview: Record<string, unknown>;
+  message: string;
+};
+
+// Pushes FastTract's current header/line items into an already-linked GHL
+// invoice (Update Invoice). Two-step, mirroring the confirm-before-write
+// pattern used everywhere else a write has real-world consequences: the
+// first call (confirm omitted/false) only returns a preview of what would
+// be sent, and nothing is applied until a second call passes confirm: true.
+export async function pushGhlInvoiceUpdate(
+  organizationId: string,
+  id: string,
+  confirm: boolean,
+): Promise<GhlInvoicePushPreview | { updated: true }> {
+  const { data, error } = await supabase.functions.invoke("ghl-invoice-sync", {
+    body: { organizationId, action: "update", kind: "invoice", id, confirm },
+  });
+  if (error) throw error;
+  const result = data as { error?: string; pending?: true; preview?: Record<string, unknown>; message?: string; updated?: true };
+  if (result?.error) throw new Error(result.error);
+  if (result?.pending) return { pending: true, preview: result.preview!, message: result.message! };
+  return { updated: true };
+}

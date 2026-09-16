@@ -290,19 +290,40 @@ export async function updateGhlAppointment(
   }
 }
 
-// Invoices (backed by GHL's connected Stripe account). Only the read path
-// (Get Invoice) and the inbound InvoicePaid webhook are implemented here.
+// Invoices (backed by GHL's connected Stripe account).
 //
-// Create Invoice (POST /invoices/) and Update Invoice (PUT /invoices/{id})
-// are NOT implemented: both have required nested-object fields (items /
-// invoiceItems, contactDetails, businessDetails, sentTo, discount) whose
-// field-level schemas were never provided and don't exist anywhere else in
-// this codebase -- guessing them risks silently creating a malformed
-// invoice (e.g. a $0 or missing-line-item invoice) rather than a loud API
-// error. Send Invoice (POST /invoices/{id}/send) is also NOT implemented:
-// its required `action` field is documented only as "Send action type"
-// with no enum of valid values, so there's no safe value FastTract could
-// supply.
+// Get Invoice, the InvoicePaid webhook, and now Update Invoice are
+// implemented. The nested-object schemas for Update Invoice's
+// `contactDetails`, `businessDetails`, and `invoiceItems` come from
+// HighLevel's own official SDK, @gohighlevel/api-client (npm, published by
+// HighLevel's marketplace account, repo github.com/GoHighLevel/highlevel-api-sdk),
+// version 3.1.0, dist/lib/code/invoices/models/invoices.d.ts -- specifically
+// the ContactDetailsDto, BusinessDetailsDto, and InvoiceItemDto interfaces
+// (the same shapes UpdateInvoiceDto's fields are typed with) -- not guessed.
+//
+// Create Invoice (POST /invoices/) is still NOT implemented: its `discount`
+// field is required (unlike Update Invoice's, which is optional), and
+// `DiscountDto.type` is typed as a bare `string` in that same official SDK
+// with no enum preserved anywhere in it -- and marketplace.gohighlevel.com,
+// where the enum might be documented in prose, is unreachable from this
+// sandbox (network egress to every gohighlevel.com subdomain is blocked).
+// Guessing "percentage" (the only value that turned up, and only in
+// secondhand blog/search summaries, never a primary source) risks silently
+// misapplying a discount instead of a loud API error.
+//
+// Send Invoice (POST /invoices/{id}/send) is also NOT implemented: its
+// required `action` field is typed as a bare `string` in the same official
+// SDK too, with no enum anywhere -- same blocker as above, same
+// unreachable page. It also needs a GHL `userId` (the sending "employee or
+// agency ID"), which FastTract has no established mapping for either.
+//
+// Line-item and invoice-total amounts are assumed to be in cents (the one
+// place a unit is documented at all is the InvoicePaid webhook's `amount`/
+// `amountPaid` fields, "Total invoice amount (in cents)" / "Amount paid (in
+// cents)") and applied consistently to every monetary field on the same
+// invoice object. This is an inference, not a separately confirmed fact for
+// line items specifically -- verify with a $1 test invoice against a real
+// account before relying on it.
 //
 // The fields below are the ones actually named in the GHL Invoice API
 // reference the org owner provided (Get Invoice's own field list, plus the
@@ -331,6 +352,94 @@ export async function getGhlInvoice(connection: GhlConnection, invoiceId: string
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`HighLevel get invoice failed (${response.status}): ${body}`);
+  }
+  return (await response.json()) as GhlInvoice;
+}
+
+// Update Invoice's nested shapes, per @gohighlevel/api-client@3.1.0's
+// ContactDetailsDto / BusinessDetailsDto / InvoiceItemDto (see the comment
+// above GhlInvoice). Address sub-objects are intentionally omitted:
+// FastTract stores a single free-text `address` column for both
+// organizations and customers, and decomposing that into
+// addressLine1/city/state/postalCode would mean guessing a parsing
+// scheme, not reading a schema.
+export type GhlContactDetails = {
+  id: string;
+  name: string;
+  phoneNo: string;
+  email: string;
+  companyName?: string;
+};
+
+export type GhlBusinessDetails = {
+  name?: string;
+  phoneNo?: string;
+  website?: string;
+  logoUrl?: string;
+};
+
+export type GhlInvoiceItem = {
+  name: string;
+  description?: string;
+  currency: string;
+  amount: number;
+  qty: number;
+};
+
+export type FastTractLineItem = { description: string; quantity: number; unit_price: number };
+
+// Maps FastTract's invoice_line_items rows onto GhlInvoiceItem. Amounts are
+// converted to cents (see the unit-convention note above GhlInvoice).
+// Throws rather than silently sending a malformed/empty invoice.
+export function buildGhlInvoiceItems(lineItems: FastTractLineItem[]): GhlInvoiceItem[] {
+  if (lineItems.length === 0) {
+    throw new Error("At least one line item is required");
+  }
+  return lineItems.map((li) => ({
+    name: li.description,
+    currency: "USD",
+    amount: Math.round(li.unit_price * 100),
+    qty: li.quantity,
+  }));
+}
+
+export type UpdateGhlInvoiceInput = {
+  name: string;
+  currency: string;
+  issueDate: string;
+  dueDate: string;
+  items: GhlInvoiceItem[];
+  contactDetails?: GhlContactDetails;
+  businessDetails?: GhlBusinessDetails;
+  termsNotes?: string;
+};
+
+export async function updateGhlInvoice(
+  connection: GhlConnection,
+  invoiceId: string,
+  input: UpdateGhlInvoiceInput,
+): Promise<GhlInvoice> {
+  if (!connection.location_id) throw new Error("HighLevel connection has no locationId");
+  const body: Record<string, unknown> = {
+    altId: connection.location_id,
+    altType: "location",
+    name: input.name,
+    currency: input.currency,
+    invoiceItems: input.items,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+  };
+  if (input.contactDetails) body.contactDetails = input.contactDetails;
+  if (input.businessDetails) body.businessDetails = input.businessDetails;
+  if (input.termsNotes) body.termsNotes = input.termsNotes;
+
+  const response = await ghlFetch(connection.access_token, `/invoices/${invoiceId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`HighLevel update invoice failed (${response.status}): ${errBody}`);
   }
   return (await response.json()) as GhlInvoice;
 }
