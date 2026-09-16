@@ -14,7 +14,25 @@ import {
 const DEFAULT_REDIRECT_URI =
   "https://ohqopzyggxmwentbgivb.supabase.co/functions/v1/ghl-oauth-callback";
 
-const REQUIRED_ESTIMATE_SCOPES = ["invoices/estimate.readonly", "invoices/estimate.write"];
+const REQUIRED_FASTTRACT_SCOPES = [
+  "contacts.readonly",
+  "contacts.write",
+  "opportunities.readonly",
+  "opportunities.write",
+  "locations.readonly",
+  "users.readonly",
+  "calendars.readonly",
+  "calendars/events.readonly",
+  "calendars/events.write",
+  "conversations.readonly",
+  "conversations.write",
+  "conversations/message.readonly",
+  "conversations/message.write",
+  "invoices.readonly",
+  "invoices.write",
+  "invoices/estimate.readonly",
+  "invoices/estimate.write",
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -58,7 +76,7 @@ Deno.serve(async (req) => {
     const configuredScopes = (Deno.env.get("GHL_SCOPES") ?? DEFAULT_GHL_SCOPES)
       .split(/\s+/)
       .filter(Boolean);
-    const scopes = [...new Set([...configuredScopes, ...REQUIRED_ESTIMATE_SCOPES])].join(" ");
+    const scopes = [...new Set([...configuredScopes, ...REQUIRED_FASTTRACT_SCOPES])].join(" ");
 
     const url = new URL(GHL_AUTHORIZE_URL);
     url.searchParams.set("response_type", "code");
