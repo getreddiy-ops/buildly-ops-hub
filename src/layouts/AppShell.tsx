@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   BarChart3, BriefcaseBusiness, CalendarDays, ChevronDown, ClipboardCheck,
   FileText, LogOut, Menu, PhoneCall, Receipt, Settings, Sparkles, Users,
-  Wrench, Clock3, Boxes, BadgeDollarSign, UserRoundCog, ShieldCheck, TerminalSquare,
+  Wrench, Clock3, Boxes, BadgeDollarSign, UserRoundCog, ShieldCheck, TerminalSquare, MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
@@ -26,10 +26,10 @@ const groups: NavGroup[] = [
     label: "Today", icon: CalendarDays, to: "/app",
     items: [
       { to: "/app", label: "My day", icon: CalendarDays },
-      { to: "/app/assistant", label: "Agent conversations", icon: Sparkles },
+      { to: "/app/assistant", label: "AI assistant", icon: Sparkles },
       { to: "/app/command-center", label: "GHL command center", icon: TerminalSquare },
       { to: "/app/approvals", label: "Approvals", icon: ClipboardCheck },
-      { to: "/app/calendar", label: "Time off", icon: Clock3 },
+      { to: "/app/calendar", label: "Calendar", icon: Clock3 },
     ],
   },
   {
@@ -37,6 +37,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/app/leads", label: "Leads & follow-up", icon: Sparkles },
       { to: "/app/customers", label: "Customers", icon: Users },
+      { to: "/app/messages", label: "Messages", icon: MessageSquare },
       { to: "/app/estimates", label: "Estimates", icon: FileText },
       { to: "/app/contracts", label: "Contracts", icon: ClipboardCheck },
       { to: "/app/invoices", label: "Invoices", icon: Receipt },
