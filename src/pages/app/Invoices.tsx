@@ -22,11 +22,12 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
+import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send, Link2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { toLocalDateInputValue } from "@/lib/local-date";
+import { linkGhlInvoice, syncGhlInvoice } from "@/lib/ghl";
 
 type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -45,6 +46,9 @@ export default function Invoices() {
   const [sending, setSendingDoc] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkingGhl, setLinkingGhl] = useState<any | null>(null);
+  const [ghlInvoiceIdInput, setGhlInvoiceIdInput] = useState("");
+  const [ghlBusyId, setGhlBusyId] = useState<string | null>(null);
 
   const [number, setNumber] = useState("");
   const [customerId, setCustomerId] = useState("");
@@ -162,6 +166,36 @@ export default function Invoices() {
     load();
   };
 
+  const submitGhlLink = async () => {
+    if (!activeOrg || !linkingGhl || !ghlInvoiceIdInput.trim()) return;
+    setGhlBusyId(linkingGhl.id);
+    try {
+      await linkGhlInvoice(activeOrg.organization_id, "invoice", linkingGhl.id, ghlInvoiceIdInput.trim());
+      toast.success("Linked to HighLevel invoice");
+      setLinkingGhl(null);
+      setGhlInvoiceIdInput("");
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not link HighLevel invoice");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
+  const runGhlSync = async (inv: any) => {
+    if (!activeOrg) return;
+    setGhlBusyId(inv.id);
+    try {
+      await syncGhlInvoice(activeOrg.organization_id, "invoice", inv.id);
+      toast.success("Synced with HighLevel");
+      load();
+    } catch (error) {
+      toast.error((error as Error).message ?? "Could not sync with HighLevel");
+    } finally {
+      setGhlBusyId(null);
+    }
+  };
+
   const openPreview = async (inv: any) => {
     const { data: li } = await supabase.from("invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
     setPreviewing({ ...inv, line_items: li ?? [] });
@@ -204,7 +238,15 @@ export default function Invoices() {
                   <TableCell className="text-sm text-muted-foreground">{inv.customers?.name ?? "—"}</TableCell>
                   <TableCell className="text-sm">{inv.issue_date}</TableCell>
                   <TableCell className="text-sm">{inv.due_date ?? "—"}</TableCell>
-                  <TableCell><StatusBadge status={inv.status} /></TableCell>
+                  <TableCell>
+                    <StatusBadge status={inv.status} />
+                    {inv.ghl_invoice_id && (
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        HighLevel: {inv.ghl_invoice_status ?? "linked"}
+                        {inv.ghl_last_synced_at && ` · synced ${new Date(inv.ghl_last_synced_at).toLocaleString()}`}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(Number(inv.total))}</TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -215,6 +257,16 @@ export default function Invoices() {
                         <DropdownMenuItem onClick={() => openPreview(inv)}><Eye className="mr-2 h-4 w-4" /> Preview</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setSendingDoc(inv)}><Send className="mr-2 h-4 w-4" /> Send</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(inv)}>Edit</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {inv.ghl_invoice_id ? (
+                          <DropdownMenuItem disabled={ghlBusyId === inv.id} onClick={() => runGhlSync(inv)}>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Sync HighLevel status
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => { setLinkingGhl(inv); setGhlInvoiceIdInput(""); }}>
+                            <Link2 className="mr-2 h-4 w-4" /> Link HighLevel invoice
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(inv.id)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -350,6 +402,28 @@ export default function Invoices() {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Link to an existing HighLevel invoice */}
+      <Dialog open={!!linkingGhl} onOpenChange={(o) => !o && setLinkingGhl(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Link HighLevel invoice</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              FastTract can't create HighLevel invoices yet, so create the invoice in HighLevel first,
+              then paste its invoice ID here to link payment status back to this invoice.
+            </p>
+            <Field label="HighLevel invoice ID">
+              <Input value={ghlInvoiceIdInput} onChange={(e) => setGhlInvoiceIdInput(e.target.value)} placeholder="e.g. 64f1c2..." />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLinkingGhl(null)}>Cancel</Button>
+            <Button onClick={submitGhlLink} disabled={!ghlInvoiceIdInput.trim() || ghlBusyId === linkingGhl?.id}>
+              {ghlBusyId === linkingGhl?.id ? "Linking…" : "Link"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

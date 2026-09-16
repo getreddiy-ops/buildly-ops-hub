@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { getConnectionByLocationOrCompany } from '../_shared/ghl.ts';
+import { buildGhlInvoiceSyncFields, getConnectionByLocationOrCompany } from '../_shared/ghl.ts';
 
 // HighLevel's current webhook signing key (Ed25519).
 // Source: https://marketplace.gohighlevel.com/docs/webhook/WebhookIntegrationGuide/
@@ -234,9 +234,12 @@ async function processInvoicePaidEvent(
   const inv = extractInvoicePaid(payload);
   if (!inv.ghlInvoiceId || inv.status !== 'paid') return;
 
+  const sync = buildGhlInvoiceSyncFields({ status: inv.status, paidAt: inv.paidAt ?? undefined });
+
   // An invoice paid via GHL might be a FastTract invoice's collection
   // invoice, or an estimate's deposit invoice -- check both, since they
-  // share the same ghl_invoice_id linkage pattern.
+  // share the same ghl_invoice_id linkage pattern. Idempotent: re-delivery
+  // of the same event re-applies the same status/timestamps.
   const { data: invoice } = await admin
     .from('invoices')
     .select('id')
@@ -244,7 +247,7 @@ async function processInvoicePaidEvent(
     .eq('ghl_invoice_id', inv.ghlInvoiceId)
     .maybeSingle();
   if (invoice) {
-    const patch: Record<string, unknown> = { status: 'paid' };
+    const patch: Record<string, unknown> = { ...sync, status: 'paid' };
     if (inv.amountPaidDollars !== null) patch.amount_paid = inv.amountPaidDollars;
     await admin.from('invoices').update(patch).eq('id', invoice.id);
     return;
@@ -258,8 +261,9 @@ async function processInvoicePaidEvent(
     .maybeSingle();
   if (estimate) {
     await admin.from('estimates').update({
+      ...sync,
       deposit_collected: true,
-      deposit_collected_at: inv.paidAt ?? new Date().toISOString(),
+      deposit_collected_at: inv.paidAt ?? sync.ghl_paid_at,
     }).eq('id', estimate.id);
   }
 }
@@ -319,29 +323,33 @@ Deno.serve(async (req) => {
   const locationId = typeof payload.locationId === 'string' ? payload.locationId : null;
   const companyId = typeof payload.companyId === 'string' ? payload.companyId : null;
 
-  const { error } = await supabase.from('highlevel_events').upsert(
-    {
-      webhook_id: webhookId,
-      event_type: eventType,
-      location_id: locationId,
-      company_id: companyId,
-      payload,
-      received_at: new Date().toISOString(),
-    },
-    { onConflict: 'webhook_id', ignoreDuplicates: true },
-  );
+  // Plain insert (not upsert) against the unique webhook_id constraint, so we
+  // can tell a genuinely new delivery apart from a GHL retry of one we've
+  // already processed -- required for InvoicePaid (and every other event) to
+  // be idempotent under redelivery, not just eventually-consistent.
+  const { error } = await supabase.from('highlevel_events').insert({
+    webhook_id: webhookId,
+    event_type: eventType,
+    location_id: locationId,
+    company_id: companyId,
+    payload,
+    received_at: new Date().toISOString(),
+  });
 
-  if (error) {
+  const isDuplicateDelivery = error?.code === '23505';
+  if (error && !isDuplicateDelivery) {
     console.error('Could not persist HighLevel webhook:', error);
     return new Response('Webhook persistence failed', { status: 500 });
   }
 
-  try {
-    await processEvent(supabase, eventType, locationId, companyId, payload);
-  } catch (processingError) {
-    // The raw event is already durably stored; a processing failure here
-    // (bad payload shape, unmapped org, etc.) should not fail the webhook.
-    console.error('Could not process HighLevel event into FastTract records:', processingError);
+  if (!isDuplicateDelivery) {
+    try {
+      await processEvent(supabase, eventType, locationId, companyId, payload);
+    } catch (processingError) {
+      // The raw event is already durably stored; a processing failure here
+      // (bad payload shape, unmapped org, etc.) should not fail the webhook.
+      console.error('Could not process HighLevel event into FastTract records:', processingError);
+    }
   }
 
   return new Response(JSON.stringify({ received: true }), {

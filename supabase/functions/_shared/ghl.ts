@@ -290,10 +290,26 @@ export async function updateGhlAppointment(
   }
 }
 
-// Invoices (backed by GHL's connected Stripe account). Only the read path is
-// implemented here -- create/send need the exact nested schema for items,
-// contactDetails, businessDetails, sentTo and discount confirmed against a
-// live account before they're built, rather than guessed.
+// Invoices (backed by GHL's connected Stripe account). Only the read path
+// (Get Invoice) and the inbound InvoicePaid webhook are implemented here.
+//
+// Create Invoice (POST /invoices/) and Update Invoice (PUT /invoices/{id})
+// are NOT implemented: both have required nested-object fields (items /
+// invoiceItems, contactDetails, businessDetails, sentTo, discount) whose
+// field-level schemas were never provided and don't exist anywhere else in
+// this codebase -- guessing them risks silently creating a malformed
+// invoice (e.g. a $0 or missing-line-item invoice) rather than a loud API
+// error. Send Invoice (POST /invoices/{id}/send) is also NOT implemented:
+// its required `action` field is documented only as "Send action type"
+// with no enum of valid values, so there's no safe value FastTract could
+// supply.
+//
+// The fields below are the ones actually named in the GHL Invoice API
+// reference the org owner provided (Get Invoice's own field list, plus the
+// InvoicePaid webhook's payload table, which documents the same invoice
+// object shape). No field name here is guessed. Notably absent: any kind
+// of payment/invoice URL -- the docs provided don't name that field, so
+// FastTract cannot populate one without guessing.
 export type GhlInvoice = {
   id: string;
   status: string;
@@ -301,6 +317,11 @@ export type GhlInvoice = {
   amountPaid: number;
   currency: string;
   contactId?: string;
+  name?: string;
+  invoiceNumber?: string;
+  issueDate?: string;
+  dueDate?: string;
+  paidAt?: string;
 };
 
 export async function getGhlInvoice(connection: GhlConnection, invoiceId: string): Promise<GhlInvoice> {
@@ -312,4 +333,42 @@ export async function getGhlInvoice(connection: GhlConnection, invoiceId: string
     throw new Error(`HighLevel get invoice failed (${response.status}): ${body}`);
   }
   return (await response.json()) as GhlInvoice;
+}
+
+export type GhlInvoiceSyncFields = {
+  ghl_invoice_status: string | null;
+  ghl_last_synced_at: string;
+  ghl_paid_at?: string;
+};
+
+// The columns common to both `invoices` and `estimates` (see
+// 20260916060000_ghl_invoice_sync_state.sql), shared by the manual
+// Get-Invoice sync path and the InvoicePaid webhook so both update this
+// state the same way. Idempotent: calling this repeatedly with the same
+// GHL invoice state produces the same fields.
+//
+// Deliberately conservative: `ghl_invoice_status` stores GHL's raw status
+// string as-is (never interpreted), and only the one documented value,
+// "paid" (per the InvoicePaid webhook's field table), drives `ghl_paid_at`.
+// GHL's non-paid status vocabulary (e.g. what a freshly-sent invoice's
+// status string looks like) isn't documented anywhere in the reference
+// provided, so `ghl_sent_at` is never set here -- it can only be set by
+// FastTract's own Send Invoice call, which isn't implemented (see the
+// comment above `GhlInvoice`). `ghl_invoice_url` is also never set here
+// for the same reason: no field name for it is documented.
+//
+// Table-specific fields (invoices.status/amount_paid vs.
+// estimates.deposit_collected/deposit_collected_at) are the caller's
+// responsibility -- the two tables don't share a status vocabulary.
+export function buildGhlInvoiceSyncFields(
+  invoice: Pick<GhlInvoice, "status" | "paidAt">,
+): GhlInvoiceSyncFields {
+  const fields: GhlInvoiceSyncFields = {
+    ghl_invoice_status: invoice.status ?? null,
+    ghl_last_synced_at: new Date().toISOString(),
+  };
+  if (invoice.status === "paid") {
+    fields.ghl_paid_at = invoice.paidAt ?? new Date().toISOString();
+  }
+  return fields;
 }

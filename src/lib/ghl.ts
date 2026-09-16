@@ -61,3 +61,31 @@ export function syncToGhl(organizationId: string, entity: GhlEntity, id: string)
     })
     .catch((error) => console.error(`ghl-sync (${entity}) failed:`, error));
 }
+
+export type GhlInvoiceKind = "invoice" | "estimate";
+
+// Links an invoice/estimate to a GHL invoice the contractor already created
+// in GHL's own UI (FastTract can't create GHL invoices itself yet -- see
+// the comment above GhlInvoice in supabase/functions/_shared/ghl.ts), and
+// pulls its current status/payment state.
+export async function linkGhlInvoice(
+  organizationId: string,
+  kind: GhlInvoiceKind,
+  id: string,
+  ghlInvoiceId: string,
+): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("ghl-invoice-sync", {
+    body: { organizationId, action: "link", kind, id, ghlInvoiceId },
+  });
+  if (error) throw error;
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+}
+
+// Re-fetches the linked GHL invoice's current status/payment state.
+export async function syncGhlInvoice(organizationId: string, kind: GhlInvoiceKind, id: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("ghl-invoice-sync", {
+    body: { organizationId, action: "sync", kind, id },
+  });
+  if (error) throw error;
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+}
