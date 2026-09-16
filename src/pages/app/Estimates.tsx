@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
+import { PhotoEstimateDialog } from "@/components/PhotoEstimateDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { estimateKnowledgeRules, estimateKnowledgeTemplates } from "@/lib/estimateKnowledge";
 
@@ -98,6 +99,16 @@ export default function Estimates() {
     setItems([{ description: "", quantity: 1, unit_price: 0 }]);
   };
   const openNew = () => { setEditing(null); resetForm(); setOpen(true); };
+  const applyPhotoDraft = (result: { title: string; notes: string; items: LineItem[] }) => {
+    setEditing(null);
+    setTitle(result.title);
+    setCustomerId("");
+    setStatus("draft");
+    setTaxPct(0);
+    setNotes(result.notes);
+    setItems(result.items.length ? result.items : [{ description: "", quantity: 1, unit_price: 0 }]);
+    setOpen(true);
+  };
   const applyTemplate = (templateId: string) => {
     const template = estimateKnowledgeTemplates.find((item) => item.id === templateId);
     if (!template) return;
@@ -199,6 +210,8 @@ export default function Estimates() {
         title="Estimates"
         description="Drafts, sent, approved, rejected."
         actions={
+          <div className="flex flex-wrap gap-2">
+          {activeOrg && <PhotoEstimateDialog organizationId={activeOrg.organization_id} onDraftReady={applyPhotoDraft} />}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={openNew}><Plus className="h-4 w-4" /> New estimate</Button>
@@ -343,6 +356,7 @@ export default function Estimates() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         }
       />
 
