@@ -89,6 +89,21 @@ function extractOpportunity(payload: Json) {
   };
 }
 
+function extractInvoicePaid(payload: Json) {
+  const i = pick(payload.invoice as Json, payload);
+  const amount = Number(i.amount);
+  const amountPaid = Number(i.amountPaid);
+  return {
+    ghlInvoiceId: str(i.id) ?? str(i.invoiceId),
+    contactId: str(i.contactId),
+    status: str(i.status),
+    // GHL sends cents; FastTract stores dollars everywhere else.
+    amountPaidDollars: Number.isFinite(amountPaid) ? amountPaid / 100 : null,
+    totalDollars: Number.isFinite(amount) ? amount / 100 : null,
+    paidAt: str(i.paidAt),
+  };
+}
+
 function extractAppointment(payload: Json) {
   const a = pick(payload.appointment as Json, payload);
   return {
@@ -211,6 +226,44 @@ async function processOpportunityEvent(
   await admin.from('leads').update(patch).eq('id', lead.id);
 }
 
+async function processInvoicePaidEvent(
+  admin: SupabaseClient,
+  organizationId: string,
+  payload: Json,
+) {
+  const inv = extractInvoicePaid(payload);
+  if (!inv.ghlInvoiceId || inv.status !== 'paid') return;
+
+  // An invoice paid via GHL might be a FastTract invoice's collection
+  // invoice, or an estimate's deposit invoice -- check both, since they
+  // share the same ghl_invoice_id linkage pattern.
+  const { data: invoice } = await admin
+    .from('invoices')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('ghl_invoice_id', inv.ghlInvoiceId)
+    .maybeSingle();
+  if (invoice) {
+    const patch: Record<string, unknown> = { status: 'paid' };
+    if (inv.amountPaidDollars !== null) patch.amount_paid = inv.amountPaidDollars;
+    await admin.from('invoices').update(patch).eq('id', invoice.id);
+    return;
+  }
+
+  const { data: estimate } = await admin
+    .from('estimates')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('ghl_invoice_id', inv.ghlInvoiceId)
+    .maybeSingle();
+  if (estimate) {
+    await admin.from('estimates').update({
+      deposit_collected: true,
+      deposit_collected_at: inv.paidAt ?? new Date().toISOString(),
+    }).eq('id', estimate.id);
+  }
+}
+
 async function processEvent(
   admin: SupabaseClient,
   eventType: string,
@@ -227,6 +280,8 @@ async function processEvent(
     await processAppointmentEvent(admin, connection.organization_id, payload);
   } else if (eventType.startsWith('Opportunity')) {
     await processOpportunityEvent(admin, connection.organization_id, connection.pipeline_stage_map ?? {}, payload);
+  } else if (eventType === 'InvoicePaid') {
+    await processInvoicePaidEvent(admin, connection.organization_id, payload);
   }
 }
 

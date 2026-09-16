@@ -9,7 +9,7 @@ export const GHL_TOKEN_URL = "https://services.leadconnectorhq.com/oauth/token";
 export const GHL_AUTHORIZE_URL = "https://marketplace.gohighlevel.com/oauth/chooselocation";
 
 export const DEFAULT_GHL_SCOPES =
-  "contacts.readonly contacts.write calendars.readonly calendars/events.readonly calendars/events.write opportunities.readonly opportunities.write";
+  "contacts.readonly contacts.write calendars.readonly calendars/events.readonly calendars/events.write opportunities.readonly opportunities.write invoices.readonly invoices.write";
 
 export function requiredSecret(name: string): string {
   const value = Deno.env.get(name);
@@ -288,4 +288,28 @@ export async function updateGhlAppointment(
     const body = await response.text();
     throw new Error(`HighLevel appointment update failed (${response.status}): ${body}`);
   }
+}
+
+// Invoices (backed by GHL's connected Stripe account). Only the read path is
+// implemented here -- create/send need the exact nested schema for items,
+// contactDetails, businessDetails, sentTo and discount confirmed against a
+// live account before they're built, rather than guessed.
+export type GhlInvoice = {
+  id: string;
+  status: string;
+  amount: number;
+  amountPaid: number;
+  currency: string;
+  contactId?: string;
+};
+
+export async function getGhlInvoice(connection: GhlConnection, invoiceId: string): Promise<GhlInvoice> {
+  if (!connection.location_id) throw new Error("HighLevel connection has no locationId");
+  const url = `/invoices/${invoiceId}?altId=${encodeURIComponent(connection.location_id)}&altType=location`;
+  const response = await ghlFetch(connection.access_token, url, { method: "GET" });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`HighLevel get invoice failed (${response.status}): ${body}`);
+  }
+  return (await response.json()) as GhlInvoice;
 }
