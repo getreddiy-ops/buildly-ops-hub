@@ -441,7 +441,7 @@ var update_job_default = defineTool11({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "fxfljmqpckujerawkwhq";
+var projectRef = "ohqopzyggxmwentbgivb";
 var mcp_default = defineMcp({
   name: "fasttract-mcp",
   title: "FastTract MCP",

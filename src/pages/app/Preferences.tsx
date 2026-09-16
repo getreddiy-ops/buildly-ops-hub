@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Settings, User, Building2, CreditCard, Palette, Code2, Smartphone,
-  Users as UsersIcon, LogOut, Save, Bot, FileText, ArrowRight, CheckCircle2, Circle,
+  Users as UsersIcon, LogOut, Save, Bot, FileText, ArrowRight, CheckCircle2, Circle, Link2,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
+import {
+  disconnectGhl, getGhlStatus, setGhlCalendar, startGhlConnect, type GhlStatus,
+} from "@/lib/ghl";
 
 type BusinessProfile = Record<string, unknown> | null;
 
@@ -27,12 +30,86 @@ export default function Preferences() {
   const { user, activeOrg, signOut, isPlatformAdmin } = useAuth();
   const { branding } = useBranding();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(null);
+
+  const isOrgAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
+  const [ghlStatus, setGhlStatusState] = useState<GhlStatus | null>(null);
+  const [ghlLoading, setGhlLoading] = useState(true);
+  const [ghlBusy, setGhlBusy] = useState(false);
+  const [calendarInput, setCalendarInput] = useState("");
+
+  const loadGhlStatus = async () => {
+    if (!activeOrg) return;
+    setGhlLoading(true);
+    try {
+      const status = await getGhlStatus(activeOrg.organization_id);
+      setGhlStatusState(status);
+      setCalendarInput(status.defaultCalendarId ?? "");
+    } catch (error) {
+      console.error("Could not load HighLevel status:", error);
+    }
+    setGhlLoading(false);
+  };
+
+  useEffect(() => { loadGhlStatus(); }, [activeOrg?.organization_id]);
+
+  useEffect(() => {
+    const ghlParam = searchParams.get("ghl");
+    if (!ghlParam) return;
+    if (ghlParam === "connected") {
+      toast.success("HighLevel connected");
+      loadGhlStatus();
+    } else if (ghlParam === "error") {
+      toast.error("Could not connect HighLevel. Please try again.");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("ghl");
+    setSearchParams(next, { replace: true });
+  }, [searchParams]);
+
+  const connectGhl = async () => {
+    if (!activeOrg) return;
+    setGhlBusy(true);
+    try {
+      await startGhlConnect(activeOrg.organization_id);
+    } catch (error) {
+      toast.error((error as Error).message || "Could not start HighLevel connection");
+      setGhlBusy(false);
+    }
+  };
+
+  const disconnectGhlAccount = async () => {
+    if (!activeOrg) return;
+    if (!confirm("Disconnect HighLevel? Existing synced records will stay, but nothing will sync until you reconnect.")) return;
+    setGhlBusy(true);
+    try {
+      await disconnectGhl(activeOrg.organization_id);
+      toast.success("HighLevel disconnected");
+      await loadGhlStatus();
+    } catch (error) {
+      toast.error((error as Error).message || "Could not disconnect HighLevel");
+    }
+    setGhlBusy(false);
+  };
+
+  const saveGhlCalendar = async () => {
+    if (!activeOrg) return;
+    setGhlBusy(true);
+    try {
+      await setGhlCalendar(activeOrg.organization_id, calendarInput.trim());
+      toast.success("HighLevel calendar saved");
+      await loadGhlStatus();
+    } catch (error) {
+      toast.error((error as Error).message || "Could not save the calendar");
+    }
+    setGhlBusy(false);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -414,6 +491,80 @@ export default function Preferences() {
           </div>
         </Card>
       </div>
+
+      {/* GoHighLevel integration */}
+      <Card className="p-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-lg font-semibold">GoHighLevel</h3>
+              <p className="text-sm text-muted-foreground">
+                Sync leads, customers, and scheduled jobs with your GoHighLevel account.
+              </p>
+            </div>
+          </div>
+          <Badge variant={ghlStatus?.connected ? "default" : "secondary"}>
+            {ghlLoading ? "Checking…" : ghlStatus?.connected ? "Connected" : "Not connected"}
+          </Badge>
+        </div>
+
+        {!ghlLoading && ghlStatus?.connected ? (
+          <div className="space-y-4">
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div className="flex justify-between gap-4 sm:block">
+                <dt className="text-muted-foreground">Location</dt>
+                <dd>{ghlStatus.locationId ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 sm:block">
+                <dt className="text-muted-foreground">Connected since</dt>
+                <dd>{ghlStatus.installedAt ? new Date(ghlStatus.installedAt).toLocaleDateString() : "—"}</dd>
+              </div>
+            </dl>
+            {isOrgAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="ghl_calendar">Calendar for scheduled jobs</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="ghl_calendar"
+                    placeholder="GoHighLevel calendar ID"
+                    value={calendarInput}
+                    onChange={(e) => setCalendarInput(e.target.value)}
+                    disabled={ghlBusy}
+                  />
+                  <Button variant="outline" onClick={saveGhlCalendar} disabled={ghlBusy}>
+                    Save
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Jobs with a schedule sync to this GoHighLevel calendar as appointments. Find the
+                  calendar ID in GoHighLevel under Settings → Calendars.
+                </p>
+              </div>
+            )}
+            {isOrgAdmin && (
+              <div className="flex justify-end">
+                <Button variant="destructive" onClick={disconnectGhlAccount} disabled={ghlBusy}>
+                  Disconnect HighLevel
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {isOrgAdmin
+                ? "Connect your GoHighLevel location to keep contacts and appointments in sync."
+                : "Ask an organization owner or admin to connect GoHighLevel."}
+            </p>
+            {isOrgAdmin && (
+              <Button onClick={connectGhl} disabled={ghlBusy || ghlLoading}>
+                <Link2 className="mr-2 h-4 w-4" /> Connect HighLevel
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* Field app switcher */}
       <Card className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">

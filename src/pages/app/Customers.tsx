@@ -20,6 +20,7 @@ import {
 import { MoreHorizontal, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
+import { syncToGhl } from "@/lib/ghl";
 import type { Database } from "@/integrations/supabase/types";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
@@ -82,11 +83,12 @@ export default function Customers() {
       notes: d.notes || null,
     };
     const res = editing
-      ? await supabase.from("customers").update(payload).eq("id", editing.id)
-      : await supabase.from("customers").insert({ ...payload, organization_id: activeOrg.organization_id });
+      ? await supabase.from("customers").update(payload).eq("id", editing.id).select("id").single()
+      : await supabase.from("customers").insert({ ...payload, organization_id: activeOrg.organization_id }).select("id").single();
     setSaving(false);
     if (res.error) { toast.error(res.error.message); return; }
     toast.success(editing ? "Customer updated" : "Customer created");
+    if (res.data) syncToGhl(activeOrg.organization_id, "customer", res.data.id);
     setOpen(false);
     load();
   };

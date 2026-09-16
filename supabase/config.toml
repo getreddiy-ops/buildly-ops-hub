@@ -11,6 +11,12 @@ project_id = "ohqopzyggxmwentbgivb"
     verify_jwt = false
   [functions.ghl-oauth-callback]
     verify_jwt = false
+  [functions.ghl-oauth-start]
+    verify_jwt = true
+  [functions.ghl-sync]
+    verify_jwt = true
+  [functions.ghl-connection]
+    verify_jwt = true
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]
