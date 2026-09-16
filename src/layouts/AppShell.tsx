@@ -28,7 +28,7 @@ const groups: NavGroup[] = [
       { to: "/app", label: "My day", icon: CalendarDays },
       { to: "/app/assistant", label: "Agent conversations", icon: Sparkles },
       { to: "/app/approvals", label: "Approvals", icon: ClipboardCheck },
-      { to: "/app/calendar", label: "Calendar", icon: Clock3 },
+      { to: "/app/calendar", label: "Time off", icon: Clock3 },
     ],
   },
   {
