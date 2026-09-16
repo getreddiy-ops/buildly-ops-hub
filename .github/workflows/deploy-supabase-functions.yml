@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 15
     environment: production
     env:
-      PROJECT_ID: ajusjfdrtposrthicjeu
+      PROJECT_ID: QJUSJFDRTPOSRTHLCJEU
       SUPABASE_ACCESS_TOKEN: ${{ secrets.TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
       # GoHighLevel
       GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
