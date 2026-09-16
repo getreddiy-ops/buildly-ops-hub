@@ -10,7 +10,7 @@
   "mcp": {
     "server": {
       "name": "fasttract-mcp",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "title": "FastTract MCP"
     },
     "tools": [
@@ -52,6 +52,44 @@
             "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
           },
           "required": ["name"],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_estimate",
+        "title": "Create estimate",
+        "description": "Preview, then create an estimate for the signed-in user's organization with optional line items.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "customer_id": { "type": "string", "format": "uuid" },
+            "lead_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["draft", "sent", "accepted", "declined"], "default": "draft" },
+            "tax": { "type": "number", "minimum": 0, "default": 0 },
+            "notes": { "type": "string" },
+            "line_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": { "type": "string", "minLength": 1 },
+                  "quantity": { "type": "number", "exclusiveMinimum": 0 },
+                  "unit_price": { "type": "number", "minimum": 0 }
+                },
+                "required": ["description", "quantity", "unit_price"],
+                "additionalProperties": false
+              }
+            },
+            "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
+          },
+          "required": ["title"],
           "additionalProperties": false
         },
         "outputSchema": null
