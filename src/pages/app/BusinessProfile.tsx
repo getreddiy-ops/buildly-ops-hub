@@ -38,7 +38,12 @@ type Profile = {
   out_of_scope?: string;
   escalation_contact?: string;
   notes?: string;
+  material_overage_pct?: number;
+  material_markup_pct?: number;
+  default_labor_rate?: number;
 };
+
+const ESTIMATING_DEFAULTS = { material_overage_pct: 10, material_markup_pct: 20, default_labor_rate: 100 };
 
 const SUB_TRADE_SUGGESTIONS = [
   "Roofing", "Siding", "Gutters", "Windows", "Decks", "Kitchen Remodel",
@@ -200,6 +205,29 @@ export default function BusinessProfile() {
           <CardDescription>Lets the AI quote ranges without inventing numbers.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <Label htmlFor="overage">Material overage %</Label>
+              <Input id="overage" type="number" min={0} step="1"
+                value={profile.material_overage_pct ?? ESTIMATING_DEFAULTS.material_overage_pct}
+                onChange={(e) => update("material_overage_pct", parseFloat(e.target.value) || 0)} />
+              <p className="mt-1 text-xs text-muted-foreground">Extra material bought to cover waste/cuts.</p>
+            </div>
+            <div>
+              <Label htmlFor="markup">Material markup %</Label>
+              <Input id="markup" type="number" min={0} step="1"
+                value={profile.material_markup_pct ?? ESTIMATING_DEFAULTS.material_markup_pct}
+                onChange={(e) => update("material_markup_pct", parseFloat(e.target.value) || 0)} />
+              <p className="mt-1 text-xs text-muted-foreground">Added on top of your material cost.</p>
+            </div>
+            <div>
+              <Label htmlFor="labor_rate">Default labor rate ($/hr)</Label>
+              <Input id="labor_rate" type="number" min={0} step="1"
+                value={profile.default_labor_rate ?? ESTIMATING_DEFAULTS.default_labor_rate}
+                onChange={(e) => update("default_labor_rate", parseFloat(e.target.value) || 0)} />
+              <p className="mt-1 text-xs text-muted-foreground">Starting point for new estimates and photo estimates.</p>
+            </div>
+          </div>
           <div>
             <Label htmlFor="model">How do you price?</Label>
             <Textarea id="model" rows={2} value={profile.pricing_model ?? ""} onChange={(e) => update("pricing_model", e.target.value)}

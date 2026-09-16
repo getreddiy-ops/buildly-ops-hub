@@ -5,7 +5,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { adminClient, requiredSecret } from "../_shared/ghl.ts";
 
-type Action = "status" | "disconnect" | "set_calendar";
+type Action = "status" | "disconnect" | "set_calendar" | "set_pipeline_map";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -21,10 +21,11 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) return json(401, { error: "Unauthorized" });
 
-    const { organizationId, action, calendarId } = (await req.json()) as {
+    const { organizationId, action, calendarId, pipelineStageMap } = (await req.json()) as {
       organizationId?: string;
       action?: Action;
       calendarId?: string;
+      pipelineStageMap?: Record<string, string>;
     };
     if (!organizationId || !action) return json(400, { error: "organizationId and action are required" });
 
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     if (action === "status") {
       const { data } = await admin
         .from("ghl_connections")
-        .select("location_id, company_id, installed_at, default_calendar_id")
+        .select("location_id, company_id, installed_at, default_calendar_id, pipeline_stage_map")
         .eq("organization_id", organizationId)
         .maybeSingle();
       return json(200, {
@@ -58,6 +59,7 @@ Deno.serve(async (req) => {
         companyId: data?.company_id ?? null,
         installedAt: data?.installed_at ?? null,
         defaultCalendarId: data?.default_calendar_id ?? null,
+        pipelineStageMap: data?.pipeline_stage_map ?? {},
       });
     }
 
@@ -77,6 +79,22 @@ Deno.serve(async (req) => {
         .eq("organization_id", organizationId);
       if (error) return json(500, { error: error.message });
       return json(200, { defaultCalendarId: calendarId || null });
+    }
+
+    if (action === "set_pipeline_map") {
+      const map = pipelineStageMap ?? {};
+      const validStatuses = new Set(["new", "contacted", "qualified", "won", "lost"]);
+      for (const value of Object.values(map)) {
+        if (!validStatuses.has(value)) {
+          return json(400, { error: `Invalid status "${value}" — must be one of new, contacted, qualified, won, lost` });
+        }
+      }
+      const { error } = await admin
+        .from("ghl_connections")
+        .update({ pipeline_stage_map: map, updated_at: new Date().toISOString() })
+        .eq("organization_id", organizationId);
+      if (error) return json(500, { error: error.message });
+      return json(200, { pipelineStageMap: map });
     }
 
     return json(400, { error: "Unknown action" });

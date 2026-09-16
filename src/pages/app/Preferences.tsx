@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 import {
-  disconnectGhl, getGhlStatus, setGhlCalendar, startGhlConnect, type GhlStatus,
+  disconnectGhl, getGhlStatus, setGhlCalendar, setGhlPipelineStageMap, startGhlConnect, type GhlStatus,
 } from "@/lib/ghl";
 
 type BusinessProfile = Record<string, unknown> | null;
@@ -37,12 +38,14 @@ export default function Preferences() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(null);
+  const [setupCounts, setSetupCounts] = useState({ materials: 0, crew: 0, phoneAssistant: false });
 
   const isOrgAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const [ghlStatus, setGhlStatusState] = useState<GhlStatus | null>(null);
   const [ghlLoading, setGhlLoading] = useState(true);
   const [ghlBusy, setGhlBusy] = useState(false);
   const [calendarInput, setCalendarInput] = useState("");
+  const [pipelineMapInput, setPipelineMapInput] = useState("");
 
   const loadGhlStatus = async () => {
     if (!activeOrg) return;
@@ -51,6 +54,9 @@ export default function Preferences() {
       const status = await getGhlStatus(activeOrg.organization_id);
       setGhlStatusState(status);
       setCalendarInput(status.defaultCalendarId ?? "");
+      setPipelineMapInput(
+        Object.entries(status.pipelineStageMap ?? {}).map(([stage, s]) => `${stage} = ${s}`).join("\n"),
+      );
     } catch (error) {
       console.error("Could not load HighLevel status:", error);
     }
@@ -111,6 +117,24 @@ export default function Preferences() {
     setGhlBusy(false);
   };
 
+  const saveGhlPipelineMap = async () => {
+    if (!activeOrg) return;
+    const map: Record<string, string> = {};
+    for (const line of pipelineMapInput.split("\n")) {
+      const [stage, status] = line.split("=").map((part) => part?.trim());
+      if (stage && status) map[stage] = status;
+    }
+    setGhlBusy(true);
+    try {
+      await setGhlPipelineStageMap(activeOrg.organization_id, map);
+      toast.success("Pipeline stage mapping saved");
+      await loadGhlStatus();
+    } catch (error) {
+      toast.error((error as Error).message || "Could not save the pipeline mapping");
+    }
+    setGhlBusy(false);
+  };
+
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -136,6 +160,23 @@ export default function Preferences() {
         .eq("id", activeOrg.organization_id)
         .maybeSingle();
       setBusinessProfile((data?.business_profile as BusinessProfile) ?? {});
+    })();
+  }, [activeOrg]);
+
+  useEffect(() => {
+    if (!activeOrg) return;
+    (async () => {
+      const orgId = activeOrg.organization_id;
+      const [materials, crew, phoneAssistant] = await Promise.all([
+        supabase.from("materials").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("organization_members").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+        supabase.from("phone_assistants").select("id").eq("organization_id", orgId).maybeSingle(),
+      ]);
+      setSetupCounts({
+        materials: materials.count ?? 0,
+        crew: crew.count ?? 0,
+        phoneAssistant: !!phoneAssistant.data,
+      });
     })();
   }, [activeOrg]);
 
@@ -170,10 +211,13 @@ export default function Preferences() {
       { label: "Business phone on file", done: hasPhone, to: "/app/branding" },
       { label: "Invoice defaults set", done: hasInvoiceDefaults, to: "/app/branding" },
       { label: "Business profile filled in", done: hasBusinessProfile, to: "/app/business-profile" },
+      { label: "Materials price list started", done: setupCounts.materials > 0, to: "/app/materials" },
+      { label: "Crew or teammate invited", done: setupCounts.crew > 1, to: "/app/crew" },
+      { label: "Phone assistant configured", done: setupCounts.phoneAssistant, to: "/app/phone-assistant" },
     ];
     const done = items.filter((i) => i.done).length;
     return { items, done, total: items.length, pct: Math.round((done / items.length) * 100) };
-  }, [branding, invoiceDefaults, businessProfile]);
+  }, [branding, invoiceDefaults, businessProfile, setupCounts]);
 
   const orgName = activeOrg?.organization?.name ?? branding?.name ?? "Your business";
 
@@ -539,6 +583,28 @@ export default function Preferences() {
                 <p className="text-xs text-muted-foreground">
                   Jobs with a schedule sync to this GoHighLevel calendar as appointments. Find the
                   calendar ID in GoHighLevel under Settings → Calendars.
+                </p>
+              </div>
+            )}
+            {isOrgAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="ghl_pipeline_map">Pipeline stage mapping</Label>
+                <Textarea
+                  id="ghl_pipeline_map"
+                  rows={4}
+                  placeholder={"Estimate Sent = contacted\nJob Won = won\nJob Lost = lost"}
+                  value={pipelineMapInput}
+                  onChange={(e) => setPipelineMapInput(e.target.value)}
+                  disabled={ghlBusy}
+                />
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={saveGhlPipelineMap} disabled={ghlBusy}>Save mapping</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  One per line: <code>Your GHL stage name = status</code>, where status is one of new,
+                  contacted, qualified, won, lost. Without a mapping, only GHL's own "won"/"lost"
+                  opportunity outcome updates a lead's status here — every other stage move is still
+                  recorded, just not auto-applied to status.
                 </p>
               </div>
             )}

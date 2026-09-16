@@ -1,225 +1,187 @@
-import { FormEvent, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Bot, CalendarClock, Car, Check, CheckCircle2, ChevronDown, ChevronRight,
-  CircleAlert, ExternalLink, FileCheck2, Gift, Link2, LockKeyhole, Mic,
-  PhoneCall, Search, Send, ShieldCheck, Sparkles, Users,
+  Sparkles, Briefcase, Users, FileText, Receipt, ClipboardCheck,
+  ArrowRight, CalendarClock, AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import type { Database } from "@/integrations/supabase/types";
 
-type RunItem = {
-  id: string;
-  title: string;
-  detail: string;
-  meta?: string;
-  state: "automatic" | "approval" | "scheduled" | "decision";
-  action?: string;
-  icon: typeof PhoneCall;
-};
+type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
+type Lead = Database["public"]["Tables"]["leads"]["Row"];
+type Estimate = Database["public"]["Tables"]["estimates"]["Row"] & { customers?: { name: string } | null };
+type Invoice = Database["public"]["Tables"]["invoices"]["Row"] & { customers?: { name: string } | null };
 
-const sections: { title: string; items: RunItem[] }[] = [
-  {
-    title: "Now",
-    items: [{
-      id: "call", title: "AI phone agent is handling an inbound call",
-      detail: "New customer inquiry · Website redesign", meta: "Live now",
-      state: "automatic", icon: PhoneCall,
-    }],
-  },
-  {
-    title: "Next",
-    items: [
-      {
-        id: "followup", title: "Lead follow-up drafted and awaiting approval",
-        detail: "For: Evergreen Services · Discovery call request", meta: "Draft prepared with next steps",
-        state: "approval", action: "Review", icon: FileCheck2,
-      },
-      {
-        id: "meeting", title: "10:30 AM · Team check-in",
-        detail: "30 min · Conference room + Zoom", meta: "Starts in 48 minutes",
-        state: "scheduled", action: "Join meeting", icon: Users,
-      },
-    ],
-  },
-  {
-    title: "Later",
-    items: [
-      {
-        id: "seo", title: "SEO broken-link repair ready for review",
-        detail: "12 issues found · Fixes prepared and ready to publish", meta: "Review before publishing",
-        state: "decision", action: "Review", icon: Search,
-      },
-      {
-        id: "birthday", title: "Jessica’s birthday is tomorrow",
-        detail: "Your secretary · Card reminder scheduled", meta: "Tomorrow",
-        state: "scheduled", action: "View", icon: Gift,
-      },
-      {
-        id: "oil", title: "Vehicle oil change due",
-        detail: "2019 Ford F-150 · Recommended by Aug 4", meta: "In 12 days",
-        state: "scheduled", action: "Schedule", icon: Car,
-      },
-      {
-        id: "tax", title: "Oregon quarterly tax materials",
-        detail: "Q2 2026 · Gathered for accountant review", meta: "Professional review required",
-        state: "decision", action: "Review", icon: FileCheck2,
-      },
-    ],
-  },
-];
+const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
-const stateMeta = {
-  automatic: { label: "Handled automatically", className: "text-emerald-400", icon: CheckCircle2 },
-  approval: { label: "Drafted for approval", className: "text-amber-400", icon: CircleAlert },
-  scheduled: { label: "Scheduled", className: "text-sky-400", icon: CalendarClock },
-  decision: { label: "Needs your decision", className: "text-amber-400", icon: CircleAlert },
-};
+function StatTile({ label, value, to, icon: Icon }: { label: string; value: string | number; to: string; icon: typeof Briefcase }) {
+  return (
+    <Link to={to}>
+      <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-secondary/40">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
+        <div className="min-w-0">
+          <div className="text-xl font-semibold tabular-nums">{value}</div>
+          <div className="text-xs text-muted-foreground">{label}</div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
 
 export default function Dashboard() {
   const { user, activeOrg } = useAuth();
-  const [agentOpen, setAgentOpen] = useState(true);
-  const [command, setCommand] = useState("");
-  const [completed, setCompleted] = useState<string[]>([]);
+  const isAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
+  const [loading, setLoading] = useState(true);
+  const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
+  const [activeJobCount, setActiveJobCount] = useState(0);
+  const [followUpLeads, setFollowUpLeads] = useState<Lead[]>([]);
+  const [awaitingEstimates, setAwaitingEstimates] = useState<Estimate[]>([]);
+  const [overdueInvoices, setOverdueInvoices] = useState<Invoice[]>([]);
+  const [unpaidTotal, setUnpaidTotal] = useState(0);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+
   const firstName = useMemo(() => {
     const full = user?.user_metadata?.full_name as string | undefined;
     return full?.split(" ")[0] || user?.email?.split("@")[0] || "there";
   }, [user]);
 
-  const submitCommand = (event: FormEvent) => {
-    event.preventDefault();
-    if (!command.trim()) return;
-    toast.success("Your agent is on it", { description: `FastTract is preparing: “${command.trim()}”` });
-    setCommand("");
-  };
+  const todayLabel = useMemo(
+    () => new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+    [],
+  );
 
-  const handleAction = (item: RunItem) => {
-    setCompleted((current) => [...current, item.id]);
-    toast.success(item.state === "scheduled" ? "Opened schedule" : "Ready for your review", {
-      description: item.title,
-    });
-  };
+  useEffect(() => {
+    if (!activeOrg) return;
+    const orgId = activeOrg.organization_id;
+    setLoading(true);
+    (async () => {
+      const weekAhead = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const [jobsRes, activeJobsRes, leadsRes, estimatesRes, invoicesRes, approvalsRes] = await Promise.all([
+        supabase.from("jobs").select("*, customers(name)").eq("organization_id", orgId)
+          .not("scheduled_start", "is", null).lte("scheduled_start", weekAhead)
+          .not("status", "in", "(cancelled,completed)")
+          .order("scheduled_start", { ascending: true }).limit(6),
+        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId)
+          .in("status", ["scheduled", "in_progress"]),
+        supabase.from("leads").select("*").eq("organization_id", orgId)
+          .in("status", ["new", "contacted"]).order("created_at", { ascending: false }).limit(5),
+        supabase.from("estimates").select("*, customers(name)").eq("organization_id", orgId)
+          .eq("status", "sent").order("updated_at", { ascending: false }).limit(5),
+        supabase.from("invoices").select("*, customers(name)").eq("organization_id", orgId)
+          .in("status", ["sent", "overdue"]).order("due_date", { ascending: true }).limit(20),
+        isAdmin
+          ? supabase.from("time_entries").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending")
+          : Promise.resolve({ count: 0 }),
+      ]);
+      setUpcomingJobs((jobsRes.data ?? []) as Job[]);
+      setActiveJobCount(activeJobsRes.count ?? 0);
+      setFollowUpLeads(leadsRes.data ?? []);
+      setAwaitingEstimates((estimatesRes.data ?? []) as Estimate[]);
+      const invoices = (invoicesRes.data ?? []) as Invoice[];
+      const overdue = invoices.filter((inv) => inv.status === "overdue" || (!!inv.due_date && inv.due_date < todayIso));
+      setOverdueInvoices(overdue.slice(0, 5));
+      setUnpaidTotal(invoices.reduce((sum, inv) => sum + (Number(inv.total) - Number(inv.amount_paid)), 0));
+      setPendingApprovals(approvalsRes.count ?? 0);
+      setLoading(false);
+    })();
+  }, [activeOrg?.organization_id, isAdmin]);
+
+  const attentionItems = [
+    ...(isAdmin && pendingApprovals > 0
+      ? [{ key: "approvals", to: "/app/approvals", icon: ClipboardCheck,
+          title: `${pendingApprovals} time entr${pendingApprovals === 1 ? "y" : "ies"} awaiting approval`, detail: "Review and approve crew hours" }]
+      : []),
+    ...overdueInvoices.map((inv) => ({
+      key: `inv-${inv.id}`, to: `/app/invoices`, icon: Receipt,
+      title: `Overdue invoice${inv.number ? ` #${inv.number}` : ""} — ${fmt(Number(inv.total) - Number(inv.amount_paid))}`,
+      detail: inv.customers?.name ?? "No customer on file",
+    })),
+    ...followUpLeads.map((lead) => ({
+      key: `lead-${lead.id}`, to: "/app/leads", icon: Users,
+      title: `Follow up with ${lead.name}`, detail: lead.source ? `Source: ${lead.source}` : "New lead",
+    })),
+    ...awaitingEstimates.map((est) => ({
+      key: `est-${est.id}`, to: `/app/estimates`, icon: FileText,
+      title: `Estimate "${est.title}" awaiting response`, detail: est.customers?.name ?? "No customer on file",
+    })),
+  ];
 
   return (
-    <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[minmax(0,1fr)_324px]">
-      <section className="min-w-0 px-4 py-7 sm:px-8 lg:px-10">
-        <div className="mb-7 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{firstName}’s day</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Thursday, July 23, 2026</p>
-          </div>
-          <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setAgentOpen((open) => !open)}>
-            <Bot className="mr-2 h-4 w-4" /> Agent
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <PageHeader title={`${firstName}'s day`} description={todayLabel} />
 
-        <form onSubmit={submitCommand} className="mb-8 flex items-center gap-2 rounded-xl border border-border bg-card p-2 focus-within:ring-2 focus-within:ring-primary">
-          <Sparkles className="ml-3 h-5 w-5 text-primary" />
-          <Input
-            value={command}
-            onChange={(event) => setCommand(event.target.value)}
-            className="h-12 border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
-            placeholder="Ask your agent to handle anything…"
-            aria-label="Ask your FastTract agent"
-          />
-          <Button type="button" size="icon" variant="ghost" aria-label="Talk to your agent" onClick={() => toast.info("Voice agent ready", { description: "Start speaking when the microphone opens." })}>
-            <Mic className="h-5 w-5" />
-          </Button>
-          <Button type="submit" size="icon" aria-label="Send to your agent"><Send className="h-4 w-4" /></Button>
-        </form>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Active jobs" value={activeJobCount} to="/app/jobs" icon={Briefcase} />
+        <StatTile label="Leads to follow up" value={followUpLeads.length} to="/app/leads" icon={Users} />
+        <StatTile label="Estimates awaiting reply" value={awaitingEstimates.length} to="/app/estimates" icon={FileText} />
+        <StatTile label="Unpaid invoices" value={fmt(unpaidTotal)} to="/app/invoices" icon={Receipt} />
+      </div>
 
-        <div className="space-y-7">
-          {sections.map((section) => (
-            <section key={section.title}>
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><span className="h-2 w-2 rounded-full bg-primary" />{section.title}</h2>
-              <div className="overflow-hidden rounded-xl border border-border bg-card/45">
-                {section.items.map((item, index) => {
-                  const meta = stateMeta[item.state];
-                  const StateIcon = meta.icon;
-                  const done = completed.includes(item.id);
-                  return (
-                    <div key={item.id} className={cn(
-                      "flex flex-col gap-4 p-4 sm:flex-row sm:items-center",
-                      index > 0 && "border-t border-border",
-                      done && "opacity-55",
-                    )}>
-                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><item.icon className="h-5 w-5" /></div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold">{item.title}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
-                        {item.meta && <p className="mt-1 text-xs text-muted-foreground/75">{item.meta}</p>}
-                      </div>
-                      <div className="flex shrink-0 items-center justify-between gap-4 sm:w-48 sm:flex-col sm:items-end">
-                        <span className={cn("flex items-center gap-1.5 text-xs font-medium", meta.className)}>
-                          {done ? <Check className="h-3.5 w-3.5" /> : <StateIcon className="h-3.5 w-3.5" />}
-                          {done ? "Reviewed" : meta.label}
-                        </span>
-                        {item.action && !done && <Button variant="outline" size="sm" onClick={() => handleAction(item)}>{item.action}</Button>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-      </section>
-
-      <aside className={cn(
-        "border-l border-border bg-card/25 p-6 lg:block",
-        agentOpen ? "block" : "hidden",
-      )}>
-        <div className="sticky top-6">
-          <div className="mb-5 flex flex-wrap gap-x-4 gap-y-2 border-b border-border pb-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agent online 24/7</span>
-            <span className="flex items-center gap-2"><PhoneCall className="h-3.5 w-3.5 text-primary" /> Phone active</span>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-base font-semibold"><CalendarClock className="h-4 w-4 text-primary" /> Today & this week</h2>
+            <Button asChild variant="ghost" size="sm"><Link to="/app/jobs">All jobs <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
           </div>
-          <button onClick={() => setAgentOpen((open) => !open)} className="flex w-full items-center justify-between text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-            <span className="flex items-center gap-2 text-lg font-semibold"><Bot className="h-5 w-5 text-primary" />Agent</span>
-            <ChevronDown className={cn("h-4 w-4 transition-transform", !agentOpen && "-rotate-90")} />
-          </button>
-          <div className="mt-7 border-b border-border pb-6">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="mt-4 text-2xl font-semibold">Good morning, {firstName}.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              I’ve prepared your runbook and I’m handling calls, follow-ups, and reminders so you can focus on what matters most.
-            </p>
-          </div>
-          <div className="border-b border-border py-6">
-            <h3 className="text-sm font-semibold">Suggestions</h3>
-            <div className="mt-3 divide-y divide-border overflow-hidden rounded-lg border border-border">
-              {[
-                ["Call back the newest lead", "Follow up on their request"],
-                ["Review website lead", "Schedule a discovery call"],
-                ["Move team check-in", "Resolve a calendar conflict"],
-              ].map(([title, detail]) => (
-                <button key={title} onClick={() => setCommand(title)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{title}</span><span className="block text-xs text-muted-foreground">{detail}</span></span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : upcomingJobs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing scheduled in the next 7 days.</p>
+          ) : (
+            <div className="space-y-2">
+              {upcomingJobs.map((job) => (
+                <Link key={job.id} to="/app/jobs" className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm hover:bg-secondary/40">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{job.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">{job.customers?.name ?? "No customer"}</div>
+                  </div>
+                  <Badge variant="outline" className="shrink-0">
+                    {job.scheduled_start ? new Date(job.scheduled_start).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "—"}
+                  </Badge>
+                </Link>
               ))}
             </div>
-            <Link to="/app/settings" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">What FastTract knows <ChevronRight className="h-4 w-4" /></Link>
-          </div>
-          <div className="py-6">
-            <h3 className="text-sm font-semibold">Permissions & status</h3>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" />Calls: Answering</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" />Messages: Drafting</li>
-              <li className="flex items-center gap-2"><Link2 className="h-4 w-4 text-emerald-400" />Business data: Connected</li>
-              <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />State: {activeOrg?.organization?.name ? "Profile-aware" : "Configure profile"}</li>
-            </ul>
-            <div className="mt-5 flex gap-2 rounded-lg border border-border bg-background/50 p-3 text-xs text-muted-foreground">
-              <LockKeyhole className="h-4 w-4 shrink-0 text-primary" />
-              <span>Sensitive actions, publishing, payments, and compliance work require your approval.</span>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold"><AlertTriangle className="h-4 w-4 text-amber-500" /> Needs your attention</h2>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : attentionItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You're all caught up.</p>
+          ) : (
+            <div className="space-y-2">
+              {attentionItems.slice(0, 8).map((item) => (
+                <Link key={item.key} to={item.to} className="flex items-center gap-3 rounded-md border border-border/60 p-3 text-sm hover:bg-secondary/40">
+                  <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{item.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">{item.detail}</div>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" asChild><Link to="/app/business-profile">Manage agent context <ExternalLink className="ml-2 h-3.5 w-3.5" /></Link></Button>
+          )}
+        </Card>
+      </div>
+
+      <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <div>
+            <div className="font-semibold">Ask Ava</div>
+            <div className="text-sm text-muted-foreground">Ask about your business, or have Ava draft a lead, estimate, or job for your approval.</div>
           </div>
         </div>
-      </aside>
+        <Button asChild><Link to="/app/assistant">Open Ask Ava <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
+      </Card>
     </div>
   );
 }

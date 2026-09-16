@@ -61,13 +61,18 @@ export default function Costing() {
   const load = async () => {
     if (!activeOrg) return;
     setLoading(true);
-    const [{ data: js }, { data: cs }, { data: ts }, { data: mems }] = await Promise.all([
+    const [{ data: js }, { data: ts }, { data: mems }] = await Promise.all([
       supabase.from("jobs").select("id, title, budget, status").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
-      supabase.from("job_costs").select("*").order("incurred_on", { ascending: false }),
       supabase.from("time_entries").select("id, job_id, user_id, approved_hours, status").eq("organization_id", activeOrg.organization_id).eq("status", "approved"),
       supabase.rpc("get_org_hourly_rates", { _org_id: activeOrg.organization_id }),
     ]);
     setJobs((js ?? []) as JobLite[]);
+    // job_costs has no organization_id column of its own — scope explicitly
+    // by this org's job ids rather than relying only on the join-through RLS policy.
+    const jobIds = (js ?? []).map((j) => j.id);
+    const { data: cs } = jobIds.length
+      ? await supabase.from("job_costs").select("*").in("job_id", jobIds).order("incurred_on", { ascending: false })
+      : { data: [] };
     setCosts((cs ?? []) as CostRow[]);
     setTimes((ts ?? []) as TimeRow[]);
     const r: Record<string, number> = {};

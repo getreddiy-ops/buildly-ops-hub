@@ -22,6 +22,7 @@ interface Props {
   terms?: string
   notes?: string
   brandColor?: string
+  shareUrl?: string
 }
 
 const money = (n?: number) =>
@@ -45,6 +46,7 @@ const Email = (props: Props) => {
     terms,
     notes,
     brandColor = '#d9531e',
+    shareUrl,
   } = props
   const label = docType === 'estimate' ? 'Estimate' : 'Invoice'
   const heading = title || `${label}${docNumber ? ` ${docNumber}` : ''}`
@@ -94,6 +96,14 @@ const Email = (props: Props) => {
                   </Text>
                 </Column>
               </Row>
+            </Section>
+          )}
+
+          {shareUrl && (
+            <Section style={{ marginTop: '22px', textAlign: 'center' as const }}>
+              <Link href={shareUrl} style={{ ...ctaButton, backgroundColor: brandColor }}>
+                Review &amp; Accept {label}
+              </Link>
             </Section>
           )}
 
@@ -170,3 +180,7 @@ const totalsLabel = { color: '#8a8a8a', marginRight: '12px' }
 const hr = { borderTop: '1px solid #eee', margin: '22px 0' }
 const sectionTitle = { fontSize: '12px', color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.06em', margin: '0 0 4px' }
 const body = { fontSize: '13px', color: '#333', margin: 0, whiteSpace: 'pre-wrap' as const }
+const ctaButton = {
+  display: 'inline-block', color: '#ffffff', fontSize: '14px', fontWeight: 700,
+  padding: '12px 28px', borderRadius: '8px', textDecoration: 'none',
+}

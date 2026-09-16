@@ -9,6 +9,8 @@ project_id = "ohqopzyggxmwentbgivb"
     verify_jwt = true
   [functions.elevenlabs-postcall]
     verify_jwt = false
+  [functions.estimate-from-photos]
+    verify_jwt = true
   [functions.ghl-oauth-callback]
     verify_jwt = false
   [functions.ghl-oauth-start]
@@ -24,6 +26,8 @@ project_id = "ohqopzyggxmwentbgivb"
   [functions.highlevel-webhook]
     verify_jwt = false
   [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.public-estimate]
     verify_jwt = false
   [functions.payments-webhook]
     verify_jwt = false

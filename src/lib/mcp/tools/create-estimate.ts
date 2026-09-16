@@ -1,11 +1,11 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { sb, resolveOrgId, err, ok } from "./_helpers";
+import { sb, resolveOrgId, err, ok, previewOrConfirm } from "./_helpers";
 
 export default defineTool({
   name: "create_estimate",
   title: "Create estimate",
-  description: "Create a new estimate for the signed-in user's organization, with optional line items.",
+  description: "Create a new estimate for the signed-in user's organization, with optional line items. Call with confirm: true only after previewing.",
   inputSchema: {
     title: z.string().min(1),
     customer_id: z.string().uuid().optional(),
@@ -22,9 +22,10 @@ export default defineTool({
         }),
       )
       .optional(),
+    confirm: z.boolean().optional().describe("Set true to actually create the estimate after reviewing the preview."),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
+  handler: async ({ confirm, ...input }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
     const client = sb(ctx);
     const org = await resolveOrgId(client, ctx.getUserId()!);
@@ -33,6 +34,9 @@ export default defineTool({
     const items = input.line_items ?? [];
     const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const total = subtotal + (input.tax ?? 0);
+
+    const preview = previewOrConfirm(confirm, `create estimate "${input.title}" totaling $${total.toFixed(2)}`, { ...input, subtotal, total });
+    if (preview) return preview;
 
     const { data: est, error } = await client
       .from("estimates")

@@ -27,3 +27,16 @@ export function err(text: string) {
 export function ok(text: string, structured?: Record<string, unknown>) {
   return { content: [{ type: "text" as const, text }], structuredContent: structured };
 }
+
+// Every create_*/update_* tool takes an explicit `confirm` flag and must call
+// this before writing. A financial/customer-facing/high-impact action never
+// executes on the first call — the caller sees exactly what would happen and
+// has to call again with confirm: true, mirroring the confirm-before-write
+// flow the in-app AI assistant already uses.
+export function previewOrConfirm(confirm: boolean | undefined, actionLabel: string, preview: Record<string, unknown>) {
+  if (confirm) return null;
+  return ok(
+    `Not yet applied. This would ${actionLabel}. Review the details, then call this tool again with confirm: true to proceed.`,
+    { pending: true, preview },
+  );
+}

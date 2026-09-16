@@ -35,36 +35,61 @@ var list_customers_default = defineTool({
 });
 
 // src/lib/mcp/tools/create-customer.ts
-import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.108.2";
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.23.0";
 import { z as z2 } from "npm:zod@^3.25.76";
+
+// src/lib/mcp/tools/_helpers.ts
+import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.108.2";
 function sb2(ctx) {
   return createClient2(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
     auth: { persistSession: false, autoRefreshToken: false }
   });
 }
+async function resolveOrgId(client, userId) {
+  const { data, error } = await client.from("organization_members").select("organization_id").eq("user_id", userId).limit(1);
+  if (error) return { error: error.message };
+  const orgId = data?.[0]?.organization_id;
+  if (!orgId) return { error: "No organization found for this user." };
+  return { orgId };
+}
+function err(text) {
+  return { content: [{ type: "text", text }], isError: true };
+}
+function ok(text, structured) {
+  return { content: [{ type: "text", text }], structuredContent: structured };
+}
+function previewOrConfirm(confirm, actionLabel, preview) {
+  if (confirm) return null;
+  return ok(
+    `Not yet applied. This would ${actionLabel}. Review the details, then call this tool again with confirm: true to proceed.`,
+    { pending: true, preview }
+  );
+}
+
+// src/lib/mcp/tools/create-customer.ts
 var create_customer_default = defineTool2({
   name: "create_customer",
   title: "Create customer",
-  description: "Create a new customer record in the signed-in user's active organization.",
+  description: "Create a new customer record in the signed-in user's active organization. Call with confirm: true only after previewing.",
   inputSchema: {
     name: z2.string().trim().min(1),
     email: z2.string().email().optional(),
     phone: z2.string().optional(),
-    address: z2.string().optional()
+    address: z2.string().optional(),
+    confirm: z2.boolean().optional().describe("Set true to actually create the customer after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
-    if (!ctx.isAuthenticated()) return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+  handler: async ({ confirm, ...input }, ctx) => {
+    if (!ctx.isAuthenticated()) return err("Not authenticated");
     const client = sb2(ctx);
-    const { data: memberships, error: mErr } = await client.from("organization_members").select("organization_id").eq("user_id", ctx.getUserId()).limit(1);
-    if (mErr) return { content: [{ type: "text", text: mErr.message }], isError: true };
-    const orgId = memberships?.[0]?.organization_id;
-    if (!orgId) return { content: [{ type: "text", text: "No organization found for this user." }], isError: true };
-    const { data, error } = await client.from("customers").insert({ ...input, organization_id: orgId }).select().single();
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    return { content: [{ type: "text", text: `Created customer ${data.id}` }], structuredContent: { customer: data } };
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
+    const preview = previewOrConfirm(confirm, `create customer "${input.name}"`, { ...input, organization_id: org.orgId });
+    if (preview) return preview;
+    const { data, error } = await client.from("customers").insert({ ...input, organization_id: org.orgId }).select().single();
+    if (error) return err(error.message);
+    return ok(`Created customer ${data.id}`, { customer: data });
   }
 });
 
@@ -158,34 +183,10 @@ var list_estimates_default = defineTool5({
 // src/lib/mcp/tools/create-estimate.ts
 import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.23.0";
 import { z as z6 } from "npm:zod@^3.25.76";
-
-// src/lib/mcp/tools/_helpers.ts
-import { createClient as createClient6 } from "npm:@supabase/supabase-js@^2.108.2";
-function sb6(ctx) {
-  return createClient6(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
-}
-async function resolveOrgId(client, userId) {
-  const { data, error } = await client.from("organization_members").select("organization_id").eq("user_id", userId).limit(1);
-  if (error) return { error: error.message };
-  const orgId = data?.[0]?.organization_id;
-  if (!orgId) return { error: "No organization found for this user." };
-  return { orgId };
-}
-function err(text) {
-  return { content: [{ type: "text", text }], isError: true };
-}
-function ok(text, structured) {
-  return { content: [{ type: "text", text }], structuredContent: structured };
-}
-
-// src/lib/mcp/tools/create-estimate.ts
 var create_estimate_default = defineTool6({
   name: "create_estimate",
   title: "Create estimate",
-  description: "Create a new estimate for the signed-in user's organization, with optional line items.",
+  description: "Create a new estimate for the signed-in user's organization, with optional line items. Call with confirm: true only after previewing.",
   inputSchema: {
     title: z6.string().min(1),
     customer_id: z6.string().uuid().optional(),
@@ -199,17 +200,20 @@ var create_estimate_default = defineTool6({
         quantity: z6.number().positive(),
         unit_price: z6.number().nonnegative()
       })
-    ).optional()
+    ).optional(),
+    confirm: z6.boolean().optional().describe("Set true to actually create the estimate after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
+  handler: async ({ confirm, ...input }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
-    const client = sb6(ctx);
+    const client = sb2(ctx);
     const org = await resolveOrgId(client, ctx.getUserId());
     if (org.error) return err(org.error);
     const items = input.line_items ?? [];
     const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const total = subtotal + (input.tax ?? 0);
+    const preview = previewOrConfirm(confirm, `create estimate "${input.title}" totaling $${total.toFixed(2)}`, { ...input, subtotal, total });
+    if (preview) return preview;
     const { data: est, error } = await client.from("estimates").insert({
       organization_id: org.orgId,
       title: input.title,
@@ -245,7 +249,7 @@ import { z as z7 } from "npm:zod@^3.25.76";
 var update_estimate_default = defineTool7({
   name: "update_estimate",
   title: "Update estimate",
-  description: "Update fields on an existing estimate. Only provided fields are changed.",
+  description: "Update fields on an existing estimate. Only provided fields are changed. Call with confirm: true only after previewing.",
   inputSchema: {
     id: z7.string().uuid(),
     title: z7.string().min(1).optional(),
@@ -254,14 +258,20 @@ var update_estimate_default = defineTool7({
     subtotal: z7.number().nonnegative().optional(),
     tax: z7.number().nonnegative().optional(),
     total: z7.number().nonnegative().optional(),
-    notes: z7.string().nullable().optional()
+    notes: z7.string().nullable().optional(),
+    confirm: z7.boolean().optional().describe("Set true to actually apply the update after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async ({ id, ...patch }, ctx) => {
+  handler: async ({ id, confirm, ...patch }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb2(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
     const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
     if (!Object.keys(clean).length) return err("No fields to update.");
-    const { data, error } = await sb6(ctx).from("estimates").update(clean).eq("id", id).select().single();
+    const preview = previewOrConfirm(confirm, `update estimate ${id}`, { id, ...clean });
+    if (preview) return preview;
+    const { data, error } = await client.from("estimates").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
     if (error) return err(error.message);
     return ok(`Updated estimate ${id}`, { estimate: data });
   }
@@ -273,7 +283,7 @@ import { z as z8 } from "npm:zod@^3.25.76";
 var create_invoice_default = defineTool8({
   name: "create_invoice",
   title: "Create invoice",
-  description: "Create a new invoice for the signed-in user's organization, with optional line items.",
+  description: "Create a new invoice for the signed-in user's organization, with optional line items. Call with confirm: true only after previewing.",
   inputSchema: {
     customer_id: z8.string().uuid().optional(),
     job_id: z8.string().uuid().optional(),
@@ -291,18 +301,21 @@ var create_invoice_default = defineTool8({
         quantity: z8.number().positive(),
         unit_price: z8.number().nonnegative()
       })
-    ).optional()
+    ).optional(),
+    confirm: z8.boolean().optional().describe("Set true to actually create the invoice after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
+  handler: async ({ confirm, ...input }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
-    const client = sb6(ctx);
+    const client = sb2(ctx);
     const org = await resolveOrgId(client, ctx.getUserId());
     if (org.error) return err(org.error);
     const items = input.line_items ?? [];
     const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const tax_amount = subtotal * (input.tax_rate ?? 0);
     const total = subtotal + tax_amount;
+    const preview = previewOrConfirm(confirm, `create an invoice totaling $${total.toFixed(2)}`, { ...input, subtotal, tax_amount, total });
+    if (preview) return preview;
     const { data: inv, error } = await client.from("invoices").insert({
       organization_id: org.orgId,
       customer_id: input.customer_id ?? null,
@@ -344,7 +357,7 @@ import { z as z9 } from "npm:zod@^3.25.76";
 var update_invoice_default = defineTool9({
   name: "update_invoice",
   title: "Update invoice",
-  description: "Update fields on an existing invoice. Only provided fields are changed.",
+  description: "Update fields on an existing invoice. Only provided fields are changed. Call with confirm: true only after previewing.",
   inputSchema: {
     id: z9.string().uuid(),
     status: z9.string().optional(),
@@ -357,14 +370,20 @@ var update_invoice_default = defineTool9({
     total: z9.number().nonnegative().optional(),
     amount_paid: z9.number().nonnegative().optional(),
     notes: z9.string().nullable().optional(),
-    terms: z9.string().nullable().optional()
+    terms: z9.string().nullable().optional(),
+    confirm: z9.boolean().optional().describe("Set true to actually apply the update after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async ({ id, ...patch }, ctx) => {
+  handler: async ({ id, confirm, ...patch }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb2(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
     const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
     if (!Object.keys(clean).length) return err("No fields to update.");
-    const { data, error } = await sb6(ctx).from("invoices").update(clean).eq("id", id).select().single();
+    const preview = previewOrConfirm(confirm, `update invoice ${id}`, { id, ...clean });
+    if (preview) return preview;
+    const { data, error } = await client.from("invoices").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
     if (error) return err(error.message);
     return ok(`Updated invoice ${id}`, { invoice: data });
   }
@@ -376,7 +395,7 @@ import { z as z10 } from "npm:zod@^3.25.76";
 var create_job_default = defineTool10({
   name: "create_job",
   title: "Create job",
-  description: "Create a new job for the signed-in user's organization.",
+  description: "Create a new job for the signed-in user's organization. Call with confirm: true only after previewing.",
   inputSchema: {
     title: z10.string().min(1),
     customer_id: z10.string().uuid().optional(),
@@ -386,14 +405,17 @@ var create_job_default = defineTool10({
     address: z10.string().optional(),
     scheduled_start: z10.string().optional().describe("ISO timestamp"),
     scheduled_end: z10.string().optional().describe("ISO timestamp"),
-    budget: z10.number().nonnegative().optional()
+    budget: z10.number().nonnegative().optional(),
+    confirm: z10.boolean().optional().describe("Set true to actually create the job after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
+  handler: async ({ confirm, ...input }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
-    const client = sb6(ctx);
+    const client = sb2(ctx);
     const org = await resolveOrgId(client, ctx.getUserId());
     if (org.error) return err(org.error);
+    const preview = previewOrConfirm(confirm, `create job "${input.title}"`, { ...input, organization_id: org.orgId });
+    if (preview) return preview;
     const { data, error } = await client.from("jobs").insert({
       organization_id: org.orgId,
       title: input.title,
@@ -417,7 +439,7 @@ import { z as z11 } from "npm:zod@^3.25.76";
 var update_job_default = defineTool11({
   name: "update_job",
   title: "Update job",
-  description: "Update fields on an existing job. Only provided fields are changed.",
+  description: "Update fields on an existing job. Only provided fields are changed. Call with confirm: true only after previewing.",
   inputSchema: {
     id: z11.string().uuid(),
     title: z11.string().min(1).optional(),
@@ -427,14 +449,20 @@ var update_job_default = defineTool11({
     scheduled_start: z11.string().nullable().optional(),
     scheduled_end: z11.string().nullable().optional(),
     budget: z11.number().nonnegative().nullable().optional(),
-    customer_id: z11.string().uuid().nullable().optional()
+    customer_id: z11.string().uuid().nullable().optional(),
+    confirm: z11.boolean().optional().describe("Set true to actually apply the update after reviewing the preview.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async ({ id, ...patch }, ctx) => {
+  handler: async ({ id, confirm, ...patch }, ctx) => {
     if (!ctx.isAuthenticated()) return err("Not authenticated");
+    const client = sb2(ctx);
+    const org = await resolveOrgId(client, ctx.getUserId());
+    if (org.error) return err(org.error);
     const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== void 0));
     if (!Object.keys(clean).length) return err("No fields to update.");
-    const { data, error } = await sb6(ctx).from("jobs").update(clean).eq("id", id).select().single();
+    const preview = previewOrConfirm(confirm, `update job ${id}`, { id, ...clean });
+    if (preview) return preview;
+    const { data, error } = await client.from("jobs").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
     if (error) return err(error.message);
     return ok(`Updated job ${id}`, { job: data });
   }

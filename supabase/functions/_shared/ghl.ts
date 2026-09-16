@@ -93,6 +93,7 @@ export type GhlConnection = {
   token_type: string;
   expires_at: string;
   default_calendar_id: string | null;
+  pipeline_stage_map: Record<string, string>;
 };
 
 export async function getConnectionForOrg(

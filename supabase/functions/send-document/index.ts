@@ -6,6 +6,7 @@ const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
 const TWILIO_API_KEY = Deno.env.get('TWILIO_API_KEY')
 const TWILIO_GATEWAY = 'https://connector-gateway.lovable.dev/twilio'
+const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL') || 'https://app.fasttract.org'
 
 function money(n: number | string | null | undefined) {
   const v = typeof n === 'string' ? parseFloat(n) : (n ?? 0)
@@ -100,6 +101,9 @@ Deno.serve(async (req) => {
       terms: (doc as any).terms || undefined,
       notes: (doc as any).notes || undefined,
       brandColor: org.brand_color || undefined,
+      shareUrl: docType === 'estimate' && (doc as any).share_token
+        ? `${PUBLIC_APP_URL}/e/${(doc as any).share_token}`
+        : undefined,
     }
 
     const results: Record<string, any> = {}
@@ -132,6 +136,7 @@ Deno.serve(async (req) => {
           `${money(templateData.total)}` +
           (templateData.dueDate ? ` (due ${templateData.dueDate})` : '') +
           (message ? `\n${message}` : '') +
+          (templateData.shareUrl ? `\nReview & accept: ${templateData.shareUrl}` : '') +
           (org.email ? `\nReply or email ${org.email}` : '')
 
         // Look up first Twilio number if from_number not provided
