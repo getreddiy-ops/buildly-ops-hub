@@ -92,11 +92,25 @@ jobs:
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
           echo "FastTract production deployment: $deployment_url" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Smoke test deployment
+      - name: Verify FastTract production alias
         shell: bash
-        env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$DEPLOYMENT_URL/")
+          body=$(mktemp)
+          status=$(curl --silent --show-error --location --output "$body" --write-out '%{http_code}' "https://fasttract-app.vercel.app/")
           test "$status" = "200"
+          grep -q "FastTract | Your Personal AI Business Assistant" "$body"
+          echo "Verified FastTract production alias: https://fasttract-app.vercel.app" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check custom-domain cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(mktemp)
+          status=$(curl --silent --show-error --location --output "$body" --write-out '%{http_code}' "https://app.fasttract.org/" || true)
+          if [ "$status" = "200" ] && grep -q "FastTract | Your Personal AI Business Assistant" "$body"; then
+            echo "Custom domain is serving FastTract: https://app.fasttract.org" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::app.fasttract.org is not serving the FastTract Vercel build yet; DNS/provider cutover is still required."
+            echo "Custom domain cutover pending: app.fasttract.org" >> "$GITHUB_STEP_SUMMARY"
+          fi
