@@ -28,30 +28,40 @@ export async function fasttractApi<T = any>(path: string, options: ApiOptions = 
 
 export const FastTractApi = {
   me: (organizationId?: string | null) => fasttractApi("/v1/me", { organizationId }),
+
   listCustomers: (organizationId?: string | null) => fasttractApi("/v1/customers", { organizationId }),
   createCustomer: (organizationId: string, customer: Record<string, unknown>) => fasttractApi("/v1/customers", {
     method: "POST",
     organizationId,
     body: JSON.stringify(customer),
   }),
+  updateCustomer: (organizationId: string, customerId: string, customer: Record<string, unknown>) => fasttractApi(`/v1/customers/${customerId}`, {
+    method: "PATCH",
+    organizationId,
+    body: JSON.stringify(customer),
+  }),
+
   listJobs: (organizationId?: string | null) => fasttractApi("/v1/jobs", { organizationId }),
   createJob: (organizationId: string, job: Record<string, unknown>) => fasttractApi("/v1/jobs", {
     method: "POST",
     organizationId,
     body: JSON.stringify(job),
   }),
+
   listEstimates: (organizationId?: string | null) => fasttractApi("/v1/estimates", { organizationId }),
   createEstimate: (organizationId: string, estimate: Record<string, unknown>) => fasttractApi("/v1/estimates", {
     method: "POST",
     organizationId,
     body: JSON.stringify(estimate),
   }),
+
   listInvoices: (organizationId?: string | null) => fasttractApi("/v1/invoices", { organizationId }),
   createInvoice: (organizationId: string, invoice: Record<string, unknown>) => fasttractApi("/v1/invoices", {
     method: "POST",
     organizationId,
     body: JSON.stringify(invoice),
   }),
+
   clockIn: (organizationId: string, payload: { job_id: string; latitude?: number; longitude?: number; note?: string }) => fasttractApi("/v1/time/clock-in", {
     method: "POST",
     organizationId,
