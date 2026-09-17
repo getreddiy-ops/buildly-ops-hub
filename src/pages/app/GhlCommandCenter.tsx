@@ -18,11 +18,12 @@ type Entry = {
 
 const EXAMPLES = [
   "create customer named API Test Customer",
+  "create job Smith driveway for API Test Customer",
   "clock me into Smith driveway",
   "clock me out of Smith driveway",
-  "create estimate for Mike Weiss for $8200 concrete sidewalk",
-  "create invoice for Mike Weiss for $1200 concrete repair",
-  "text Mike Weiss: Your estimate is ready.",
+  "create estimate for API Test Customer for $8200 concrete sidewalk",
+  "create invoice for API Test Customer for $1200 concrete repair",
+  "mark invoice INV-123 paid",
 ];
 
 export default function GhlCommandCenter() {
@@ -42,7 +43,7 @@ export default function GhlCommandCenter() {
     setRunning(true);
     if (!raw) setCommand("");
     try {
-      const { data, error } = await supabase.functions.invoke("ghl-command", {
+      const { data, error } = await supabase.functions.invoke("fasttract-command", {
         body: { organizationId: activeOrg.organization_id, command: value },
       });
 
@@ -80,7 +81,7 @@ export default function GhlCommandCenter() {
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <PageHeader
         title="FastTract Command Center"
-        description="Run everyday business actions in plain English — customers, time clock, estimates, invoices, and messages."
+        description="Run everyday business actions directly in FastTract — customers, jobs, time clock, estimates, and invoices."
       />
 
       <Card className="p-4 md:p-6">
@@ -88,7 +89,7 @@ export default function GhlCommandCenter() {
           <TerminalSquare className="h-5 w-5 text-primary" />
           <div>
             <p className="font-semibold">FastTract Actions</p>
-            <p className="text-sm text-muted-foreground">Securely connected to your business account.</p>
+            <p className="text-sm text-muted-foreground">Writes directly to your FastTract business data. No CRM bridge required.</p>
           </div>
         </div>
 
