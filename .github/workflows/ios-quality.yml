@@ -1,0 +1,94 @@
+name: FastTract iOS quality gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "ios/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - ".env"
+      - ".env.production"
+      - ".github/workflows/ios-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fasttract-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-quality:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      VITE_SUPABASE_PROJECT_ID: qjusjfdrtposrthlcjeu
+      VITE_SUPABASE_URL: https://qjusjfdrtposrthlcjeu.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zx4gzhfijwHArY8ZqUNsUA_0C7xRkE_
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build web application
+        run: npm run build
+
+      - name: Sync Capacitor iOS project
+        run: npx cap sync ios
+
+      - name: Verify native configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'org.fasttract.app' capacitor.config.ts
+          grep -q '<string>FastTract</string>' ios/App/App/Info.plist
+          grep -q 'NSMicrophoneUsageDescription' ios/App/App/Info.plist
+          test -f ios/App/App/capacitor.config.json
+          test -d ios/App/App/public
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -resolvePackageDependencies
+
+      - name: Build FastTract for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Record quality gate summary
+        if: success()
+        run: |
+          echo '### FastTract iOS quality gate passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Unit tests passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Production web assets compiled' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Capacitor sync completed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Native iOS project compiled for Simulator' >> "$GITHUB_STEP_SUMMARY"
