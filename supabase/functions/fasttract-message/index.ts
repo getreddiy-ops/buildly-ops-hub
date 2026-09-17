@@ -8,6 +8,8 @@ const GATEWAY = "https://connector-gateway.lovable.dev/twilio";
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
 
+type Channel = "sms" | "email";
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -46,6 +48,41 @@ async function twilio(path: string, params: Record<string, string>) {
   return text ? JSON.parse(text) : {};
 }
 
+async function queueEmail(args: {
+  recipientEmail: string;
+  companyName: string;
+  customerName: string;
+  message: string;
+}) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      apikey: SERVICE_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      templateName: "customer-message",
+      recipientEmail: args.recipientEmail,
+      idempotencyKey: `customer-message:${crypto.randomUUID()}`,
+      templateData: {
+        companyName: args.companyName,
+        customerName: args.customerName,
+        subject: `Message from ${args.companyName}`,
+        message: args.message,
+      },
+    }),
+  });
+
+  const raw = await response.text();
+  let data: Record<string, unknown> = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw }; }
+  if (!response.ok || data.success === false || data.error) {
+    throw new Error(String(data.error ?? data.reason ?? `Email queue failed (${response.status})`));
+  }
+  return data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -55,25 +92,57 @@ Deno.serve(async (req) => {
     const organizationId = String(body.organizationId ?? body.organization_id ?? "").trim();
     const customerId = String(body.customerId ?? body.customer_id ?? "").trim();
     const message = String(body.message ?? "").trim();
+    const requestedChannel = String(body.channel ?? "sms").toLowerCase();
+    const channel: Channel = requestedChannel === "email" ? "email" : "sms";
     if (!organizationId || !customerId || !message) return json({ error: "organizationId, customerId and message are required" }, 400);
 
     const { admin, user } = await requireMember(req, organizationId);
 
     const { data: customer, error: customerError } = await admin
       .from("customers")
-      .select("id,name,phone")
+      .select("id,name,phone,email")
       .eq("organization_id", organizationId)
       .eq("id", customerId)
       .single();
     if (customerError) throw customerError;
-    if (!customer.phone) return json({ error: "Customer has no phone number" }, 400);
 
     const { data: org, error: orgError } = await admin
       .from("organizations")
-      .select("name,phone")
+      .select("name,phone,email")
       .eq("id", organizationId)
       .single();
     if (orgError) throw orgError;
+
+    if (channel === "email") {
+      if (!customer.email) return json({ error: "Customer has no email address" }, 400);
+      const queued = await queueEmail({
+        recipientEmail: customer.email,
+        companyName: org.name,
+        customerName: customer.name,
+        message,
+      });
+      const messageId = crypto.randomUUID();
+      await admin.from("ft_messages").insert({
+        id: messageId,
+        business_id: organizationId,
+        data: {
+          channel: "email",
+          direction: "outbound",
+          customer_id: customer.id,
+          customer_name: customer.name,
+          to: customer.email,
+          from: org.email ?? null,
+          body: message,
+          provider: "fasttract-transactional-email",
+          provider_id: null,
+          sent_by: user.id,
+          status: queued.queued === true ? "queued" : "accepted",
+        },
+      });
+      return json({ message: `Email queued for ${customer.name}.`, status: "queued" });
+    }
+
+    if (!customer.phone) return json({ error: "Customer has no phone number" }, 400);
     if (!org.phone) return json({ error: "Set the business phone number before sending texts" }, 400);
 
     const sent = await twilio("/Messages.json", { To: customer.phone, From: org.phone, Body: message });
