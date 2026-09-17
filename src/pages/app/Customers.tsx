@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { FastTractApi } from "@/lib/fasttractApi";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -46,17 +47,18 @@ export default function Customers() {
   const load = async () => {
     if (!activeOrg) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("organization_id", activeOrg.organization_id)
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
-    setLoading(false);
+    try {
+      const result = await FastTractApi.listCustomers(activeOrg.organization_id) as { data?: Customer[] };
+      setRows(result.data ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load customers");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, [activeOrg?.organization_id]);
+  useEffect(() => { void load(); }, [activeOrg?.organization_id]);
 
   const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (c: Customer) => {
@@ -81,22 +83,32 @@ export default function Customers() {
       address: d.address || null,
       notes: d.notes || null,
     };
-    const res = editing
-      ? await supabase.from("customers").update(payload).eq("id", editing.id).select("id").single()
-      : await supabase.from("customers").insert({ ...payload, organization_id: activeOrg.organization_id }).select("id").single();
-    setSaving(false);
-    if (res.error) { toast.error(res.error.message); return; }
-    toast.success(editing ? "Customer updated" : "Customer created");
-    setOpen(false);
-    load();
+
+    try {
+      if (editing) {
+        await FastTractApi.updateCustomer(activeOrg.organization_id, editing.id, payload);
+      } else {
+        await FastTractApi.createCustomer(activeOrg.organization_id, payload);
+      }
+      toast.success(editing ? "Customer updated" : "Customer created");
+      setOpen(false);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save customer");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // Delete stays on the authenticated Supabase path until the v1 API gets an
+  // explicit destructive-action endpoint. All normal customer reads/writes now
+  // use the FastTract API shared by web and the TestFlight app.
   const remove = async (id: string) => {
     if (!confirm("Delete this customer?")) return;
     const { error } = await supabase.from("customers").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Customer deleted");
-    load();
+    await load();
   };
 
   return (
@@ -147,8 +159,12 @@ export default function Customers() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={Users} title="No customers yet" description="Add a customer manually, or convert a won lead."
-          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New customer</Button>} />
+        <EmptyState
+          icon={Users}
+          title="No customers yet"
+          description="Add a customer manually, or convert a won lead."
+          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New customer</Button>}
+        />
       ) : (
         <div className="rounded-lg border border-border">
           <Table>
