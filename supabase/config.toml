@@ -11,6 +11,10 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = false
   [functions.estimate-from-photos]
     verify_jwt = true
+  [functions.fasttract-command]
+    verify_jwt = true
+  [functions.fasttract-message]
+    verify_jwt = true
   [functions.ghl-oauth-callback]
     verify_jwt = false
   [functions.ghl-oauth-start]
@@ -39,6 +43,12 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = true
   [functions.send-transactional-email]
     verify_jwt = true
+  [functions.stripe-connect]
+    verify_jwt = true
+  [functions.stripe-estimate-checkout]
+    verify_jwt = false
+  [functions.stripe-connect-webhook]
+    verify_jwt = false
   [functions.twilio-voice-webhook]
     verify_jwt = false
   [functions.voice-speak]
