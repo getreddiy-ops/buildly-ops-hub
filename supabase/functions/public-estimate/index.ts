@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
     const { data: estimate, error } = await admin
       .from("estimates")
       .select(
-        "id, title, status, subtotal, tax, total, notes, accepted_at, accepted_by_name, deposit_required, deposit_collected, " +
-        "customers(name), organizations:organization_id(name, phone, email, logo_url, brand_color)",
+        "id, title, status, subtotal, tax, total, notes, accepted_at, accepted_by_name, deposit_required, deposit_collected, deposit_amount_collected, " +
+        "customers(name), organizations:organization_id(name, phone, email, logo_url, brand_color, stripe_connected_account_id, stripe_charges_enabled)",
       )
       .eq("share_token", token)
       .maybeSingle();
@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
       acceptedByName: action === "accept" ? name : estimate.accepted_by_name,
       depositRequired: estimate.deposit_required !== null ? Number(estimate.deposit_required) : null,
       depositCollected: estimate.deposit_collected,
+      depositAmountCollected: estimate.deposit_amount_collected !== null ? Number(estimate.deposit_amount_collected) : null,
+      paymentsEnabled: Boolean(org.stripe_connected_account_id && org.stripe_charges_enabled),
     });
   } catch (error) {
     console.error("public-estimate error:", error);
