@@ -11,6 +11,9 @@ export type GhlStatus = {
   pipelineStageMap: Record<string, string>;
 };
 
+// Legacy migration helpers remain available while existing HighLevel data is
+// being exported, but FastTract no longer depends on HighLevel for normal app
+// saves. These functions can be removed after migration/porting is complete.
 export async function getGhlStatus(organizationId: string): Promise<GhlStatus> {
   const { data, error } = await supabase.functions.invoke("ghl-connection", {
     body: { organizationId, action: "status" },
@@ -51,13 +54,9 @@ export async function setGhlPipelineStageMap(organizationId: string, pipelineSta
   if (data?.error) throw new Error(data.error);
 }
 
-// Fire-and-forget: push a just-created/updated record to GHL. Failures are
-// logged, not surfaced, so a HighLevel hiccup never blocks the FastTract save.
-export function syncToGhl(organizationId: string, entity: GhlEntity, id: string): void {
-  supabase.functions
-    .invoke("ghl-sync", { body: { organizationId, entity, id } })
-    .then(({ error }) => {
-      if (error) console.error(`ghl-sync (${entity}) failed:`, error);
-    })
-    .catch((error) => console.error(`ghl-sync (${entity}) failed:`, error));
+// Compatibility no-op. Older screens still call this after native FastTract
+// writes; keeping the function prevents a risky broad refactor while ensuring
+// those saves never leave FastTract or depend on GHL.
+export function syncToGhl(_organizationId: string, _entity: GhlEntity, _id: string): void {
+  // Intentionally disabled: FastTract is now the system of record.
 }
