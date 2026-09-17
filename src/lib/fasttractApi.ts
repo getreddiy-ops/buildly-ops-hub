@@ -47,6 +47,11 @@ export const FastTractApi = {
     organizationId,
     body: JSON.stringify(job),
   }),
+  updateJob: (organizationId: string, jobId: string, job: Record<string, unknown>) => fasttractApi(`/v1/jobs/${jobId}`, {
+    method: "PATCH",
+    organizationId,
+    body: JSON.stringify(job),
+  }),
 
   listEstimates: (organizationId?: string | null) => fasttractApi("/v1/estimates", { organizationId }),
   createEstimate: (organizationId: string, estimate: Record<string, unknown>) => fasttractApi("/v1/estimates", {
