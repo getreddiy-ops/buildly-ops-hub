@@ -3,8 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
-// https://vitejs.dev/config/
-export default defineConfig(() => ({
+// Keep the Lovable MCP generator in local dev only. In CI/production the
+// generated Supabase function is already committed and must not be rewritten.
+export default defineConfig(({ command }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -12,7 +13,7 @@ export default defineConfig(() => ({
       overlay: false,
     },
   },
-  plugins: [react(), mcpPlugin()],
+  plugins: command === "serve" ? [react(), mcpPlugin()] : [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
