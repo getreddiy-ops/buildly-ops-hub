@@ -51,7 +51,7 @@ import FieldMap from "./pages/field/FieldMap";
 import FieldCrew from "./pages/field/FieldCrew";
 import FieldAssistant from "./pages/field/FieldAssistant";
 import Assistant from "./pages/app/Assistant";
-import GhlCommandCenter from "./pages/app/GhlCommandCenter";
+import CommandCenter from "./pages/app/CommandCenter";
 import Messages from "./pages/app/Messages";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
 import Billing from "./pages/app/Billing";
@@ -156,7 +156,7 @@ const App = () => (
               <Route path="approvals" element={<Approvals />} />
               <Route path="costing" element={<Costing />} />
               <Route path="assistant" element={<PaywallGate feature="AI Assistant"><Assistant /></PaywallGate>} />
-              <Route path="command-center" element={<GhlCommandCenter />} />
+              <Route path="command-center" element={<CommandCenter />} />
               <Route path="phone-assistant" element={<PaywallGate feature="Phone Assistant" requires="premium"><PhoneAssistant /></PaywallGate>} />
               <Route path="messages" element={<Messages />} />
               <Route path="billing" element={<Billing />} />
