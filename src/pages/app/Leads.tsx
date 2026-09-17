@@ -24,7 +24,6 @@ import {
 import { MoreHorizontal, Plus, Users, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AiFormHelper } from "@/components/AiFormHelper";
-import { syncToGhl } from "@/lib/ghl";
 import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -100,7 +99,6 @@ export default function Leads() {
     setSaving(false);
     if (res.error) { toast.error(res.error.message); return; }
     toast.success(editing ? "Lead updated" : "Lead created");
-    if (res.data) syncToGhl(activeOrg.organization_id, "lead", res.data.id);
     setOpen(false);
     load();
   };
@@ -115,15 +113,13 @@ export default function Leads() {
 
   const convertToCustomer = async (l: Lead) => {
     if (!activeOrg) return;
-    const { data: customer, error: cErr } = await supabase.from("customers").insert({
+    const { error: cErr } = await supabase.from("customers").insert({
       organization_id: activeOrg.organization_id,
       name: l.name, email: l.email, phone: l.phone, address: l.address,
-      ghl_contact_id: l.ghl_contact_id,
-    }).select("id").single();
+    });
     if (cErr) return toast.error(cErr.message);
     await supabase.from("leads").update({ status: "won" }).eq("id", l.id);
     toast.success("Converted to customer");
-    if (customer) syncToGhl(activeOrg.organization_id, "customer", customer.id);
     load();
   };
 
