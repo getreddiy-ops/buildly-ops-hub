@@ -6,6 +6,7 @@ on:
     paths:
       - "supabase/functions/**"
       - "supabase/config.toml"
+      - ".github/workflows/deploy-supabase-functions.yml"
   workflow_dispatch:
     inputs:
       confirmation:
@@ -30,13 +31,6 @@ jobs:
     env:
       PROJECT_ID: qjusjfdrtposrthlcjeu
       SUPABASE_ACCESS_TOKEN: ${{ secrets.TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
-      GHL_CLIENT_ID: ${{ secrets.GHL_CLIENT_ID }}
-      GHL_CLIENT_SECRET: ${{ secrets.GHL_CLIENT_SECRET }}
-      GHL_STATE_SECRET: ${{ secrets.GHL_STATE_SECRET }}
-      GHL_REDIRECT_URI: ${{ vars.GHL_REDIRECT_URI }}
-      GHL_SCOPES: ${{ vars.GHL_SCOPES }}
-      GHL_SUCCESS_URL: ${{ vars.GHL_SUCCESS_URL }}
-      GHL_ERROR_URL: ${{ vars.GHL_ERROR_URL }}
       LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       PADDLE_SANDBOX_API_KEY: ${{ secrets.PADDLE_SANDBOX_API_KEY }}
@@ -64,9 +58,6 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$GHL_CLIENT_ID"
-          test -n "$GHL_CLIENT_SECRET"
-          test -n "$GHL_STATE_SECRET"
 
       - name: Link production project
         run: supabase link --project-ref "$PROJECT_ID"
@@ -76,8 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          for name in GHL_CLIENT_ID GHL_CLIENT_SECRET GHL_STATE_SECRET GHL_REDIRECT_URI GHL_SCOPES \
-                      GHL_SUCCESS_URL GHL_ERROR_URL LOVABLE_API_KEY OPENAI_API_KEY \
+          for name in LOVABLE_API_KEY OPENAI_API_KEY \
                       PADDLE_SANDBOX_API_KEY PADDLE_LIVE_API_KEY PAYMENTS_SANDBOX_WEBHOOK_SECRET \
                       PAYMENTS_LIVE_WEBHOOK_SECRET TWILIO_API_KEY TWILIO_AUTH_TOKEN \
                       ELEVENLABS_API_KEY ELEVENLABS_VOICE_ID ELEVENLABS_WEBHOOK_SECRET PUBLIC_APP_URL; do
@@ -90,12 +80,3 @@ jobs:
 
       - name: Deploy every function
         run: supabase functions deploy --project-ref "$PROJECT_ID"
-
-      - name: Confirm unsigned HighLevel webhooks are rejected
-        shell: bash
-        run: |
-          set -euo pipefail
-          webhook_url="https://${PROJECT_ID}.supabase.co/functions/v1/highlevel-webhook"
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            -X POST -H 'Content-Type: application/json' -d '{}' "$webhook_url")
-          test "$status" = "401"
