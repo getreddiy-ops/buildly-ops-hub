@@ -1,5 +1,5 @@
 // Phone number lifecycle for the org's assistant.
-// Actions: search | purchase | release | byo. Org admin + Premium required.
+// Actions: search | purchase | release | byo. Org admin required.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -8,27 +8,53 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GATEWAY = "https://connector-gateway.lovable.dev/twilio";
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY") ?? "";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+const TWILIO_GATEWAY = "https://connector-gateway.lovable.dev/twilio";
 const PROJECT_ID = Deno.env.get("SUPABASE_URL")!.match(/https:\/\/([^.]+)\./)?.[1];
 const WEBHOOK_URL = `https://${PROJECT_ID}.supabase.co/functions/v1/twilio-voice-webhook`;
 
 async function twilio(path: string, method: string, params?: Record<string, string>) {
-  const init: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TWILIO_API_KEY,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  };
-  if (params && method !== "GET") init.body = new URLSearchParams(params);
-  const url = `${GATEWAY}${path}` + (method === "GET" && params ? `?${new URLSearchParams(params)}` : "");
-  const res = await fetch(url, init);
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${text}`);
-  return text ? JSON.parse(text) : {};
+  const query = params && method === "GET" ? `?${new URLSearchParams(params)}` : "";
+  const body = params && method !== "GET" && method !== "DELETE" ? new URLSearchParams(params) : undefined;
+
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(TWILIO_ACCOUNT_SID)}${path}${query}`,
+      {
+        method,
+        headers: {
+          Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
+          ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+        },
+        body,
+      },
+    );
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Twilio ${response.status}: ${text}`);
+    return text ? JSON.parse(text) : {};
+  }
+
+  // Temporary compatibility path for existing installs until direct Twilio
+  // credentials are moved into FastTract's Supabase secrets.
+  if (LOVABLE_API_KEY && TWILIO_API_KEY) {
+    const response = await fetch(`${TWILIO_GATEWAY}${path}${query}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TWILIO_API_KEY,
+        ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      },
+      body,
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Twilio ${response.status}: ${text}`);
+    return text ? JSON.parse(text) : {};
+  }
+
+  throw new Error("Twilio is not configured for FastTract yet");
 }
 
 type Action = "search" | "purchase" | "release" | "byo";
@@ -58,7 +84,7 @@ Deno.serve(async (req) => {
       organization_id, area_code, country = "US",
       number_type = "local", phone_number,
     } = body;
-    const action: Action = body.action ?? "purchase"; // back-compat
+    const action: Action = body.action ?? "purchase";
 
     const { data: member } = await admin
       .from("organization_members").select("role")
@@ -70,22 +96,20 @@ Deno.serve(async (req) => {
       .eq("organization_id", organization_id).maybeSingle();
     if (!existing?.elevenlabs_agent_id) return json({ error: "Configure assistant first" }, 400);
 
-    // SEARCH: list available numbers (no purchase)
     if (action === "search") {
       const kind = number_type === "toll_free" ? "TollFree" : "Local";
       const params: Record<string, string> = { VoiceEnabled: "true", SmsEnabled: "true", PageSize: "10" };
       if (area_code && number_type === "local") params.AreaCode = area_code;
       const search = await twilio(`/AvailablePhoneNumbers/${country}/${kind}.json`, "GET", params);
-      const numbers = (search.available_phone_numbers ?? []).map((n: any) => ({
-        phone_number: n.phone_number,
-        friendly_name: n.friendly_name,
-        locality: n.locality,
-        region: n.region,
+      const numbers = (search.available_phone_numbers ?? []).map((number: Record<string, unknown>) => ({
+        phone_number: number.phone_number,
+        friendly_name: number.friendly_name,
+        locality: number.locality,
+        region: number.region,
       }));
       return json({ numbers });
     }
 
-    // PURCHASE: buy a specific number, or first available matching area code
     if (action === "purchase") {
       if (existing.twilio_phone_sid) return json({ error: "A phone number is already connected. Release it first." }, 400);
 
@@ -114,13 +138,12 @@ Deno.serve(async (req) => {
       return json({ assistant: saved });
     }
 
-    // RELEASE: hand back the Twilio number
     if (action === "release") {
       if (existing.twilio_phone_sid) {
         try {
           await twilio(`/IncomingPhoneNumbers/${existing.twilio_phone_sid}.json`, "DELETE");
-        } catch (e) {
-          console.error("twilio release failed", e);
+        } catch (error) {
+          console.error("twilio release failed", error);
         }
       }
       const { data: saved, error } = await admin
@@ -132,7 +155,6 @@ Deno.serve(async (req) => {
       return json({ assistant: saved });
     }
 
-    // BYO: store an external number (user forwards or ports it themselves)
     if (action === "byo") {
       if (!phone_number) return json({ error: "phone_number required" }, 400);
       if (existing.twilio_phone_sid) return json({ error: "Release the connected Twilio number first" }, 400);
@@ -146,9 +168,9 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: "unknown action" }, 400);
-  } catch (e) {
-    console.error("provision error", e);
-    return json({ error: (e as Error).message }, 500);
+  } catch (error) {
+    console.error("provision error", error);
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
 
