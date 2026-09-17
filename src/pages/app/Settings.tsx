@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, FileText, LogOut, Mail, Palette, Phone, Save, Users } from "lucide-react";
+import { Building2, CreditCard, FileText, Loader2, LogOut, Mail, Palette, Phone, Save, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/hooks/useBranding";
 import { toast } from "sonner";
 
+type PaymentStatus = {
+  accountId: string | null;
+  status: string;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+};
+
+const emptyPayments: PaymentStatus = {
+  accountId: null,
+  status: "not_connected",
+  chargesEnabled: false,
+  payoutsEnabled: false,
+  detailsSubmitted: false,
+};
+
 export default function Settings() {
   const { user, activeOrg, signOut } = useAuth();
   const { branding } = useBranding();
@@ -20,6 +36,8 @@ export default function Settings() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [payments, setPayments] = useState<PaymentStatus>(emptyPayments);
+  const [paymentBusy, setPaymentBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -36,6 +54,43 @@ export default function Settings() {
       });
   }, [user]);
 
+  const loadPayments = async () => {
+    if (!activeOrg) return;
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("stripe_connected_account_id,stripe_connect_status,stripe_charges_enabled,stripe_payouts_enabled,stripe_details_submitted")
+      .eq("id", activeOrg.organization_id)
+      .maybeSingle();
+    if (error) return;
+    setPayments({
+      accountId: data?.stripe_connected_account_id ?? null,
+      status: data?.stripe_connect_status ?? "not_connected",
+      chargesEnabled: data?.stripe_charges_enabled === true,
+      payoutsEnabled: data?.stripe_payouts_enabled === true,
+      detailsSubmitted: data?.stripe_details_submitted === true,
+    });
+  };
+
+  useEffect(() => {
+    if (!activeOrg) return;
+    void loadPayments();
+    const stripeReturn = new URLSearchParams(window.location.search).get("stripe");
+    if (!stripeReturn) return;
+
+    setPaymentBusy(true);
+    void supabase.functions.invoke("stripe-connect", {
+      body: { organizationId: activeOrg.organization_id, action: "status" },
+    }).then(({ data, error }) => {
+      setPaymentBusy(false);
+      if (error || data?.error) toast.error(data?.error || error?.message || "Could not refresh payment status");
+      else {
+        toast.success(data?.chargesEnabled ? "Customer payments are ready" : "Payment setup saved — Stripe may still need more information");
+        void loadPayments();
+      }
+      window.history.replaceState({}, "", "/app/settings");
+    });
+  }, [activeOrg]);
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
@@ -48,12 +103,30 @@ export default function Settings() {
     else toast.success("Profile updated");
   };
 
+  const connectPayments = async () => {
+    if (!activeOrg || paymentBusy) return;
+    setPaymentBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-connect", {
+        body: { organizationId: activeOrg.organization_id, action: "onboard" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error("Stripe onboarding is unavailable");
+      window.location.assign(data.url);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not start payment setup");
+      setPaymentBusy(false);
+    }
+  };
+
   const logout = async () => {
     await signOut();
     navigate("/login");
   };
 
   const orgName = activeOrg?.organization?.name ?? branding?.name ?? "Your business";
+  const paymentReady = payments.chargesEnabled;
 
   return (
     <div className="space-y-6">
@@ -99,6 +172,38 @@ export default function Settings() {
               <Save className="mr-2 h-4 w-4" /> {saving ? "Saving…" : "Save profile"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/30">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                <CreditCard className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Customer payments</CardTitle>
+                <CardDescription>Connect Stripe so customers can pay estimate deposits directly to your business.</CardDescription>
+              </div>
+            </div>
+            <Badge variant={paymentReady ? "default" : "secondary"}>
+              {paymentReady ? "Ready" : payments.accountId ? "Setup in progress" : "Not connected"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {paymentReady
+              ? "Online deposit payments are enabled on accepted FastTract estimates."
+              : payments.detailsSubmitted
+                ? "Stripe has your information. Payment activation may still be pending review."
+                : "Stripe securely handles identity verification, card processing, and payouts."}
+          </div>
+          <Button onClick={connectPayments} disabled={paymentBusy}>
+            {paymentBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {paymentReady ? "Manage Stripe" : payments.accountId ? "Continue setup" : "Connect Stripe"}
+          </Button>
         </CardContent>
       </Card>
 
