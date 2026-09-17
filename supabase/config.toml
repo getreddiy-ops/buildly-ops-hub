@@ -11,6 +11,8 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = false
   [functions.estimate-from-photos]
     verify_jwt = true
+  [functions.fasttract-api]
+    verify_jwt = false
   [functions.fasttract-command]
     verify_jwt = true
   [functions.fasttract-message]
