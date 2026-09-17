@@ -1,5 +1,6 @@
 import type { ComponentType, ReactElement } from 'npm:react@18.3.1'
 import { template as documentShare } from './document-share.tsx'
+import { template as customerMessage } from './customer-message.tsx'
 
 export interface TemplateEntry {
   component: ComponentType<any> | ((props: any) => ReactElement)
@@ -11,4 +12,5 @@ export interface TemplateEntry {
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'document-share': documentShare,
+  'customer-message': customerMessage,
 }
