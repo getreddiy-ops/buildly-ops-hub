@@ -81,6 +81,13 @@ jobs:
           printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
           npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      - name: Inspect custom-domain DNS
+        continue-on-error: true
+        shell: bash
+        run: |
+          npx vercel@latest domains inspect app.fasttract.org --token="$VERCEL_TOKEN"
+          npx vercel@latest domains inspect app.fast-tract.com --token="$VERCEL_TOKEN"
+
       - name: Build and deploy production
         id: deploy
         shell: bash
