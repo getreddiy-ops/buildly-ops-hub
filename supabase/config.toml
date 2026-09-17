@@ -13,6 +13,8 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = true
   [functions.fasttract-api]
     verify_jwt = false
+  [functions.fasttract-api-keys]
+    verify_jwt = true
   [functions.fasttract-command]
     verify_jwt = true
   [functions.fasttract-message]
