@@ -11,8 +11,15 @@ import { trackSignup } from "@/lib/gtag";
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
+async function sha256Hex(input: string) {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function Signup() {
   const navigate = useNavigate();
+  const inviteToken = new URLSearchParams(window.location.search).get("invite");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,11 +44,15 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const inviteTokenHash = inviteToken ? await sha256Hex(inviteToken) : null;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          ...(inviteTokenHash ? { invite_token_hash: inviteTokenHash } : {}),
+        },
         emailRedirectTo: window.location.origin + "/onboarding",
       },
     });
@@ -62,7 +73,10 @@ export default function Signup() {
       return;
     }
 
-    toast({ title: "Account created", description: "Let’s introduce Ava to your company." });
+    toast({
+      title: "Account created",
+      description: inviteToken ? "Your team access is ready." : "Let’s introduce Ava to your company.",
+    });
     navigate("/onboarding");
   };
 
@@ -135,7 +149,11 @@ export default function Signup() {
           ) : (
             <>
               <h1 className="text-2xl font-semibold">Join FastTract</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Create your account, set up your company, then choose a 7-day trial plan.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {inviteToken
+                  ? "Create your account to join the FastTract team that invited you."
+                  : "Create your account, set up your company, then choose a 7-day trial plan."}
+              </p>
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div><Label htmlFor="name">Full name</Label>
                   <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
@@ -144,12 +162,14 @@ export default function Signup() {
                 <div><Label htmlFor="password">Password</Label>
                   <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating…" : "Create account & continue"}
+                  {loading ? "Creating…" : inviteToken ? "Create account & join team" : "Create account & continue"}
                 </Button>
               </form>
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                You will review pricing before entering payment details.
-              </p>
+              {!inviteToken && (
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  You will review pricing before entering payment details.
+                </p>
+              )}
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have one? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
               </p>
