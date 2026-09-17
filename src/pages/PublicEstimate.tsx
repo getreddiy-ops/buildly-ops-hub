@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, XCircle, FileText, Loader2 } from "lucide-react";
+import { CheckCircle2, CreditCard, FileText, Loader2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ type EstimateView = {
   acceptedByName: string | null;
   depositRequired: number | null;
   depositCollected: boolean;
+  depositAmountCollected: number | null;
+  paymentsEnabled: boolean;
 };
 
 const fmt = (n: number) => Number(n).toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -39,6 +41,7 @@ export default function PublicEstimate() {
   const [name, setName] = useState("");
   const [signature, setSignature] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const load = async () => {
     if (!token) return;
@@ -49,7 +52,16 @@ export default function PublicEstimate() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [token]);
+  useEffect(() => { void load(); }, [token]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("payment") === "success") {
+      toast.success("Payment received. Updating the estimate…");
+      const timer = window.setTimeout(() => void load(), 1500);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [token]);
 
   const respond = async (action: "accept" | "decline") => {
     if (!token) return;
@@ -62,6 +74,21 @@ export default function PublicEstimate() {
     if (error || data?.error) { toast.error(data?.error || "Something went wrong"); return; }
     setEstimate(data as EstimateView);
     toast.success(action === "accept" ? "Estimate accepted" : "Estimate declined");
+  };
+
+  const payDeposit = async () => {
+    if (!token || paying) return;
+    setPaying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-estimate-checkout", { body: { token } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error("Payment checkout is unavailable");
+      window.location.assign(data.url);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not start payment");
+      setPaying(false);
+    }
   };
 
   if (loading) {
@@ -133,12 +160,43 @@ export default function PublicEstimate() {
 
             <div className="mt-8 border-t border-border pt-6">
               {estimate.status === "approved" ? (
-                <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-700">
-                  <CheckCircle2 className="h-5 w-5 shrink-0" />
-                  <div className="text-sm">
-                    <div className="font-medium">Accepted{estimate.acceptedByName ? ` by ${estimate.acceptedByName}` : ""}</div>
-                    {estimate.acceptedAt && <div className="text-emerald-700/80">{new Date(estimate.acceptedAt).toLocaleString()}</div>}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-700">
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                    <div className="text-sm">
+                      <div className="font-medium">Accepted{estimate.acceptedByName ? ` by ${estimate.acceptedByName}` : ""}</div>
+                      {estimate.acceptedAt && <div className="text-emerald-700/80">{new Date(estimate.acceptedAt).toLocaleString()}</div>}
+                    </div>
                   </div>
+
+                  {estimate.depositRequired != null && estimate.depositRequired > 0 && (
+                    estimate.depositCollected ? (
+                      <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 p-4 text-sm">
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                        <div>
+                          <div className="font-medium">Deposit paid</div>
+                          <div className="text-muted-foreground">{fmt(estimate.depositAmountCollected ?? estimate.depositRequired)}</div>
+                        </div>
+                      </div>
+                    ) : estimate.paymentsEnabled ? (
+                      <div className="rounded-lg border border-border p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="font-medium">Deposit due: {fmt(estimate.depositRequired)}</div>
+                            <div className="text-sm text-muted-foreground">Pay securely online to move this project forward.</div>
+                          </div>
+                          <Button onClick={payDeposit} disabled={paying}>
+                            {paying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+                            {paying ? "Opening checkout…" : "Pay deposit"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                        Deposit due: {fmt(estimate.depositRequired)}. Your contractor will provide payment instructions.
+                      </div>
+                    )
+                  )}
                 </div>
               ) : estimate.status === "rejected" ? (
                 <div className="flex items-center gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-rose-700">
