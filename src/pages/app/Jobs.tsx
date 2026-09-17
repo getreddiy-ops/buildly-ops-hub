@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { FastTractApi } from "@/lib/fasttractApi";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -52,11 +53,13 @@ const empty = {
   scheduled_start: "", scheduled_end: "",
 };
 
-const fmtDate = (s: string | null) => s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
+const fmtDate = (s: string | null) => s
+  ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+  : "—";
 
 export default function Jobs() {
-  const { activeOrg, user } = useAuth();
-  const [rows, setRows] = useState<(Job & { customers?: { name: string } | null })[]>([]);
+  const { activeOrg } = useAuth();
+  const [rows, setRows] = useState<Job[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [members, setMembers] = useState<{ user_id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,28 +77,41 @@ export default function Jobs() {
   const load = async () => {
     if (!activeOrg) return;
     setLoading(true);
-    const [{ data: jobs, error }, { data: custs }, { data: mems }] = await Promise.all([
-      supabase.from("jobs").select("*, customers(name)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
-      supabase.from("customers").select("*").eq("organization_id", activeOrg.organization_id).order("name"),
-      supabase.from("organization_members").select("user_id").eq("organization_id", activeOrg.organization_id),
-    ]);
-    if (error) toast.error(error.message);
-    setRows((jobs ?? []) as any);
-    setCustomers(custs ?? []);
-    const userIds = (mems ?? []).map((m: any) => m.user_id);
-    let profs: any[] = [];
-    if (userIds.length > 0) {
-      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
-      profs = data ?? [];
+    try {
+      const [jobsResult, customersResult, memberResult] = await Promise.all([
+        FastTractApi.listJobs(activeOrg.organization_id) as Promise<{ data?: Job[] }>,
+        FastTractApi.listCustomers(activeOrg.organization_id) as Promise<{ data?: Customer[] }>,
+        supabase
+          .from("organization_members")
+          .select("user_id")
+          .eq("organization_id", activeOrg.organization_id),
+      ]);
+
+      setRows(jobsResult.data ?? []);
+      setCustomers(customersResult.data ?? []);
+
+      const userIds = (memberResult.data ?? []).map((m: any) => m.user_id).filter(Boolean);
+      let profs: any[] = [];
+      if (userIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+        profs = data ?? [];
+      }
+      setMembers(userIds.map((uid: string) => {
+        const p = profs.find((x) => x.id === uid);
+        return { user_id: uid, name: p?.full_name || p?.email || uid.slice(0, 8) };
+      }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load jobs");
+      setRows([]);
+    } finally {
+      setLoading(false);
     }
-    setMembers(userIds.map((uid: string) => {
-      const p = profs.find((x) => x.id === uid);
-      return { user_id: uid, name: p?.full_name || p?.email || uid.slice(0, 8) };
-    }));
-    setLoading(false);
   };
 
-  useEffect(() => { load(); }, [activeOrg?.organization_id]);
+  useEffect(() => { void load(); }, [activeOrg?.organization_id]);
 
   const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (j: Job) => {
@@ -119,7 +135,8 @@ export default function Jobs() {
       budget: form.budget === "" ? undefined : Number(form.budget),
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
-    if (!activeOrg || !user) return;
+    if (!activeOrg) return;
+
     setSaving(true);
     const d = parsed.data;
     const payload = {
@@ -132,38 +149,56 @@ export default function Jobs() {
       scheduled_start: d.scheduled_start ? new Date(d.scheduled_start).toISOString() : null,
       scheduled_end: d.scheduled_end ? new Date(d.scheduled_end).toISOString() : null,
     };
-    const res = editing
-      ? await supabase.from("jobs").update(payload).eq("id", editing.id).select("id").single()
-      : await supabase.from("jobs").insert({ ...payload, organization_id: activeOrg.organization_id, created_by: user.id }).select("id").single();
-    setSaving(false);
-    if (res.error) return toast.error(res.error.message);
-    toast.success(editing ? "Job updated" : "Job created");
-    setOpen(false);
-    load();
+
+    try {
+      if (editing) {
+        await FastTractApi.updateJob(activeOrg.organization_id, editing.id, payload);
+      } else {
+        await FastTractApi.createJob(activeOrg.organization_id, payload);
+      }
+      toast.success(editing ? "Job updated" : "Job created");
+      setOpen(false);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save job");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // Destructive job deletion remains on the authenticated database path until
+  // the v1 API adds an explicit delete endpoint. Normal job reads/writes use
+  // the same FastTract API consumed by the mobile app.
   const remove = async (id: string) => {
     if (!confirm("Delete this job?")) return;
     const { error } = await supabase.from("jobs").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Job deleted");
-    load();
+    await load();
   };
 
   const openCrew = async (j: Job) => {
-    setCrewJob(j); setAddUserId(""); setCrewOpen(true);
+    setCrewJob(j);
+    setAddUserId("");
+    setCrewOpen(true);
     const { data } = await supabase.from("crew_assignments").select("id, user_id").eq("job_id", j.id);
     setCrew(data ?? []);
   };
+
   const assignedIds = useMemo(() => new Set(crew.map((c) => c.user_id)), [crew]);
+
   const addCrew = async () => {
     if (!crewJob || !addUserId) return;
-    const { error } = await supabase.from("crew_assignments").insert({ job_id: crewJob.id, user_id: addUserId });
+    const { error } = await supabase.from("crew_assignments").insert({
+      job_id: crewJob.id,
+      user_id: addUserId,
+    });
     if (error) return toast.error(error.message);
     setAddUserId("");
     const { data } = await supabase.from("crew_assignments").select("id, user_id").eq("job_id", crewJob.id);
     setCrew(data ?? []);
   };
+
   const removeCrew = async (id: string) => {
     const { error } = await supabase.from("crew_assignments").delete().eq("id", id);
     if (error) return toast.error(error.message);
@@ -198,10 +233,9 @@ export default function Jobs() {
                     ]}
                     context={{ customers: customers.map((c) => ({ id: c.id, name: c.name })) }}
                     onFill={(v: any) => {
-                      const matched =
-                        v.customer_name && customers.find(
-                          (c) => c.name.toLowerCase() === String(v.customer_name).toLowerCase(),
-                        );
+                      const matched = v.customer_name && customers.find(
+                        (c) => c.name.toLowerCase() === String(v.customer_name).toLowerCase(),
+                      );
                       setForm((f) => ({
                         ...f,
                         ...v,
@@ -212,8 +246,11 @@ export default function Jobs() {
                   />
                 </div>
               </DialogHeader>
+
               <div className="grid gap-3 max-h-[70vh] overflow-y-auto pr-1">
-                <Field label="Title"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
+                <Field label="Title">
+                  <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Customer">
                     <div className="flex gap-2">
@@ -227,34 +264,57 @@ export default function Jobs() {
                       </Select>
                       <QuickCreateCustomerButton
                         label="New"
-                        onCreated={async (c) => { await load(); setForm((f) => ({ ...f, customer_id: c.id })); }}
+                        onCreated={async (c) => {
+                          await load();
+                          setForm((f) => ({ ...f, customer_id: c.id }));
+                        }}
                       />
                     </div>
                   </Field>
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as JobStatus })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, " ")}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {STATUSES.map((s) => (
+                          <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, " ")}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </Field>
                 </div>
-                <Field label="Address"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
+                <Field label="Address">
+                  <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Scheduled start">
-                    <Input type="datetime-local" value={form.scheduled_start}
-                      onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
+                    <Input
+                      type="datetime-local"
+                      value={form.scheduled_start}
+                      onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })}
+                    />
                   </Field>
                   <Field label="Scheduled end">
-                    <Input type="datetime-local" value={form.scheduled_end}
-                      onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })} />
+                    <Input
+                      type="datetime-local"
+                      value={form.scheduled_end}
+                      onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })}
+                    />
                   </Field>
                 </div>
                 <Field label="Budget (USD)">
-                  <Input type="number" min={0} step="0.01" value={form.budget}
-                    onChange={(e) => setForm({ ...form, budget: e.target.value })} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.budget}
+                    onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                  />
                 </Field>
-                <Field label="Description"><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+                <Field label="Description">
+                  <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </Field>
               </div>
+
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
@@ -276,8 +336,12 @@ export default function Jobs() {
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={Briefcase} title="No jobs scheduled" description="Create a job and assign crew to it."
-          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New job</Button>} />
+        <EmptyState
+          icon={Briefcase}
+          title="No jobs scheduled"
+          description="Create a job and assign crew to it."
+          action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New job</Button>}
+        />
       ) : view === "calendar" ? (
         <JobsCalendar jobs={rows} onSelectJob={openEdit} />
       ) : (
@@ -302,11 +366,15 @@ export default function Jobs() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" aria-label="Job actions"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" aria-label="Job actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEdit(j)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openCrew(j)}><UsersIcon className="h-4 w-4" /> Assign crew</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openCrew(j)}>
+                          <UsersIcon className="h-4 w-4" /> Assign crew
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => remove(j.id)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -342,7 +410,9 @@ export default function Jobs() {
                 return (
                   <div key={c.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                     <span className="text-sm">{m?.name ?? c.user_id.slice(0, 8)}</span>
-                    <Button size="icon" variant="ghost" onClick={() => removeCrew(c.id)}><X className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => removeCrew(c.id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 );
               })}
