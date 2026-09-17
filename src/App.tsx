@@ -83,7 +83,7 @@ import SuperOrgs from "./pages/super/SuperOrgs";
 import SuperData from "./pages/super/SuperData";
 import SuperLive from "./pages/super/SuperLive";
 import { FieldProfile } from "./pages/stubs";
-import Preferences from "./pages/app/Preferences";
+import Settings from "./pages/app/Settings";
 import Unsubscribe from "./pages/Unsubscribe";
 import PublicEstimate from "./pages/PublicEstimate";
 import OAuthConsent from "./pages/OAuthConsent";
@@ -163,7 +163,7 @@ const App = () => (
               <Route path="business-profile" element={<BusinessProfile />} />
               <Route path="branding" element={<Branding />} />
               <Route path="developer" element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>} />
-              <Route path="settings" element={<Preferences />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
 
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
