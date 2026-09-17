@@ -4,9 +4,12 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const GATEWAY = "https://connector-gateway.lovable.dev/twilio";
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
+
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY") ?? "";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+const TWILIO_GATEWAY = "https://connector-gateway.lovable.dev/twilio";
 
 type Channel = "sms" | "email";
 
@@ -34,18 +37,40 @@ async function requireMember(req: Request, organizationId: string) {
 }
 
 async function twilio(path: string, params: Record<string, string>) {
-  const res = await fetch(`${GATEWAY}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TWILIO_API_KEY,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams(params),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${text}`);
-  return text ? JSON.parse(text) : {};
+  const encoded = new URLSearchParams(params);
+
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(TWILIO_ACCOUNT_SID)}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: encoded,
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Twilio ${response.status}: ${text}`);
+    return text ? JSON.parse(text) : {};
+  }
+
+  // Temporary compatibility path while existing Twilio credentials are moved
+  // from the connector into FastTract's own Supabase secrets.
+  if (LOVABLE_API_KEY && TWILIO_API_KEY) {
+    const response = await fetch(`${TWILIO_GATEWAY}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TWILIO_API_KEY,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: encoded,
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Twilio ${response.status}: ${text}`);
+    return text ? JSON.parse(text) : {};
+  }
+
+  throw new Error("Twilio is not configured for FastTract yet");
 }
 
 async function queueEmail(args: {
