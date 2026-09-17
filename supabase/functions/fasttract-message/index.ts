@@ -16,7 +16,6 @@ const corsHeaders = {
 };
 
 type Channel = "sms" | "email";
-
 type AdminClient = ReturnType<typeof createClient>;
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
@@ -69,8 +68,6 @@ async function twilio(path: string, params: Record<string, string>) {
     return text ? JSON.parse(text) : {};
   }
 
-  // Compatibility path until the existing Twilio credentials have been moved
-  // fully into FastTract's Supabase secrets.
   if (LOVABLE_API_KEY && TWILIO_API_KEY) {
     const response = await fetch(`${TWILIO_GATEWAY}${path}`, {
       method: "POST",
@@ -87,6 +84,34 @@ async function twilio(path: string, params: Record<string, string>) {
   }
 
   throw new Error("Twilio is not configured for FastTract yet");
+}
+
+async function runEmailDispatcher() {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/process-email-queue`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    const raw = await response.text();
+    if (!response.ok) {
+      console.warn("FastTract email queued but dispatcher returned an error", response.status, raw);
+      return { dispatched: false, warning: `Dispatcher returned ${response.status}` };
+    }
+    try {
+      return { dispatched: true, result: raw ? JSON.parse(raw) : {} };
+    } catch {
+      return { dispatched: true };
+    }
+  } catch (error) {
+    const warning = error instanceof Error ? error.message : String(error);
+    console.warn("FastTract email queued but dispatcher could not be started", warning);
+    return { dispatched: false, warning };
+  }
 }
 
 async function queueEmail(args: {
@@ -125,7 +150,9 @@ async function queueEmail(args: {
   if (!response.ok || data.success === false || data.error) {
     throw new Error(String(data.error ?? data.reason ?? `Email queue failed (${response.status})`));
   }
-  return data;
+
+  const dispatch = await runEmailDispatcher();
+  return { ...data, dispatch };
 }
 
 async function logMessage(admin: AdminClient, record: {
@@ -196,6 +223,8 @@ Deno.serve(async (req) => {
         message,
       });
 
+      const dispatch = queued.dispatch as { dispatched?: boolean } | undefined;
+      const status = dispatch?.dispatched ? "dispatched" : "queued";
       const logWarning = await logMessage(admin, {
         organization_id: organizationId,
         customer_id: customer.id,
@@ -206,12 +235,15 @@ Deno.serve(async (req) => {
         body: message,
         provider: "fasttract-transactional-email",
         provider_id: typeof queued.messageId === "string" ? queued.messageId : null,
-        status: queued.queued === true ? "queued" : "accepted",
+        status,
+        metadata: { dispatcher: dispatch ?? null },
       });
 
       return json({
-        message: `Email queued for ${customer.name}.`,
-        status: "queued",
+        message: dispatch?.dispatched
+          ? `Email dispatched for ${customer.name}.`
+          : `Email queued for ${customer.name}.`,
+        status,
         logWarning,
       });
     }
