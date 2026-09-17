@@ -27,7 +27,6 @@ import { AiFormHelper } from "@/components/AiFormHelper";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { JobsCalendar } from "@/components/JobsCalendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { syncToGhl } from "@/lib/ghl";
 import type { Database } from "@/integrations/supabase/types";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
@@ -139,7 +138,6 @@ export default function Jobs() {
     setSaving(false);
     if (res.error) return toast.error(res.error.message);
     toast.success(editing ? "Job updated" : "Job created");
-    if (res.data) syncToGhl(activeOrg.organization_id, "job", res.data.id);
     setOpen(false);
     load();
   };
