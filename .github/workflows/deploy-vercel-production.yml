@@ -36,8 +36,8 @@ jobs:
     environment: production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: team_9wZiPEF74UMyEFvgkMtDCmum
+      VERCEL_PROJECT_ID: prj_89P35G2ZVL6lcTDXr3rSK4WslCZb
       VITE_SUPABASE_PROJECT_ID: qjusjfdrtposrthlcjeu
       VITE_SUPABASE_URL: https://qjusjfdrtposrthlcjeu.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zx4gzhfijwHArY8ZqUNsUA_0C7xRkE_
@@ -57,8 +57,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN"
-          test -n "$VERCEL_ORG_ID"
-          test -n "$VERCEL_PROJECT_ID"
+          test "$VERCEL_ORG_ID" = "team_9wZiPEF74UMyEFvgkMtDCmum"
+          test "$VERCEL_PROJECT_ID" = "prj_89P35G2ZVL6lcTDXr3rSK4WslCZb"
           test "$VITE_SUPABASE_PROJECT_ID" = "qjusjfdrtposrthlcjeu"
 
       - name: Install dependencies
