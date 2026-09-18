@@ -24,15 +24,23 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FastTract uses the camera so you can photograph a job site and turn those photos into an estimate.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FastTract records your location when you clock in or out so hours can be verified against the job site.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>FastTract uses the microphone only when you choose to speak with Ava.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FastTract accesses your photo library so you can attach existing job photos to an estimate or invoice.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
