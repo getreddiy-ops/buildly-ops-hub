@@ -8,45 +8,59 @@
 
 @layer base {
   :root {
-    /* Silver-mist background, evergreen-charcoal text */
-    --background: 210 12% 96%;
-    --foreground: 155 28% 11%;
+    /* LIGHT THEME = the "paper" surface: estimates, invoices, PDFs and anything a
+       homeowner prints. Warm sand neutrals over deep forest, so documents read as
+       professional stationery rather than as a dimmed version of the dark app. */
+    --background: 38 40% 97%;
+    --foreground: 158 28% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 155 28% 11%;
+    --card-foreground: 158 28% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 155 28% 11%;
+    --popover-foreground: 158 28% 10%;
 
-    /* Dependable evergreen primary */
-    --primary: 145 63% 28%;
-    --primary-foreground: 0 0% 100%;
+    /* Deep forest primary — the brand colour */
+    --primary: 158 55% 24%;
+    --primary-foreground: 38 40% 97%;
 
-    /* Brushed-silver secondary surfaces */
-    --secondary: 210 10% 90%;
-    --secondary-foreground: 155 28% 14%;
+    /* Call-to-action, deliberately separate from --primary so buttons never
+       compete with brand chrome or focus rings. See .dark for the rationale. */
+    --cta: 158 55% 24%;
+    --cta-foreground: 38 40% 97%;
 
-    --muted: 210 12% 92%;
-    --muted-foreground: 155 10% 38%;
+    /* Warm sand secondary surfaces */
+    --secondary: 36 27% 91%;
+    --secondary-foreground: 158 28% 14%;
+
+    --muted: 36 24% 93%;
+    --muted-foreground: 158 10% 36%;
 
     /* Soft green accent for selected and highlighted states */
-    --accent: 145 30% 89%;
-    --accent-foreground: 145 52% 22%;
+    --accent: 152 28% 90%;
+    --accent-foreground: 158 52% 20%;
 
-    --destructive: 0 72% 50%;
+    --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 63% 32%;
+    --success: 152 55% 28%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 155 28% 11%;
+    /* Amber is the only secondary accent. Reserve it for "needs your approval". */
+    --warning: 32 80% 46%;
+    --warning-foreground: 40 40% 97%;
 
-    --border: 210 10% 82%;
-    --input: 210 10% 82%;
-    --ring: 145 63% 28%;
+    --border: 36 20% 86%;
+    --input: 36 20% 86%;
+    /* Dimmer than --cta on purpose: a focus ring is state, not an invitation. */
+    --ring: 158 40% 40%;
 
     --radius: 0.625rem;
+
+    /* Typography. Loaded in index.html; these are theme-independent. */
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: "Space Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
     --sidebar-background: 155 28% 11%;
     --sidebar-foreground: 210 14% 92%;
@@ -64,54 +78,77 @@
   }
 
   .dark {
-    /* Deep evergreen-black with cool silver text */
-    --background: 155 24% 7%;
-    --foreground: 210 14% 92%;
+    /* DARK THEME = the primary brand surface ("Dark Operator").
+       The whole competitive category — ServiceTitan, Jobber, Housecall Pro, Workiz,
+       Joist — is blue on white. Nobody owns dark and nobody owns green, so this is
+       deliberate positioning, not a dimmed alternate. Near-black with a green cast,
+       one high-chroma emerald doing all the action work. */
+    --background: 155 14% 6%;
+    --foreground: 150 10% 92%;
 
-    --card: 155 20% 11%;
-    --card-foreground: 210 14% 92%;
+    /* Tighter step from background than before: the old 11% mid-tone went muddy
+       behind dense tables. */
+    --card: 155 14% 9%;
+    --card-foreground: 150 10% 92%;
 
-    --popover: 155 20% 11%;
-    --popover-foreground: 210 14% 92%;
+    --popover: 155 14% 9%;
+    --popover-foreground: 150 10% 92%;
 
-    --primary: 145 58% 46%;
-    --primary-foreground: 155 28% 7%;
+    --primary: 152 65% 50%;
+    --primary-foreground: 155 60% 6%;
 
-    --secondary: 210 8% 18%;
-    --secondary-foreground: 210 14% 92%;
+    /* Call-to-action. Previously --primary and --ring were the same green, so
+       buttons, focus rings and sidebar chrome all competed at identical weight.
+       Splitting them is the single highest-impact change in this palette:
+       --cta invites a click, --primary identifies the brand, --ring reports state. */
+    --cta: 152 65% 50%;
+    --cta-foreground: 155 60% 6%;
 
-    --muted: 155 14% 15%;
-    --muted-foreground: 210 9% 68%;
+    --secondary: 158 10% 16%;
+    --secondary-foreground: 150 10% 92%;
 
-    --accent: 145 32% 20%;
-    --accent-foreground: 145 48% 80%;
+    --muted: 155 12% 13%;
+    --muted-foreground: 150 8% 64%;
 
-    --destructive: 0 68% 54%;
+    --accent: 152 30% 18%;
+    --accent-foreground: 152 50% 78%;
+
+    --destructive: 0 70% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 58% 48%;
-    --success-foreground: 155 28% 7%;
+    --success: 152 65% 50%;
+    --success-foreground: 155 60% 6%;
 
-    --warning: 38 92% 56%;
-    --warning-foreground: 155 28% 7%;
+    /* Amber is the only non-emerald accent. Reserve it for "needs your approval" —
+       if it appears anywhere else it stops meaning anything. */
+    --warning: 38 100% 63%;
+    --warning-foreground: 40 60% 8%;
 
-    --border: 155 12% 22%;
-    --input: 155 12% 22%;
-    --ring: 145 58% 46%;
+    /* Quieter lines than the old 22%: dense data reads calmer and denser. */
+    --border: 158 15% 14%;
+    --input: 158 15% 14%;
+    --ring: 155 55% 27%;
 
-    --sidebar-background: 155 28% 5%;
-    --sidebar-foreground: 210 14% 92%;
-    --sidebar-primary: 145 58% 48%;
-    --sidebar-primary-foreground: 155 28% 7%;
-    --sidebar-accent: 155 22% 13%;
-    --sidebar-accent-foreground: 210 14% 96%;
-    --sidebar-border: 155 18% 16%;
-    --sidebar-ring: 145 58% 48%;
+    --sidebar-background: 158 16% 4%;
+    --sidebar-foreground: 150 10% 90%;
+    --sidebar-primary: 152 65% 50%;
+    --sidebar-primary-foreground: 155 60% 6%;
+    --sidebar-accent: 155 14% 11%;
+    --sidebar-accent-foreground: 150 10% 96%;
+    --sidebar-border: 158 15% 12%;
+    --sidebar-ring: 155 55% 27%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(150 55% 30%), hsl(145 58% 48%));
-    --gradient-dark: linear-gradient(180deg, hsl(155 26% 9%), hsl(210 8% 5%));
-    --shadow-elevated: 0 20px 60px -20px hsl(145 58% 38% / 0.38);
-    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.42), 0 1px 2px hsl(0 0% 0% / 0.24);
+    --gradient-primary: linear-gradient(135deg, hsl(158 55% 30%), hsl(152 65% 50%));
+    --gradient-dark: linear-gradient(180deg, hsl(155 14% 9%), hsl(158 16% 4%));
+    --shadow-elevated: 0 20px 60px -20px hsl(152 65% 38% / 0.30);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.45), 0 1px 2px hsl(0 0% 0% / 0.26);
+
+    /* FALLBACK ACCENT — not active.
+       If the emerald CTA ever under-converts on paid traffic, the tested
+       alternative is the "Field-Tough" safety orange below. Swap --cta only;
+       it must never become the brand/identity colour.
+         --cta: 22 90% 48%;
+         --cta-foreground: 0 0% 100%; */
   }
 }
 
@@ -128,6 +165,15 @@
 @layer utilities {
   .bg-gradient-primary { background-image: var(--gradient-primary); }
   .bg-gradient-dark { background: var(--gradient-dark); }
+  /* Money, job numbers and call durations. Contractors read figures all day —
+     a monospaced, tabular face is most of what makes the app feel like an
+     instrument rather than a web form. Columns of digits also stop jittering. */
+  .tabular-money {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
+  }
   .text-gradient-primary {
     background-image: var(--gradient-primary);
     -webkit-background-clip: text;
