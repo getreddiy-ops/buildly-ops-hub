@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ruleForState, computeBalance } from "@/lib/pto-accrual";
 import { cn } from "@/lib/utils";
 import { toLocalDateInputValue } from "@/lib/local-date";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 // Best-effort infer US state from a free-form address (client-side mirror of server helper).
 function inferStateCode(address?: string | null): string | null {
@@ -83,7 +84,7 @@ export default function CalendarPage() {
       supabase.from("organization_members")
         .select("user_id, profiles:user_id(email, full_name)")
         .eq("organization_id", orgId),
-      supabase.from("time_entries")
+      supabase.from(TIME_ENTRY_TABLE)
         .select("clock_in, clock_out")
         .eq("organization_id", orgId)
         .eq("user_id", user.id)

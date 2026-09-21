@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Database } from "@/integrations/supabase/types";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -76,7 +77,7 @@ export default function Dashboard() {
         supabase.from("invoices").select("*, customers(name)").eq("organization_id", orgId)
           .in("status", ["sent", "overdue"]).order("due_date", { ascending: true }).limit(20),
         isAdmin
-          ? supabase.from("time_entries").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending")
+          ? supabase.from(TIME_ENTRY_TABLE).select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending")
           : Promise.resolve({ count: 0 }),
       ]);
       setUpcomingJobs((jobsRes.data ?? []) as Job[]);

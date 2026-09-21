@@ -1444,6 +1444,77 @@ export type Database = {
         }
         Relationships: []
       }
+      contractor_time_entries: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_hours: number | null
+          clock_in: string
+          clock_in_lat: number | null
+          clock_in_lng: number | null
+          clock_out: string | null
+          clock_out_lat: number | null
+          clock_out_lng: number | null
+          created_at: string
+          id: string
+          job_id: string | null
+          job_title: string | null
+          note: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_hours?: number | null
+          clock_in?: string
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out?: string | null
+          clock_out_lat?: number | null
+          clock_out_lng?: number | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_title?: string | null
+          note?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_hours?: number | null
+          clock_in?: string
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out?: string | null
+          clock_out_lat?: number | null
+          clock_out_lng?: number | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_title?: string | null
+          note?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_time_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_entries: {
         Row: {
           approved_at: string | null

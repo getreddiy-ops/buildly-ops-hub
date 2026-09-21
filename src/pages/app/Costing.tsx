@@ -19,6 +19,7 @@ import {
 import { DollarSign, Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { toLocalDateInputValue } from "@/lib/local-date";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 interface JobLite { id: string; title: string; budget: number | null; status: string; }
 interface CostRow {
@@ -63,7 +64,7 @@ export default function Costing() {
     setLoading(true);
     const [{ data: js }, { data: ts }, { data: mems }] = await Promise.all([
       supabase.from("jobs").select("id, title, budget, status").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
-      supabase.from("time_entries").select("id, job_id, user_id, approved_hours, status").eq("organization_id", activeOrg.organization_id).eq("status", "approved"),
+      supabase.from(TIME_ENTRY_TABLE).select("id, job_id, user_id, approved_hours, status").eq("organization_id", activeOrg.organization_id).eq("status", "approved"),
       supabase.rpc("get_org_hourly_rates", { _org_id: activeOrg.organization_id }),
     ]);
     setJobs((js ?? []) as JobLite[]);

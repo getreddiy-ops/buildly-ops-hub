@@ -15,6 +15,7 @@ import {
   distanceInMeters,
   elapsedTime,
   getCurrentPosition,
+  TIME_ENTRY_TABLE,
 } from "@/lib/time-clock";
 
 interface OpenEntry {
@@ -22,7 +23,7 @@ interface OpenEntry {
   job_id: string | null;
   clock_in: string;
   note: string | null;
-  jobs?: { title: string } | null;
+  job_title: string | null;
 }
 
 interface AssignedJob {
@@ -103,8 +104,8 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
     if (!user || !activeOrg) return;
     setLoading(true);
     const { data: entry, error: entryError } = await supabase
-        .from("time_entries")
-        .select("id, job_id, clock_in, note, jobs(title)")
+        .from(TIME_ENTRY_TABLE)
+        .select("id, job_id, job_title, clock_in, note")
         .eq("user_id", user.id)
         .eq("organization_id", activeOrg.organization_id)
         .is("clock_out", null)
@@ -210,10 +211,6 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
   const clockIn = async () => {
     if (!user || !activeOrg) return;
     const jobId = manualJob !== "__none__" ? manualJob : null;
-    if (!jobId && !activity.trim()) {
-      toast.error("Choose a job or describe what you'll be working on.");
-      return;
-    }
     setWorking(true);
     try {
       let position: GeolocationPosition | null = null;
@@ -224,15 +221,17 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         setPerm("denied");
         toast.warning("Location was unavailable. Your time will still be recorded.");
       }
-      const { error } = await supabase.from("time_entries").insert({
+      const selectedJob = jobs.find((job) => job.id === jobId);
+      const { error } = await supabase.from(TIME_ENTRY_TABLE).insert({
         organization_id: activeOrg.organization_id,
         user_id: user.id,
         job_id: jobId,
+        job_title: selectedJob?.title ?? null,
         clock_in: new Date().toISOString(),
         clock_in_lat: position?.coords.latitude ?? null,
         clock_in_lng: position?.coords.longitude ?? null,
         status: "pending",
-        note: jobId ? null : activity.trim(),
+        note: jobId ? null : (activity.trim() || "General work"),
       });
       if (error) throw error;
       toast.success(jobId ? "Clocked in to the selected job" : "Clocked in — assign the entry later");
@@ -259,7 +258,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         toast.warning("Location was unavailable. Your clock-out will still be saved.");
       }
       const { error } = await supabase
-        .from("time_entries")
+        .from(TIME_ENTRY_TABLE)
         .update({
           clock_out: new Date().toISOString(),
           clock_out_lat: position?.coords.latitude ?? null,
@@ -293,7 +292,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
           </div>
           <p className="text-sm uppercase tracking-wide text-muted-foreground">Clocked in</p>
           <p className="mt-1 text-xl font-semibold">
-            {openEntry.jobs?.title ?? (openEntry.note ? `Unassigned · ${openEntry.note}` : "Unassigned")}
+            {openEntry.job_title ?? (openEntry.note ? `Unassigned · ${openEntry.note}` : "General work")}
           </p>
           <p className="mt-4 font-mono text-4xl tabular-nums" key={tick}>{elapsedTime(openEntry.clock_in)}</p>
           <p className="mt-2 text-xs text-muted-foreground">Since {new Date(openEntry.clock_in).toLocaleTimeString()}</p>
@@ -407,7 +406,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
 
       <Button
         onClick={clockIn}
-        disabled={working || (manualJob === "__none__" && !activity.trim())}
+        disabled={working}
         size="lg"
         className="w-full"
       >

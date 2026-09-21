@@ -1,5 +1,7 @@
 export const AUTO_JOB_RADIUS_METERS = 250;
 
+export const TIME_ENTRY_TABLE = "contractor_time_entries" as const;
+
 export const canChooseAnyOrgJob = (role: string | null | undefined) =>
   role === "owner" || role === "admin";
 

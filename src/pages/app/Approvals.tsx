@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { CheckSquare, Check, X, MapPin, Receipt, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 interface Entry {
   id: string;
@@ -24,7 +25,7 @@ interface Entry {
   clock_in_lat: number | null;
   clock_in_lng: number | null;
   note: string | null;
-  jobs: { title: string } | null;
+  job_title: string | null;
 }
 
 const rawHours = (e: Entry) =>
@@ -48,8 +49,8 @@ export default function Approvals() {
     setLoading(true);
     const [{ data, error }, { data: jobsData }] = await Promise.all([
       supabase
-        .from("time_entries")
-        .select("id, user_id, job_id, clock_in, clock_out, clock_in_lat, clock_in_lng, note, jobs(title)")
+        .from(TIME_ENTRY_TABLE)
+        .select("id, user_id, job_id, job_title, clock_in, clock_out, clock_in_lat, clock_in_lng, note")
         .eq("organization_id", activeOrg.organization_id)
         .eq("status", "pending")
         .not("clock_out", "is", null)
@@ -78,12 +79,12 @@ export default function Approvals() {
 
   const attachJob = async (e: Entry, jobId: string) => {
     setWorking(e.id);
-    const { error } = await supabase.from("time_entries").update({ job_id: jobId }).eq("id", e.id);
+    const job = allJobs.find((j) => j.id === jobId);
+    const { error } = await supabase.from(TIME_ENTRY_TABLE).update({ job_id: jobId, job_title: job?.title ?? null }).eq("id", e.id);
     setWorking(null);
     if (error) return toast.error(error.message);
     toast.success("Job attached");
-    const job = allJobs.find((j) => j.id === jobId);
-    setEntries((s) => s.map((x) => x.id === e.id ? { ...x, job_id: jobId, jobs: job ? { title: job.title } : null } : x));
+    setEntries((s) => s.map((x) => x.id === e.id ? { ...x, job_id: jobId, job_title: job?.title ?? null } : x));
   };
 
   const decide = async (e: Entry, status: "approved" | "rejected") => {
@@ -94,7 +95,7 @@ export default function Approvals() {
       ? (override !== undefined && override !== "" ? Number(override) : rawHours(e))
       : 0;
     const { error } = await supabase
-      .from("time_entries")
+      .from(TIME_ENTRY_TABLE)
       .update({
         status,
         approved_hours: status === "approved" ? hours : 0,
@@ -127,7 +128,7 @@ export default function Approvals() {
         <TableCell className="font-medium">{names[e.user_id] ?? "—"}</TableCell>
         <TableCell className="text-sm">
           {e.job_id ? (
-            <span className="text-muted-foreground">{e.jobs?.title ?? "—"}</span>
+            <span className="text-muted-foreground">{e.job_title ?? "—"}</span>
           ) : (
             <div className="space-y-1">
               {e.note && <div className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {e.note}</div>}

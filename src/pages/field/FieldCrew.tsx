@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmptyState } from "@/components/EmptyState";
 import { Users, Loader2, MapPin, Circle } from "lucide-react";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 interface CrewMember {
   user_id: string;
@@ -32,8 +33,8 @@ export default function FieldCrew() {
 
       // open time entries
       const { data: open } = await supabase
-        .from("time_entries")
-        .select("user_id, clock_in, clock_in_lat, clock_in_lng, jobs:job_id(title, address)")
+        .from(TIME_ENTRY_TABLE)
+        .select("user_id, clock_in, clock_in_lat, clock_in_lng, job_title")
         .eq("organization_id", activeOrg.organization_id)
         .is("clock_out", null);
 
@@ -46,8 +47,8 @@ export default function FieldCrew() {
           user_id: r.user_id,
           full_name: r.profiles?.full_name ?? null,
           clocked_in: !!e,
-          job_title: e?.jobs?.title ?? null,
-          job_address: e?.jobs?.address ?? null,
+          job_title: e?.job_title ?? null,
+          job_address: null,
           lat: e?.clock_in_lat ?? null,
           lng: e?.clock_in_lng ?? null,
           since: e?.clock_in ?? null,

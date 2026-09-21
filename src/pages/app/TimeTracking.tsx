@@ -13,6 +13,7 @@ import {
 import { Clock, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import FieldClock from "@/pages/field/FieldClock";
+import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
 interface Entry {
   id: string;
@@ -26,7 +27,7 @@ interface Entry {
   clock_out_lng: number | null;
   approved_hours: number | null;
   status: string;
-  jobs: { title: string } | null;
+  job_title: string | null;
 }
 
 type TimeScope = "week" | "month" | "all";
@@ -51,7 +52,7 @@ export default function TimeTracking() {
   const load = useCallback(async () => {
     if (!activeOrg) return;
     setLoading(true);
-    let q = supabase.from("time_entries").select("*, jobs(title)").eq("organization_id", activeOrg.organization_id);
+    let q = supabase.from(TIME_ENTRY_TABLE).select("*").eq("organization_id", activeOrg.organization_id);
     if (!isAdmin && user) q = q.eq("user_id", user.id);
     if (scope !== "all") {
       const since = new Date();
@@ -135,7 +136,7 @@ export default function TimeTracking() {
               {entries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-medium">{names[e.user_id] ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{e.jobs?.title ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{e.job_title ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{fmtDate(e.clock_in)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.clock_out ? fmtDate(e.clock_out) : <span className="text-primary">Active</span>}</TableCell>
                   <TableCell className="text-right tabular-nums">{e.clock_out ? fmtHrs(hrs(e)) : "—"}</TableCell>
