@@ -34,7 +34,7 @@ export default defineTool({
     if (preview) return preview;
 
     const { data, error } = await client
-      .from("invoices").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
+      .from("org_invoices").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
     if (error) return err(error.message);
     return ok(`Updated invoice ${id}`, { invoice: data });
   },

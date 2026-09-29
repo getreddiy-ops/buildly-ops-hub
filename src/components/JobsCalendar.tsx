@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
-type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
+type Job = Database["public"]["Tables"]["org_jobs"]["Row"] & { customers?: { name: string } | null };
 
 function dateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

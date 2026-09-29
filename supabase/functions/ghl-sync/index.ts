@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     }
 
     const appointmentId = await createGhlAppointment(connection, fields);
-    await admin.from("jobs").update({ ghl_appointment_id: appointmentId }).eq("id", id);
+    await admin.from("org_jobs").update({ ghl_appointment_id: appointmentId }).eq("id", id);
     return json(200, { synced: true, ghlAppointmentId: appointmentId });
   } catch (error) {
     console.error("ghl-sync error:", error);

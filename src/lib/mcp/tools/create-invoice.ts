@@ -44,7 +44,7 @@ export default defineTool({
     if (preview) return preview;
 
     const { data: inv, error } = await client
-      .from("invoices")
+      .from("org_invoices")
       .insert({
         organization_id: org.orgId,
         customer_id: input.customer_id ?? null,
@@ -76,7 +76,7 @@ export default defineTool({
         total: i.quantity * i.unit_price,
         position: idx,
       }));
-      const { error: liErr } = await client.from("invoice_line_items").insert(rows);
+      const { error: liErr } = await client.from("org_invoice_line_items").insert(rows);
       if (liErr) return err(`Invoice created but line items failed: ${liErr.message}`);
     }
     return ok(`Created invoice ${inv.id}`, { invoice: inv });

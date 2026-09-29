@@ -31,7 +31,7 @@ export default defineTool({
     if (preview) return preview;
 
     const { data, error } = await client
-      .from("jobs").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
+      .from("org_jobs").update(clean).eq("id", id).eq("organization_id", org.orgId).select().single();
     if (error) return err(error.message);
     return ok(`Updated job ${id}`, { job: data });
   },

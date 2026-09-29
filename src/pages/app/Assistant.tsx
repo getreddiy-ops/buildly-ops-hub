@@ -269,7 +269,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           .ilike("name", `%${p.args.customer_name}%`).limit(1).maybeSingle();
         if (cErr) throw cErr;
         if (!cust) throw new Error(`Customer "${p.args.customer_name}" not found. Create them first.`);
-        const { error } = await supabase.from("jobs").insert({
+        const { error } = await supabase.from("org_jobs").insert({
           organization_id: org_id,
           customer_id: cust.id,
           title: p.args.title,
@@ -329,7 +329,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         resultLabel = `Lead "${p.args.lead_name}" updated`;
       } else if (p.name === "update_job") {
         const { data: job, error: jErr } = await supabase
-          .from("jobs").select("id").eq("organization_id", org_id)
+          .from("org_jobs").select("id").eq("organization_id", org_id)
           .ilike("title", `%${p.args.job_title}%`).limit(1).maybeSingle();
         if (jErr) throw jErr;
         if (!job) throw new Error(`Job "${p.args.job_title}" not found.`);
@@ -338,7 +338,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
         }
         if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
-        const { error } = await supabase.from("jobs").update(patch as any).eq("id", job.id);
+        const { error } = await supabase.from("org_jobs").update(patch as any).eq("id", job.id);
         if (error) throw error;
         resultLabel = `Job "${p.args.job_title}" updated`;
       } else if (p.name === "update_estimate") {

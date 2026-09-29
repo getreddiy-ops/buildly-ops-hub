@@ -56,7 +56,7 @@ export default function Approvals() {
         .not("clock_out", "is", null)
         .order("clock_in", { ascending: false }),
       supabase
-        .from("jobs")
+        .from("org_jobs")
         .select("id, title, status")
         .eq("organization_id", activeOrg.organization_id)
         .neq("status", "cancelled"),

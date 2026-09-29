@@ -63,7 +63,7 @@ export default function Costing() {
     if (!activeOrg) return;
     setLoading(true);
     const [{ data: js }, { data: ts }, { data: mems }] = await Promise.all([
-      supabase.from("jobs").select("id, title, budget, status").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
+      supabase.from("org_jobs").select("id, title, budget, status").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from(TIME_ENTRY_TABLE).select("id, job_id, user_id, approved_hours, status").eq("organization_id", activeOrg.organization_id).eq("status", "approved"),
       supabase.rpc("get_org_hourly_rates", { _org_id: activeOrg.organization_id }),
     ]);
@@ -72,7 +72,7 @@ export default function Costing() {
     // by this org's job ids rather than relying only on the join-through RLS policy.
     const jobIds = (js ?? []).map((j) => j.id);
     const { data: cs } = jobIds.length
-      ? await supabase.from("job_costs").select("*").in("job_id", jobIds).order("incurred_on", { ascending: false })
+      ? await supabase.from("org_job_costs").select("*").in("job_id", jobIds).order("incurred_on", { ascending: false })
       : { data: [] };
     setCosts((cs ?? []) as CostRow[]);
     setTimes((ts ?? []) as TimeRow[]);
@@ -117,7 +117,7 @@ export default function Costing() {
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (!selectedJob || !user) return;
     setSaving(true);
-    const { error } = await supabase.from("job_costs").insert({
+    const { error } = await supabase.from("org_job_costs").insert({
       job_id: selectedJob,
       category: parsed.data.category,
       description: parsed.data.description || null,
@@ -135,7 +135,7 @@ export default function Costing() {
 
   const removeCost = async (id: string) => {
     if (!confirm("Delete this cost?")) return;
-    const { error } = await supabase.from("job_costs").delete().eq("id", id);
+    const { error } = await supabase.from("org_job_costs").delete().eq("id", id);
     if (error) return toast.error(error.message);
     load();
   };

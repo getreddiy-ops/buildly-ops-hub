@@ -169,7 +169,7 @@ export type Database = {
             foreignKeyName: "contracts_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "org_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -181,7 +181,7 @@ export type Database = {
           },
         ]
       }
-      crew_assignments: {
+      org_crew_assignments: {
         Row: {
           created_at: string
           id: string
@@ -208,7 +208,7 @@ export type Database = {
             foreignKeyName: "crew_assignments_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "org_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -520,7 +520,7 @@ export type Database = {
           },
         ]
       }
-      invoice_line_items: {
+      org_invoice_line_items: {
         Row: {
           created_at: string
           description: string
@@ -556,12 +556,12 @@ export type Database = {
             foreignKeyName: "invoice_line_items_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "invoices"
+            referencedRelation: "org_invoices"
             referencedColumns: ["id"]
           },
         ]
       }
-      invoices: {
+      org_invoices: {
         Row: {
           amount_paid: number
           created_at: string
@@ -575,6 +575,7 @@ export type Database = {
           notes: string | null
           number: string | null
           organization_id: string
+          paid_at: string | null
           status: string
           subtotal: number
           tax_amount: number
@@ -596,6 +597,7 @@ export type Database = {
           notes?: string | null
           number?: string | null
           organization_id: string
+          paid_at?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -617,6 +619,7 @@ export type Database = {
           notes?: string | null
           number?: string | null
           organization_id?: string
+          paid_at?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -644,7 +647,7 @@ export type Database = {
             foreignKeyName: "invoices_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "org_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -656,7 +659,7 @@ export type Database = {
           },
         ]
       }
-      job_costs: {
+      org_job_costs: {
         Row: {
           amount: number
           category: string
@@ -692,12 +695,12 @@ export type Database = {
             foreignKeyName: "job_costs_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "org_jobs"
             referencedColumns: ["id"]
           },
         ]
       }
-      jobs: {
+      org_jobs: {
         Row: {
           address: string | null
           budget: number | null
@@ -1605,7 +1608,7 @@ export type Database = {
             foreignKeyName: "time_entries_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "org_jobs"
             referencedColumns: ["id"]
           },
           {

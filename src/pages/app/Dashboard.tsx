@@ -13,10 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import type { Database } from "@/integrations/supabase/types";
 import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
 
-type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
+type Job = Database["public"]["Tables"]["org_jobs"]["Row"] & { customers?: { name: string } | null };
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"] & { customers?: { name: string } | null };
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"] & { customers?: { name: string } | null };
+type Invoice = Database["public"]["Tables"]["org_invoices"]["Row"] & { customers?: { name: string } | null };
 
 const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
@@ -64,17 +64,17 @@ export default function Dashboard() {
       const weekAhead = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const todayIso = new Date().toISOString().slice(0, 10);
       const [jobsRes, activeJobsRes, leadsRes, estimatesRes, invoicesRes, approvalsRes] = await Promise.all([
-        supabase.from("jobs").select("*, customers(name)").eq("organization_id", orgId)
+        supabase.from("org_jobs").select("*, customers(name)").eq("organization_id", orgId)
           .not("scheduled_start", "is", null).lte("scheduled_start", weekAhead)
           .not("status", "in", "(cancelled,completed)")
           .order("scheduled_start", { ascending: true }).limit(6),
-        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId)
+        supabase.from("org_jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId)
           .in("status", ["scheduled", "in_progress"]),
         supabase.from("leads").select("*").eq("organization_id", orgId)
           .in("status", ["new", "contacted"]).order("created_at", { ascending: false }).limit(5),
         supabase.from("estimates").select("*, customers(name)").eq("organization_id", orgId)
           .eq("status", "sent").order("updated_at", { ascending: false }).limit(5),
-        supabase.from("invoices").select("*, customers(name)").eq("organization_id", orgId)
+        supabase.from("org_invoices").select("*, customers(name)").eq("organization_id", orgId)
           .in("status", ["sent", "overdue"]).order("due_date", { ascending: true }).limit(20),
         isAdmin
           ? supabase.from(TIME_ENTRY_TABLE).select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending")

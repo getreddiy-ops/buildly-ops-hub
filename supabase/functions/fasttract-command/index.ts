@@ -62,7 +62,7 @@ async function findCustomer(admin: any, organizationId: string, name: string) {
 
 async function findJob(admin: any, organizationId: string, title: string) {
   const { data, error } = await admin
-    .from("jobs")
+    .from("org_jobs")
     .select("id,title,status,customer_id")
     .eq("organization_id", organizationId)
     .ilike("title", title)
@@ -72,7 +72,7 @@ async function findJob(admin: any, organizationId: string, title: string) {
   if (data) return data;
 
   const { data: fuzzy, error: fuzzyError } = await admin
-    .from("jobs")
+    .from("org_jobs")
     .select("id,title,status,customer_id")
     .eq("organization_id", organizationId)
     .ilike("title", `%${title}%`)
@@ -96,7 +96,7 @@ async function createCustomer(admin: any, organizationId: string, name: string) 
 async function createJob(admin: any, organizationId: string, userId: string, title: string, customerName: string) {
   const customer = await findCustomer(admin, organizationId, customerName);
   const { data, error } = await admin
-    .from("jobs")
+    .from("org_jobs")
     .insert({
       organization_id: organizationId,
       customer_id: customer.id,
@@ -220,7 +220,7 @@ async function createInvoice(admin: any, organizationId: string, userId: string,
   const number = `INV-${now.getTime().toString().slice(-8)}`;
 
   const { data: invoice, error } = await admin
-    .from("invoices")
+    .from("org_invoices")
     .insert({
       organization_id: organizationId,
       customer_id: customer.id,
@@ -239,7 +239,7 @@ async function createInvoice(admin: any, organizationId: string, userId: string,
     .single();
   if (error) throw error;
 
-  const { error: itemError } = await admin.from("invoice_line_items").insert({
+  const { error: itemError } = await admin.from("org_invoice_line_items").insert({
     invoice_id: invoice.id,
     description,
     quantity: 1,
@@ -248,7 +248,7 @@ async function createInvoice(admin: any, organizationId: string, userId: string,
     position: 0,
   });
   if (itemError) {
-    await admin.from("invoices").delete().eq("id", invoice.id);
+    await admin.from("org_invoices").delete().eq("id", invoice.id);
     throw itemError;
   }
 
@@ -261,7 +261,7 @@ async function createInvoice(admin: any, organizationId: string, userId: string,
 
 async function markInvoicePaid(admin: any, organizationId: string, number: string) {
   const { data: invoice, error } = await admin
-    .from("invoices")
+    .from("org_invoices")
     .select("id,number,total")
     .eq("organization_id", organizationId)
     .ilike("number", number)
@@ -271,7 +271,7 @@ async function markInvoicePaid(admin: any, organizationId: string, number: strin
   if (!invoice) throw new Error(`Invoice ${number} was not found.`);
 
   const { error: updateError } = await admin
-    .from("invoices")
+    .from("org_invoices")
     .update({ status: "paid", amount_paid: invoice.total })
     .eq("id", invoice.id);
   if (updateError) throw updateError;

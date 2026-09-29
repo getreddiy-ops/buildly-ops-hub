@@ -304,11 +304,11 @@ Deno.serve(async (req) => {
       if (!org_id) throw new Error("organization_id required");
       const q = (t: string) => admin.from(t).select("*", { count: "exact", head: true }).eq("organization_id", org_id);
       const [cust, leads, jobs, est, inv, mats, vend, calls] = await Promise.all([
-        q("customers"), q("leads"), q("jobs"), q("estimates"),
-        q("invoices"), q("materials"), q("vendors"), q("phone_calls"),
+        q("customers"), q("leads"), q("org_jobs"), q("estimates"),
+        q("org_invoices"), q("materials"), q("vendors"), q("phone_calls"),
       ]);
-      const { data: invoices } = await admin.from("invoices")
-        .select("id, invoice_number, total, status, paid_at, created_at, customer_id")
+      const { data: invoices } = await admin.from("org_invoices")
+        .select("id, invoice_number:number, total, status, paid_at, created_at, customer_id")
         .eq("organization_id", org_id).order("created_at", { ascending: false }).limit(25);
       const revenue = (invoices ?? [])
         .filter((i: any) => i.status === "paid")
@@ -364,17 +364,21 @@ Deno.serve(async (req) => {
     }
 
     if (body.type === "mark_invoice_paid") {
-      if (!body.invoice_id) throw new Error("invoice_id required");
-      const { error } = await admin.from("invoices").update({
-        status: "paid", paid_at: new Date().toISOString(),
-      }).eq("id", body.invoice_id);
+      if (!body.invoice_id || !body.organization_id) throw new Error("invoice_id and organization_id required");
+      const { data: invoice, error: lookupError } = await admin.from("org_invoices")
+        .select("total").eq("id", body.invoice_id).eq("organization_id", body.organization_id).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!invoice) throw new Error("Invoice not found for organization");
+      const { error } = await admin.from("org_invoices").update({
+        status: "paid", amount_paid: invoice.total, paid_at: new Date().toISOString(),
+      }).eq("id", body.invoice_id).eq("organization_id", body.organization_id);
       if (error) throw error;
       return ok({ updated: true });
     }
 
     if (body.type === "void_invoice") {
-      if (!body.invoice_id) throw new Error("invoice_id required");
-      const { error } = await admin.from("invoices").update({ status: "void" }).eq("id", body.invoice_id);
+      if (!body.invoice_id || !body.organization_id) throw new Error("invoice_id and organization_id required");
+      const { error } = await admin.from("org_invoices").update({ status: "void" }).eq("id", body.invoice_id).eq("organization_id", body.organization_id);
       if (error) throw error;
       return ok({ updated: true });
     }
