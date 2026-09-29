@@ -18,6 +18,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
   const [showEmail, setShowEmail] = useState(true);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resending, setResending] = useState(false);
@@ -46,6 +47,30 @@ export default function Login() {
     }
     setResendCooldown(45);
     toast({ title: "Confirmation email sent", description: `Check ${email}.` });
+  };
+
+  const handlePasswordReset = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || resetSending) return;
+    setResetSending(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({
+        title: "Check your email",
+        description: "If an account exists for that address, you'll receive a password reset link.",
+      });
+    } catch {
+      return toast({
+        title: "Couldn't send reset email",
+        description: "Please try again later or contact FastTract support.",
+        variant: "destructive",
+      });
+    } finally {
+      setResetSending(false);
+    }
   };
 
   useEffect(() => {
@@ -84,7 +109,7 @@ export default function Login() {
       if (msg.includes("invalid login") || msg.includes("invalid_credentials")) {
         return toast({
           title: "Check your credentials",
-          description: "Check your email and password. If you need a new password, contact FastTract support.",
+          description: "Check your email and password, or use the password reset link below.",
         });
       }
       return toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
@@ -131,6 +156,16 @@ export default function Login() {
                   <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <div><Label htmlFor="password">Password</Label>
                   <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                <div className="-mt-2 text-right">
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={!email.trim() || resetSending}
+                    className="text-sm text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+                  >
+                    {resetSending ? "Sending reset link…" : "Forgot password?"}
+                  </button>
+                </div>
                 <Button type="submit" variant="outline" className="w-full" disabled={loading}>
                   {loading ? "Signing in…" : "Sign in with email"}
                 </Button>
