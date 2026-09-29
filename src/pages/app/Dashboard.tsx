@@ -177,11 +177,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary" />
           <div>
-            <div className="font-semibold">Ask Ava</div>
-            <div className="text-sm text-muted-foreground">Ask about your business, or have Ava draft a lead, estimate, or job for your approval.</div>
+            <div className="font-semibold">Ask AI</div>
+            <div className="text-sm text-muted-foreground">Ask about your business, or have Ask AI draft a lead, estimate, or job for your approval.</div>
           </div>
         </div>
-        <Button asChild><Link to="/app/assistant">Open Ask Ava <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
+        <Button asChild><Link to="/app/assistant">Open Ask AI <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
       </Card>
     </div>
   );

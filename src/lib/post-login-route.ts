@@ -33,6 +33,15 @@ export function resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent }:
 /** Validate a `?next=` param — only allow same-origin app paths. */
 export function safeNextPath(raw: string | null): string | null {
   if (!raw) return null;
-  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  // Reject separators and control characters before URL normalization.
+  // eslint-disable-next-line no-control-regex
+  if (!raw.startsWith("/") || raw.startsWith("//") || /[\\\u0000-\u0020\u007f]/.test(raw)) return null;
+  try {
+    const path = decodeURIComponent(raw.split(/[?#]/, 1)[0]);
+    // eslint-disable-next-line no-control-regex
+    if (path.startsWith("//") || /[\\\u0000-\u0020\u007f]/.test(path)) return null;
+    const origin = "https://fasttract.invalid";
+    if (new URL(raw, origin).origin !== origin) return null;
+  } catch { return null; }
   return raw;
 }

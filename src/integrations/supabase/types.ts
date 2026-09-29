@@ -940,17 +940,26 @@ export type Database = {
           brand_color: string | null
           brand_color_secondary: string | null
           business_profile: Json
-          created_at: string
+          business_type: string | null
+          created_at: string | null
+          created_by: string | null
           document_defaults: Json
           email: string | null
           id: string
           legal_name: string | null
           logo_url: string | null
           name: string
-          owner_id: string
+          owner_id: string | null
           phone: string | null
           plan: string
           slug: string | null
+          stripe_charges_enabled: boolean
+          stripe_connect_status: string
+          stripe_connected_account_id: string | null
+          stripe_customer_id: string | null
+          stripe_details_submitted: boolean
+          stripe_payouts_enabled: boolean
+          stripe_subscription_id: string | null
           tax_id: string | null
           updated_at: string
           website: string | null
@@ -961,17 +970,26 @@ export type Database = {
           brand_color?: string | null
           brand_color_secondary?: string | null
           business_profile?: Json
-          created_at?: string
+          business_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
           document_defaults?: Json
           email?: string | null
           id?: string
           legal_name?: string | null
           logo_url?: string | null
           name: string
-          owner_id: string
+          owner_id?: string | null
           phone?: string | null
           plan?: string
           slug?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_connect_status?: string
+          stripe_connected_account_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
+          stripe_subscription_id?: string | null
           tax_id?: string | null
           updated_at?: string
           website?: string | null
@@ -982,17 +1000,26 @@ export type Database = {
           brand_color?: string | null
           brand_color_secondary?: string | null
           business_profile?: Json
-          created_at?: string
+          business_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
           document_defaults?: Json
           email?: string | null
           id?: string
           legal_name?: string | null
           logo_url?: string | null
           name?: string
-          owner_id?: string
+          owner_id?: string | null
           phone?: string | null
           plan?: string
           slug?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_connect_status?: string
+          stripe_connected_account_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
+          stripe_subscription_id?: string | null
           tax_id?: string | null
           updated_at?: string
           website?: string | null
