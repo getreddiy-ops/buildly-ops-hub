@@ -129,4 +129,24 @@ describe("Billing checkout activation", () => {
     );
     openWindow.mockRestore();
   });
+
+  it("offers new customers only the FastTract core checkout", async () => {
+    openCheckout.mockResolvedValue(undefined);
+    render(
+      <MemoryRouter initialEntries={["/app/billing"]}>
+        <Billing />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("FastTract")).toBeInTheDocument();
+    expect(screen.queryByText("FastTract Plus")).not.toBeInTheDocument();
+    expect(screen.queryByText("FastTract Premium")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /start 7-day free trial/i }));
+
+    await waitFor(() => expect(openCheckout).toHaveBeenCalledWith({
+      priceId: "contractor_os_pro_monthly",
+      customerEmail: "owner@example.com",
+      customData: { userId: "user-1", orgId: "org-1" },
+    }));
+  });
 });

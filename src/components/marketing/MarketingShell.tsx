@@ -70,7 +70,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           <div>
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              FastTract by Lynchmarc LLC — the personal AI operating system for small businesses.
+              FastTract by Lynchmarc LLC — contractor operations software for office and field work.
             </p>
           </div>
           {footerCols.map((col) => (
@@ -102,7 +102,6 @@ export function CTARow() {
     <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
       <Button size="lg" asChild><Link to="/signup">Start Free</Link></Button>
       <Button size="lg" variant="outline" asChild><Link to="/contact">Book a Demo</Link></Button>
-      <Button size="lg" variant="ghost" asChild><Link to="/ai-photo-estimator">Try AI Estimate Lab</Link></Button>
     </div>
   );
 }

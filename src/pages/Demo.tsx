@@ -217,21 +217,21 @@ export default function Demo() {
   return (
     <MarketingShell>
       <SEO
-        title="FastTract Live Demo — See Ava Run a Business Workflow"
-        description="Watch Ava turn a customer call into organized work, documents, scheduling, and payment—while keeping the owner in control."
+        title="FastTract Workflow Concept Demo"
+        description="Explore a simulated contractor workflow concept. The demo does not connect to a live FastTract account or perform these actions."
         path="/demo"
       />
 
       <section className="mx-auto max-w-6xl px-4 pt-12 pb-6 sm:px-6 lg:px-8 lg:pt-16">
         <div className="mx-auto max-w-3xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Live Interactive Demo
+            <Sparkles className="h-3.5 w-3.5" /> Simulated concept demo
           </div>
           <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-            Watch Ava turn a request into <span className="text-gradient-primary">finished work</span>
+            See a sample contractor workflow
           </h1>
           <p className="mt-4 text-muted-foreground">
-            This contractor example shows the same conversational workflow FastTract adapts for any business.
+            This animation uses sample data to illustrate a possible workflow. It is not connected to an account, AI provider, calendar, crew, customer, or payment system, and it does not create or send records.
           </p>
         </div>
       </section>
@@ -433,7 +433,7 @@ export default function Demo() {
         </div>
 
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" asChild><Link to="/signup">Start Free Trial</Link></Button>
+          <Button size="lg" asChild><Link to="/pricing">See the core plan</Link></Button>
           <Button size="lg" variant="outline" asChild><Link to="/contact">Book a Live Walkthrough</Link></Button>
         </div>
       </section>
@@ -444,7 +444,7 @@ export default function Demo() {
             Ready to run your business this way?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Start a 7-day free trial. Card required; you won't be charged until the trial ends. Cancel anytime.
+            Start a 7-day free trial of FastTract Core. Card required; you won't be charged until the trial ends. Cancel anytime.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild>

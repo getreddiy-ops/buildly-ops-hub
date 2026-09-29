@@ -2,13 +2,13 @@ import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SEO } from "@/components/SEO";
-import { ArrowRight, Users, MessageSquare, FileText, Phone, ClipboardList, Clock } from "lucide-react";
+import { ArrowRight, Users, MessageSquare, FileText, ClipboardList, Clock } from "lucide-react";
 
 const benefits = [
   { icon: Users, title: "Every lead in one pipeline", desc: "Capture leads from web forms, calls, and referrals. Move them from inquiry to estimate to job without spreadsheets." },
   { icon: MessageSquare, title: "Centralized customer communication", desc: "Calls, texts, emails, and on-site notes attached to the right customer — visible to your whole crew." },
   { icon: FileText, title: "Estimates that become contracts", desc: "Send branded estimates, capture e-signatures, and convert approved estimates into scheduled jobs in one click." },
-  { icon: Phone, title: "AI phone answering for missed calls", desc: "An AI receptionist captures leads 24/7, books appointments, and writes the conversation back into the CRM." },
+  { icon: MessageSquare, title: "Follow-up stays organized", desc: "Keep notes and next steps with each customer so your team can follow through." },
   { icon: ClipboardList, title: "Job history on every customer", desc: "See past jobs, photos, change orders, invoices, and payments on a single customer record." },
   { icon: Clock, title: "Built around field work", desc: "Designed for contractors — not retrofitted from a generic sales CRM. Crews use the mobile app on-site." },
 ];
@@ -18,7 +18,7 @@ export default function ContractorCRM() {
     <div className="min-h-screen bg-gradient-dark text-foreground">
       <SEO
         title="CRM for Contractors — FastTract"
-        description="A CRM built for contractors: lead pipelines, customer communication, estimates, job history, and AI phone answering — all in one app."
+        description="A CRM built for contractors: lead pipelines, customer communication, estimates, and job history — all in one app."
         path="/features/contractor-crm"
       />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
@@ -63,8 +63,7 @@ export default function ContractorCRM() {
         <h2 className="text-3xl font-semibold tracking-tight">Why contractors choose FastTract over a generic CRM</h2>
         <p className="mt-4 text-muted-foreground">
           Generic CRMs are built for inside sales teams. FastTract is built around field work: GPS-verified
-          clock-ins, boss-approved hours, job costing, and an AI assistant that drafts estimates and answers your
-          phone — all tied to the same customer record.
+          clock-ins, approved hours, job costing, and estimates — all tied to the work your team is managing.
         </p>
         <div className="mt-8">
           <Button size="lg" asChild><Link to="/signup">Try it free</Link></Button>

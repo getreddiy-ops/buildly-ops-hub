@@ -103,7 +103,7 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [input, setInput] = useState("");
   const [paused, setPaused] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [minimized, setMinimized] = useState(false);
   const [brand, setBrand] = useState<BrandScan>(emptyBrand);
   const [saving, setSaving] = useState(false);
@@ -347,6 +347,7 @@ export default function Onboarding() {
       });
     }
 
+    let assistantMemoryWarning: string | null = null;
     if (consentMemory) {
       const website = answers.website === "Skipped"
         ? "No website provided"
@@ -378,12 +379,8 @@ export default function Onboarding() {
         .from("ai_knowledge_entries")
         .upsert(knowledgeEntries, { onConflict: "organization_id,source,knowledge_key" });
       if (knowledgeError) {
-        setSaving(false);
-        return toast({
-          title: "Workspace created, but AI memory needs attention",
-          description: knowledgeError.message,
-          variant: "destructive",
-        });
+        assistantMemoryWarning = knowledgeError.message;
+        console.warn("Optional assistant memory was not saved", knowledgeError);
       }
     }
 
@@ -412,9 +409,11 @@ export default function Onboarding() {
     setSaving(false);
     toast({
       title: `Welcome, ${answers.userName}`,
-      description: `${org.name} is ready.`,
+      description: assistantMemoryWarning
+        ? `${org.name} is ready. Optional assistant details could not be saved.`
+        : `${org.name} is ready.`,
     });
-    navigate("/app?welcome=ava", { replace: true });
+    navigate("/app?welcome=setup", { replace: true });
   };
 
   if (!started) {
@@ -436,7 +435,7 @@ export default function Onboarding() {
 
             <div className="mb-3 flex items-center justify-between md:mb-5">
               <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-100">
-                <Sparkles className="h-3.5 w-3.5" /> AVA · FASTTRACT AI
+                <Sparkles className="h-3.5 w-3.5" /> FASTTRACT COMPANY SETUP
               </span>
               {!isPreview && (
                 <button className="text-xs text-white/65 hover:text-white" onClick={signOut}>
@@ -473,8 +472,8 @@ export default function Onboarding() {
                   className="mt-0.5 h-5 w-5 accent-orange-500"
                 />
                 <span>
-                  <strong className="block text-white">Remember my approved answers</strong>
-                  Save approved business details to this company’s private AI memory.
+                  <strong className="block text-white">Save approved business details</strong>
+                  Keep these details available for optional FastTract assistant features.
                 </span>
               </label>
             </div>
@@ -528,14 +527,14 @@ export default function Onboarding() {
             {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
           </button>
           <button
-            aria-label={muted ? "Unmute Ava" : "Mute Ava"}
+            aria-label={muted ? "Enable setup voice" : "Mute setup voice"}
             className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50"
             onClick={toggleMuted}
           >
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           <button
-            aria-label="Minimize Ava"
+            aria-label="Minimize setup guide"
             className="grid h-11 w-11 place-items-center rounded-full bg-black/30 hover:bg-black/50"
             onClick={() => setMinimized(!minimized)}
           >
@@ -582,7 +581,7 @@ export default function Onboarding() {
                   }`}
                 />
                 <span className="text-sm font-semibold">
-                  Ava <span className="font-normal text-white/45">· FastTract AI</span>
+                  FastTract <span className="font-normal text-white/45">· setup guide</span>
                 </span>
                 <span className="text-xs uppercase tracking-[.16em] text-white/45">{statusLabel}</span>
               </div>
@@ -631,8 +630,8 @@ export default function Onboarding() {
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
                 <span>
                   {consentMemory
-                    ? "After you approve, these answers are saved to this company’s private AI memory."
-                    : "AI memory is off. The workspace will still be created normally."}
+                    ? "After you approve, these business details are saved for optional FastTract assistant features."
+                    : "Assistant details are off. The workspace will still be created normally."}
                 </span>
               </div>
 
@@ -671,7 +670,7 @@ export default function Onboarding() {
                 </div>
               )}
 
-              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Ava is asking</p>
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-orange-500">Company setup</p>
               <h1 className="mt-3 text-2xl font-semibold leading-tight md:text-4xl">{prompt}</h1>
               <p aria-live="polite" className="mt-3 min-h-5 text-sm text-white/55">
                 {voice.recording

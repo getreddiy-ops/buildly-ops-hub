@@ -204,7 +204,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
     } catch (e: any) {
       if (!alive.current) return;
       const message = e?.code === "subscription_required"
-        ? "AI Assistant requires FastTract Plus or Premium."
+        ? "Ask AI is optional and is not part of the FastTract core launch plan yet."
         : e?.message ?? "Assistant failed";
       toast.error(message);
       setMessages((m) => [
@@ -212,7 +212,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         {
           role: "assistant",
           content: e?.code === "subscription_required"
-            ? "AI Assistant requires FastTract Plus or Premium. Open Billing to start or assign a plan."
+            ? "Ask AI is optional and is not part of the FastTract core launch plan yet. Your core customer, estimate, job, scheduling, and crew workflows remain available."
             : "Sorry — I ran into an error reaching the AI gateway.",
         },
       ]);
