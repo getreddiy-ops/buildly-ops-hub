@@ -21,6 +21,14 @@ npm run lint
 npm run build
 ```
 
+## AI is optional to the core Contractor OS
+
+Customer, job, estimate, invoice, scheduling, and team workflows must remain
+usable without an AI provider. Ask AI, photo estimating, and phone-assistant
+features may require separately configured providers. Treat customer-owned
+AI provider connections as a later milestone; keep provider credentials on the
+server and never store them in browser storage.
+
 ## Deployment
 
 FastTract is a Vite + React single-page app (`vercel.json` declares

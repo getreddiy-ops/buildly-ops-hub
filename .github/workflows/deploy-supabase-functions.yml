@@ -31,23 +31,6 @@ jobs:
     env:
       PROJECT_ID: qjusjfdrtposrthlcjeu
       SUPABASE_ACCESS_TOKEN: ${{ secrets.TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
-      LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      PADDLE_SANDBOX_API_KEY: ${{ secrets.PADDLE_SANDBOX_API_KEY }}
-      PADDLE_LIVE_API_KEY: ${{ secrets.PADDLE_LIVE_API_KEY }}
-      PAYMENTS_SANDBOX_WEBHOOK_SECRET: ${{ secrets.PAYMENTS_SANDBOX_WEBHOOK_SECRET }}
-      PAYMENTS_LIVE_WEBHOOK_SECRET: ${{ secrets.PAYMENTS_LIVE_WEBHOOK_SECRET }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-      TWILIO_API_KEY: ${{ secrets.TWILIO_API_KEY }}
-      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      RESEND_FROM_EMAIL: ${{ vars.RESEND_FROM_EMAIL }}
-      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-      ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
-      ELEVENLABS_WEBHOOK_SECRET: ${{ secrets.ELEVENLABS_WEBHOOK_SECRET }}
-      PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
 
     steps:
       - name: Check out repository
@@ -67,22 +50,25 @@ jobs:
       - name: Link production project
         run: supabase link --project-ref "$PROJECT_ID"
 
-      - name: Sync function secrets (skips any that are empty)
+      - name: Deploy changed functions only
+        if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
-          args=()
-          for name in LOVABLE_API_KEY OPENAI_API_KEY \
-                      PADDLE_SANDBOX_API_KEY PADDLE_LIVE_API_KEY PAYMENTS_SANDBOX_WEBHOOK_SECRET \
-                      PAYMENTS_LIVE_WEBHOOK_SECRET STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET \
-                      TWILIO_ACCOUNT_SID TWILIO_API_KEY TWILIO_AUTH_TOKEN RESEND_API_KEY RESEND_FROM_EMAIL \
-                      ELEVENLABS_API_KEY ELEVENLABS_VOICE_ID ELEVENLABS_WEBHOOK_SECRET PUBLIC_APP_URL; do
-            value="${!name:-}"
-            if [ -n "$value" ]; then args+=("$name=$value"); fi
-          done
-          if [ "${#args[@]}" -gt 0 ]; then
-            supabase secrets set --project-ref "$PROJECT_ID" "${args[@]}"
+          base="${{ github.event.before }}"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then base="${GITHUB_SHA}^"; fi
+          mapfile -t functions < <(git diff --name-only "$base" "$GITHUB_SHA" -- supabase/functions \
+            | awk -F/ '$1 == "supabase" && $2 == "functions" && $3 != "_shared" { print $3 }' \
+            | sort -u)
+          if ((${#functions[@]} == 0)); then
+            echo "No function entrypoints changed; skipping function deployment."
+            exit 0
           fi
+          for function in "${functions[@]}"; do
+            echo "Deploying changed function: $function"
+            supabase functions deploy "$function" --project-ref "$PROJECT_ID"
+          done
 
-      - name: Deploy every function
+      - name: Deploy all functions (manual only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation == 'DEPLOY' }}
         run: supabase functions deploy --project-ref "$PROJECT_ID"

@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
-type Proposal = ToolCall & { status: ProposalStatus; error?: string };
+type Proposal = ToolCall & { status: ProposalStatus; error?: string; organizationId: string; userId: string };
 
 type DocAttachment = { id: string; filename: string; url: string; docType: string; title: string };
 
@@ -42,12 +42,21 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export default function Assistant({ compact = false }: { compact?: boolean } = {}) {
+type AssistantProps = { compact?: boolean; onNavigate?: (text: string) => boolean };
+export default function Assistant(props: AssistantProps = {}) {
+  const { activeOrg, user } = useAuth();
+  return <AssistantSession key={String(user?.id) + ':' + String(activeOrg?.organization_id)} {...props} />;
+}
+function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
   const { activeOrg, user } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const alive = useRef(true);
+  const sending = useRef(false);
+  const applying = useRef(new Set<string>());
+  const documentUrls = useRef<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +68,13 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
 
 
   useEffect(() => {
+    alive.current = true;
     inputRef.current?.focus();
+    const urls = documentUrls.current;
+    return () => {
+      alive.current = false;
+      urls.forEach(url => URL.revokeObjectURL(url));
+    };
   }, []);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -80,7 +95,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
     }
     try {
       const urls = await Promise.all(accepted.map(fileToDataUrl));
-      setPendingImages((prev) => [...prev, ...urls]);
+      if (alive.current) setPendingImages((prev) => [...prev, ...urls]);
     } catch {
       toast.error("Could not read one of the images.");
     }
@@ -89,7 +104,10 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
     const images = pendingImages;
-    if ((!content && images.length === 0) || loading) return;
+    if ((!content && images.length === 0) || sending.current) return;
+    if (!activeOrg?.organization_id || !user) return toast.error("Choose a company before using Ask AI.");
+    if (!images.length && onNavigate?.(content)) return;
+    sending.current = true;
     setInput("");
     setPendingImages([]);
     const next: Msg[] = [
@@ -99,7 +117,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
     setMessages(next);
     setLoading(true);
     try {
-      const apiMessages = next.map((m) => {
+      const apiMessages = next.slice(-40).map((m) => {
         if (m.role === "user" && m.images && m.images.length) {
           return {
             role: "user" as const,
@@ -115,11 +133,11 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
           messages: apiMessages,
-          orgName: activeOrg?.organization.name,
           organizationId: activeOrg?.organization_id,
           environment: getPaddleEnvironment(),
         },
       });
+      if (!alive.current) return;
       if (error) {
         let message = error.message ?? "Assistant failed";
         let code: string | undefined;
@@ -141,7 +159,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       const allTools = (data.tool_calls ?? []) as ToolCall[];
       const proposals: Proposal[] = allTools
         .filter((t) => t.needsApproval && t.name !== "generate_document")
-        .map((t) => ({ ...t, status: "pending" as ProposalStatus }));
+        .map((t) => ({ ...t, status: "pending" as ProposalStatus, organizationId: activeOrg.organization_id, userId: user.id }));
 
       // Auto-execute generate_document → produce a real PDF the user can download
       const docTools = allTools.filter((t) => t.name === "generate_document");
@@ -159,10 +177,12 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       for (const t of docTools) {
         try {
           const { blob, filename } = generateDocumentPdf(t.args as DocArgs, orgHeader);
+          const url = URL.createObjectURL(blob);
+          documentUrls.current.push(url);
           documents.push({
             id: t.id,
             filename,
-            url: URL.createObjectURL(blob),
+            url,
             docType: (t.args as DocArgs).doc_type,
             title: (t.args as DocArgs).title,
           });
@@ -182,8 +202,9 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
       setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents }]);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
+      if (!alive.current) return;
       const message = e?.code === "subscription_required"
-        ? "AI Assistant requires FastTract Plus or Premium."
+        ? "Ask AI is optional and is not part of the FastTract core launch plan yet."
         : e?.message ?? "Assistant failed";
       toast.error(message);
       setMessages((m) => [
@@ -191,12 +212,13 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         {
           role: "assistant",
           content: e?.code === "subscription_required"
-            ? "AI Assistant requires FastTract Plus or Premium. Open Billing to start or assign a plan."
+            ? "Ask AI is optional and is not part of the FastTract core launch plan yet. Your core customer, estimate, job, scheduling, and crew workflows remain available."
             : "Sorry — I ran into an error reaching the AI gateway.",
         },
       ]);
     } finally {
-      setLoading(false);
+      sending.current = false;
+      if (alive.current) setLoading(false);
     }
   };
 
@@ -210,7 +232,9 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   };
 
   const executeProposal = async (msgIdx: number, p: Proposal) => {
-    if (!activeOrg || !user) return toast.error("No active organization");
+    if (!activeOrg || !user || !alive.current || p.organizationId !== activeOrg.organization_id || p.userId !== user.id) return toast.error("This proposal belongs to a different session.");
+    if (p.status !== "pending" || applying.current.has(p.id)) return;
+    applying.current.add(p.id);
     updateProposal(msgIdx, p.id, { status: "executing" });
     try {
       const org_id = activeOrg.organization_id;
@@ -245,7 +269,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           .ilike("name", `%${p.args.customer_name}%`).limit(1).maybeSingle();
         if (cErr) throw cErr;
         if (!cust) throw new Error(`Customer "${p.args.customer_name}" not found. Create them first.`);
-        const { error } = await supabase.from("jobs").insert({
+        const { error } = await supabase.from("org_jobs").insert({
           organization_id: org_id,
           customer_id: cust.id,
           title: p.args.title,
@@ -305,7 +329,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         resultLabel = `Lead "${p.args.lead_name}" updated`;
       } else if (p.name === "update_job") {
         const { data: job, error: jErr } = await supabase
-          .from("jobs").select("id").eq("organization_id", org_id)
+          .from("org_jobs").select("id").eq("organization_id", org_id)
           .ilike("title", `%${p.args.job_title}%`).limit(1).maybeSingle();
         if (jErr) throw jErr;
         if (!job) throw new Error(`Job "${p.args.job_title}" not found.`);
@@ -314,7 +338,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
           if (p.args[k] !== undefined && p.args[k] !== null && p.args[k] !== "") patch[k] = p.args[k];
         }
         if (Object.keys(patch).length === 0) throw new Error("No changes provided.");
-        const { error } = await supabase.from("jobs").update(patch as any).eq("id", job.id);
+        const { error } = await supabase.from("org_jobs").update(patch as any).eq("id", job.id);
         if (error) throw error;
         resultLabel = `Job "${p.args.job_title}" updated`;
       } else if (p.name === "update_estimate") {
@@ -376,15 +400,18 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         result: { label: resultLabel },
       });
 
+      if (!alive.current) return;
       updateProposal(msgIdx, p.id, { status: "approved" });
       toast.success(resultLabel);
     } catch (e: any) {
+      if (!alive.current) return;
       updateProposal(msgIdx, p.id, { status: "error", error: e?.message ?? "Failed" });
       toast.error(e?.message ?? "Failed to execute");
     }
   };
 
   const rejectProposal = async (msgIdx: number, p: Proposal) => {
+    if (!alive.current || p.organizationId !== activeOrg?.organization_id || p.userId !== user?.id || p.status !== "pending" || applying.current.has(p.id)) return;
     updateProposal(msgIdx, p.id, { status: "rejected" });
     if (activeOrg && user) {
       await supabase.from("ai_actions").insert({
@@ -400,7 +427,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
   return (
     <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100vh-8rem)]"}>
       {!compact && (
-        <PageHeader title="AI Assistant" description="Draft leads, estimates, jobs, and more. You approve every write." />
+        <PageHeader title="Ask AI" description="Your internal contractor assistant. Draft work here; approve every change." />
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
@@ -534,6 +561,8 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         />
         <Textarea
           ref={inputRef}
+          aria-label="Ask AI"
+          maxLength={16000}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -573,6 +602,7 @@ export default function Assistant({ compact = false }: { compact?: boolean } = {
         </Button>
         <Button
           type="submit"
+          aria-label="Send to Ask AI"
           disabled={loading || (!input.trim() && pendingImages.length === 0) || recording || transcribing}
           size="icon"
           className="shrink-0 h-10 w-10"

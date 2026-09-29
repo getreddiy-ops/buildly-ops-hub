@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
     if (path === "/v1/jobs") {
       if (req.method === "GET") {
         requireScope(actor, "read");
-        const { data, error } = await admin.from("jobs").select("id,customer_id,estimate_id,title,description,status,address,scheduled_start,scheduled_end,budget,created_at,updated_at,customers(name)").eq("organization_id", actor.organizationId).order("created_at", { ascending: false }).limit(200);
+        const { data, error } = await admin.from("org_jobs").select("id,customer_id,estimate_id,title,description,status,address,scheduled_start,scheduled_end,budget,created_at,updated_at,customers(name)").eq("organization_id", actor.organizationId).order("created_at", { ascending: false }).limit(200);
         if (error) throw error;
         return json({ data });
       }
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
         const title = clean(body.title);
         if (!title) return json({ error: "title is required" }, 400);
         const createdBy = await effectiveUserId(actor);
-        const { data, error } = await admin.from("jobs").insert({
+        const { data, error } = await admin.from("org_jobs").insert({
           organization_id: actor.organizationId,
           customer_id: clean(body.customer_id) || null,
           estimate_id: clean(body.estimate_id) || null,
@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
       const allowed = ["customer_id","estimate_id","title","description","status","address","scheduled_start","scheduled_end","budget"];
       const patch: Record<string, unknown> = {};
       for (const field of allowed) if (field in body) patch[field] = body[field] === "" ? null : body[field];
-      const { data, error } = await admin.from("jobs").update(patch).eq("organization_id", actor.organizationId).eq("id", id).select("*").maybeSingle();
+      const { data, error } = await admin.from("org_jobs").update(patch).eq("organization_id", actor.organizationId).eq("id", id).select("*").maybeSingle();
       if (error) throw error;
       if (!data) return json({ error: "Job not found" }, 404);
       return json({ data });
@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
     if (path === "/v1/invoices") {
       if (req.method === "GET") {
         requireScope(actor, "read");
-        const { data, error } = await admin.from("invoices").select("id,customer_id,estimate_id,job_id,number,status,issue_date,due_date,subtotal,tax_rate,tax_amount,total,amount_paid,notes,terms,created_at,updated_at,customers(name,email,phone)").eq("organization_id", actor.organizationId).order("created_at", { ascending: false }).limit(200);
+        const { data, error } = await admin.from("org_invoices").select("id,customer_id,estimate_id,job_id,number,status,issue_date,due_date,subtotal,tax_rate,tax_amount,total,amount_paid,notes,terms,created_at,updated_at,customers(name,email,phone)").eq("organization_id", actor.organizationId).order("created_at", { ascending: false }).limit(200);
         if (error) throw error;
         return json({ data });
       }
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
         const createdBy = await effectiveUserId(actor);
         const now = new Date();
         const number = clean(body.number) || `INV-${now.getTime().toString().slice(-8)}`;
-        const { data: invoice, error } = await admin.from("invoices").insert({
+        const { data: invoice, error } = await admin.from("org_invoices").insert({
           organization_id: actor.organizationId,
           customer_id: clean(body.customer_id),
           estimate_id: clean(body.estimate_id) || null,
@@ -324,8 +324,8 @@ Deno.serve(async (req) => {
         }).select("*").single();
         if (error) throw error;
         const payload = normalized.map((item: any, position: number) => ({ invoice_id: invoice.id, description: item.description, quantity: item.quantity, unit_price: item.unit_price, total: item.quantity * item.unit_price, position }));
-        const { error: itemError } = await admin.from("invoice_line_items").insert(payload);
-        if (itemError) { await admin.from("invoices").delete().eq("id", invoice.id); throw itemError; }
+        const { error: itemError } = await admin.from("org_invoice_line_items").insert(payload);
+        if (itemError) { await admin.from("org_invoices").delete().eq("id", invoice.id); throw itemError; }
         return json({ data: { ...invoice, items: payload } }, 201);
       }
     }

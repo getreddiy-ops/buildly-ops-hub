@@ -28,9 +28,9 @@ export default function ContractorCRMPage() {
 
       <FAQ
         items={[
-          { q: "How is this different from HubSpot or Salesforce?", a: "Generic CRMs are built for inside sales. FastTract is built for contractors — with estimates, jobs, GPS-verified crew time, invoices, and an AI phone agent tied to the same customer." },
+          { q: "How is this different from HubSpot or Salesforce?", a: "Generic CRMs are built for inside sales. FastTract is built for contractors, connecting estimates, jobs, crew time, and invoices with customer records." },
           { q: "Can I import my existing customers?", a: "Yes. Import a CSV of customers and leads to get started." },
-          { q: "Does the AI Phone Agent write into the CRM?", a: "Yes. Every answered call creates or updates a customer record with the conversation summary attached." },
+          { q: "Is AI phone answering included?", a: "No. Phone answering is planned as an optional feature and is not available in the current launch plan." },
         ]}
       />
     </MarketingShell>

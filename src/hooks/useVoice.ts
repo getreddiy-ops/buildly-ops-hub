@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 export function useVoiceRecorder(onTranscript: (text: string) => void) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const alive = useRef(true);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -14,6 +15,23 @@ export function useVoiceRecorder(onTranscript: (text: string) => void) {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      const recorder = recorderRef.current;
+      if (recorder) {
+        recorder.onstop = null;
+        recorder.ondataavailable = null;
+        recorder.onerror = null;
+        if (recorder.state !== "inactive") recorder.stop();
+      }
+      cleanupStream();
+      recorderRef.current = null;
+      chunksRef.current = [];
+    };
+  }, [cleanupStream]);
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current;
@@ -40,6 +58,7 @@ export function useVoiceRecorder(onTranscript: (text: string) => void) {
           autoGainControl: true,
         },
       });
+      if (!alive.current) { stream.getTracks().forEach(track => track.stop()); return; }
       streamRef.current = stream;
       chunksRef.current = [];
 
@@ -88,15 +107,17 @@ export function useVoiceRecorder(onTranscript: (text: string) => void) {
 
         try {
           const { data, error } = await supabase.functions.invoke("voice-transcribe", { body: form });
+          if (!alive.current) return;
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
           const text = (data?.text ?? "").trim();
           if (!text) toast.error("I couldn't hear that clearly. Try again or type your answer.");
           else onTranscript(text);
         } catch (error: any) {
+          if (!alive.current) return;
           toast.error(error?.message ?? "Voice transcription failed. You can keep typing.");
         } finally {
-          setTranscribing(false);
+          if (alive.current) setTranscribing(false);
         }
       };
 
@@ -123,20 +144,26 @@ export function useVoiceSpeaker() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playback = useRef(0);
 
   const stop = useCallback(() => {
+    playback.current++;
     audioRef.current?.pause();
     audioRef.current = null;
     setSpeakingId(null);
     setLoadingId(null);
   }, []);
 
+  useEffect(() => () => { playback.current++; audioRef.current?.pause(); audioRef.current = null; }, []);
+
   const speak = useCallback(async (id: string, text: string) => {
     stop();
     if (!text.trim()) return;
     setLoadingId(id);
+    const request = playback.current;
     try {
       const { data, error } = await supabase.functions.invoke("voice-speak", { body: { text } });
+      if (request !== playback.current) return;
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.audio) throw new Error("No voice audio returned");
@@ -154,10 +181,11 @@ export function useVoiceSpeaker() {
       setSpeakingId(id);
       await audio.play();
     } catch (error: any) {
+      if (request !== playback.current) return;
       // Voice should never block the workflow. The text is always visible.
       toast.error(error?.message ?? "Ava's voice is unavailable right now. Continue with text.");
     } finally {
-      setLoadingId((cur) => (cur === id ? null : cur));
+      if (request === playback.current) setLoadingId((cur) => (cur === id ? null : cur));
     }
   }, [stop]);
 

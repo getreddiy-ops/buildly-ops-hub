@@ -19,7 +19,7 @@ export default function AgentOverview() {
         return;
       }
       const [jobs, custs, leads] = await Promise.all([
-        supabase.from("jobs").select("id", { count: "exact", head: true }).in("organization_id", ids),
+        supabase.from("org_jobs").select("id", { count: "exact", head: true }).in("organization_id", ids),
         supabase.from("customers").select("id", { count: "exact", head: true }).in("organization_id", ids),
         supabase.from("leads").select("id", { count: "exact", head: true }).in("organization_id", ids),
       ]);

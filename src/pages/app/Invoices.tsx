@@ -67,7 +67,7 @@ export default function Invoices() {
     if (!activeOrg) return;
     setLoading(true);
     const [{ data: invs, error }, { data: custs }] = await Promise.all([
-      supabase.from("invoices").select("*, customers(name,address,email,phone)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
+      supabase.from("org_invoices").select("*, customers(name,address,email,phone)").eq("organization_id", activeOrg.organization_id).order("created_at", { ascending: false }),
       supabase.from("customers").select("id,name,address").eq("organization_id", activeOrg.organization_id).order("name"),
     ]);
     if (error) toast.error(error.message);
@@ -105,7 +105,7 @@ export default function Invoices() {
     setTaxPct(Number(inv.tax_rate) || 0);
     setNotes(inv.notes ?? "");
     setTerms(inv.terms ?? "");
-    const { data: li } = await supabase.from("invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
+    const { data: li } = await supabase.from("org_invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
     setItems((li ?? []).map((r) => ({
       id: r.id, description: r.description ?? "",
       quantity: Number(r.quantity), unit_price: Number(r.unit_price),
@@ -127,12 +127,12 @@ export default function Invoices() {
     };
     let invoiceId: string;
     if (editing) {
-      const { error } = await supabase.from("invoices").update(header).eq("id", editing.id);
+      const { error } = await supabase.from("org_invoices").update(header).eq("id", editing.id);
       if (error) { setSaving(false); return toast.error(error.message); }
       invoiceId = editing.id;
-      await supabase.from("invoice_line_items").delete().eq("invoice_id", invoiceId);
+      await supabase.from("org_invoice_line_items").delete().eq("invoice_id", invoiceId);
     } else {
-      const { data, error } = await supabase.from("invoices")
+      const { data, error } = await supabase.from("org_invoices")
         .insert({ ...header, organization_id: activeOrg.organization_id, created_by: user.id })
         .select("id").single();
       if (error || !data) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
@@ -146,7 +146,7 @@ export default function Invoices() {
       total: (Number(i.quantity) || 0) * (Number(i.unit_price) || 0),
       position: idx,
     }));
-    const { error: liErr } = await supabase.from("invoice_line_items").insert(payload);
+    const { error: liErr } = await supabase.from("org_invoice_line_items").insert(payload);
     setSaving(false);
     if (liErr) return toast.error(liErr.message);
     toast.success(editing ? "Invoice updated" : "Invoice created");
@@ -156,14 +156,14 @@ export default function Invoices() {
 
   const remove = async (id: string) => {
     if (!confirm("Delete this invoice?")) return;
-    const { error } = await supabase.from("invoices").delete().eq("id", id);
+    const { error } = await supabase.from("org_invoices").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Invoice deleted");
     load();
   };
 
   const openPreview = async (inv: any) => {
-    const { data: li } = await supabase.from("invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
+    const { data: li } = await supabase.from("org_invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
     setPreviewing({ ...inv, line_items: li ?? [] });
   };
 

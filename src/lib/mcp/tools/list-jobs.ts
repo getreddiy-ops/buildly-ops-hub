@@ -20,7 +20,7 @@ export default defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, limit }, ctx) => {
     if (!ctx.isAuthenticated()) return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    let q = sb(ctx).from("jobs").select("*").order("created_at", { ascending: false }).limit(limit);
+    let q = sb(ctx).from("org_jobs").select("*").order("created_at", { ascending: false }).limit(limit);
     if (status) q = q.eq("status", status);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };

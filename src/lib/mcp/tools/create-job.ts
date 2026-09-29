@@ -29,7 +29,7 @@ export default defineTool({
     if (preview) return preview;
 
     const { data, error } = await client
-      .from("jobs")
+      .from("org_jobs")
       .insert({
         organization_id: org.orgId,
         title: input.title,

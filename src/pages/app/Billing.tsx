@@ -16,6 +16,7 @@ import { trackTrialStart } from "@/lib/gtag";
 import { cn } from "@/lib/utils";
 
 const ORDER: Tier[] = ["base", "plus", "premium"];
+const NEW_CUSTOMER_PLANS: Tier[] = ["base"];
 const ACTIVATION_POLL_MS = 2_000;
 const ACTIVATION_TIMEOUT_MS = 45_000;
 type ActivationState = "idle" | "verifying" | "delayed";
@@ -205,8 +206,8 @@ export default function Billing() {
             </Card>
           )}
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {ORDER.map((t) => {
+          <div className={cn("grid gap-4", isActive ? "md:grid-cols-3" : "md:grid-cols-1")}>
+            {(isActive && tier ? ORDER : NEW_CUSTOMER_PLANS).map((t) => {
               const plan = TIERS[t];
               const isCurrent = isActive && tier === t;
               const currentIdx = tier ? ORDER.indexOf(tier) : -1;

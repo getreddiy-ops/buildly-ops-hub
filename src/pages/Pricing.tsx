@@ -20,7 +20,7 @@ type PlanDef = {
 const PLANS: PlanDef[] = [
   {
     tier: "base",
-    tagline: "Run your business from one organized workspace.",
+    tagline: "Run your contractor operations from one connected workspace. No AI provider required.",
     features: [
       "Leads, customers & estimates",
       "Jobs, scheduling & crew management",
@@ -28,29 +28,6 @@ const PLANS: PlanDef[] = [
       "Boss-approved hours & job costing",
       "Mobile field app",
       "Unlimited crew members",
-    ],
-  },
-  {
-    tier: "plus",
-    tagline: "Everything in FastTract, plus the AI admin assistant.",
-    highlight: true,
-    features: [
-      "Everything in FastTract",
-      "AI admin assistant",
-      "Voice-to-form: talk and it fills fields & estimates",
-      "Draft estimates & schedule jobs by chat or voice",
-      "Confirm-before-write safety",
-    ],
-  },
-  {
-    tier: "premium",
-    tagline: "Plus the AI phone answering assistant.",
-    features: [
-      "Everything in Plus",
-      "AI phone answering assistant",
-      "Captures leads 24/7",
-      "Books appointments on your calendar",
-      "Call transcripts & summaries",
     ],
   },
 ];
@@ -82,7 +59,7 @@ export default function Pricing() {
     }
   };
 
-  const productLd = Object.values(TIERS).map((t) => ({
+  const productLd = [TIERS.base].map((t) => ({
     "@context": "https://schema.org",
     "@type": "Product",
     name: `FastTract — ${t.name}`,
@@ -101,7 +78,7 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Pricing — FastTract"
-        description="Simple monthly FastTract plans for small businesses. Base includes core operations, Plus adds Ava, and Premium adds AI phone answering."
+        description="FastTract's core Contractor OS plan connects leads, estimates, jobs, scheduling, crew time, invoices, and job costing. AI is optional and not required."
         path="/pricing"
         jsonLd={productLd}
       />
@@ -111,12 +88,13 @@ export default function Pricing() {
       </header>
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-semibold tracking-tight">Pick the plan that fits your business.</h1>
-          <p className="mt-3 text-muted-foreground">Try any plan free for 7 days. Monthly billing per company. Cancel anytime.</p>
+          <h1 className="text-4xl font-semibold tracking-tight">One plan for your contractor operations.</h1>
+          <p className="mt-3 text-muted-foreground">Try FastTract free for 7 days. Billed monthly per company. Cancel anytime.</p>
           <p className="mt-1 text-xs text-muted-foreground">Card required · No charge until the trial ends</p>
         </div>
-        <h2 className="mb-6 text-center text-xl font-medium tracking-tight">Plans</h2>
-        <div className="grid gap-6 md:grid-cols-3">
+        <h2 className="mb-2 text-center text-xl font-medium tracking-tight">FastTract Core</h2>
+        <p className="mb-6 text-center text-sm text-muted-foreground">AI features are optional and not available in this launch plan. Bring-your-own AI connections are planned for later.</p>
+        <div className="mx-auto grid max-w-xl gap-6">
           {PLANS.map((plan) => {
             const t = TIERS[plan.tier];
             return (

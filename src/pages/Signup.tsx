@@ -75,7 +75,7 @@ export default function Signup() {
 
     toast({
       title: "Account created",
-      description: inviteToken ? "Your team access is ready." : "Let’s introduce Ava to your company.",
+      description: inviteToken ? "Your team access is ready." : "Next, set up your company workspace.",
     });
     navigate("/onboarding");
   };
@@ -102,7 +102,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-dark">
-      <SEO title="Create an account — FastTract" description="Meet your personal FastTract AI assistant and set up your business with five quick answers." path="/signup" noindex />
+      <SEO title="Create an account — FastTract" description="Set up your FastTract Contractor OS workspace for customers, estimates, jobs, scheduling, and your crew." path="/signup" noindex />
       <header className="mx-auto max-w-7xl px-4 py-5"><Logo /></header>
       <div className="mx-auto max-w-md px-4 py-12">
         <div className="rounded-xl border border-border bg-card p-8 shadow-card">

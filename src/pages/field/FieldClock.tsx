@@ -116,7 +116,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
     let list: AssignedJob[] = [];
     if (canChooseAnyOrgJob(activeOrg.role)) {
       const { data: orgJobs, error } = await supabase
-        .from("jobs")
+        .from("org_jobs")
         .select("id, title, status, organization_id, latitude, longitude, address")
         .eq("organization_id", activeOrg.organization_id)
         .not("status", "in", "(completed,cancelled)")
@@ -131,8 +131,8 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
       }));
     } else {
       const { data: assignments, error } = await supabase
-        .from("crew_assignments")
-        .select("job_id, jobs!inner(id, title, status, organization_id, latitude, longitude, address)")
+        .from("org_crew_assignments")
+        .select("job_id, jobs:org_jobs!inner(id, title, status, organization_id, latitude, longitude, address)")
         .eq("user_id", user.id);
       if (error) toast.error(error.message);
       list = ((assignments ?? []) as unknown as CrewAssignmentRecord[])

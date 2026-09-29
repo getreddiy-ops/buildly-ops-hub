@@ -4,30 +4,28 @@ import { SEO } from "@/components/SEO";
 import { Phone, Camera, Users, FileText, Receipt, Calendar, Clock, Bot } from "lucide-react";
 
 const features = [
-  { icon: Bot, title: "Your Personal AI Assistant", to: "/signup", desc: "Talk naturally with Ava. She learns your approved business context and helps you handle the work without hunting through menus." },
-  { icon: Phone, title: "24/7 Phone Assistant", to: "/ai-phone-agent", desc: "Answer missed calls, capture customer details, and prepare follow-up around the clock." },
   { icon: Users, title: "Customers & Follow-up", to: "/contractor-crm", desc: "Keep leads, customers, calls, messages, and next steps together in one record." },
   { icon: FileText, title: "Estimates & Proposals", to: "/estimate-software", desc: "Create clear, branded proposals and request approval before anything is sent." },
   { icon: Receipt, title: "Money & Payments", to: "/invoice-software", desc: "Organize income, expenses, invoices, payments, tax reserves, and reports." },
   { icon: Calendar, title: "Scheduling & Reminders", to: "/signup", desc: "Coordinate appointments, work, follow-ups, and the personal details you do not want to forget." },
   { icon: Clock, title: "Work Tracking", to: "/signup", desc: "Track time, jobs, projects, and costs with workflows tailored to your business." },
-  { icon: Camera, title: "Website & Brand Setup", to: "/signup", desc: "Share your website and Ava can pull in your logo and colors, then suggest a stronger web presence." },
+  { icon: Camera, title: "Company & Team Setup", to: "/signup", desc: "Set up your company profile, invite the team, and organize documents and operating details." },
 ];
 
 export default function Features() {
   return (
     <MarketingShell>
       <SEO
-        title="Features | Your Personal AI Business Assistant — FastTract"
-        description="Meet Ava and explore FastTract’s four connected areas: Home, Work, Money, and Business—personalized for the way your company operates."
+        title="Contractor OS Features — FastTract"
+        description="Connect contractor customers, estimates, jobs, scheduling, crew time, invoices, and job costing in FastTract. AI is optional."
         path="/features"
       />
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 lg:px-8 lg:pt-24">
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-          One AI assistant for the whole business.
+          One Contractor OS for office and field work.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Ava helps you manage customers, work, money, and company operations through one simple conversation. Contractor workflows are included, but FastTract adapts to any kind of business.
+          Keep customer records, estimates, scheduled jobs, crew hours, invoices, and costs connected. Core workflows do not depend on an AI provider.
         </p>
         <CTARow />
       </section>

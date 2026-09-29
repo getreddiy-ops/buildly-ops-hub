@@ -24,8 +24,8 @@ export default function FieldJobs() {
     (async () => {
       setLoading(true);
       const { data } = await supabase
-        .from("crew_assignments")
-        .select("jobs!inner(id, title, status, address, scheduled_start, organization_id, customers(name))")
+        .from("org_crew_assignments")
+        .select("jobs:org_jobs!inner(id, title, status, address, scheduled_start, organization_id, customers(name))")
         .eq("user_id", user.id);
       const list = ((data ?? []) as any[])
         .map((r) => r.jobs)

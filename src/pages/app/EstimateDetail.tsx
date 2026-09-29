@@ -32,7 +32,7 @@ export default function EstimateDetail() {
     const [{ data: e, error }, { data: li }, { data: job }] = await Promise.all([
       supabase.from("estimates").select("*, customers(name,email,phone,address)").eq("id", id).maybeSingle(),
       supabase.from("estimate_line_items").select("*").eq("estimate_id", id).order("position"),
-      supabase.from("jobs").select("id").eq("estimate_id", id).maybeSingle(),
+      supabase.from("org_jobs").select("id").eq("estimate_id", id).maybeSingle(),
     ]);
     if (error) toast.error(error.message);
     setEst(e);
@@ -46,7 +46,7 @@ export default function EstimateDetail() {
   const convertToJob = async () => {
     if (!est || !activeOrg || !user) return;
     setConverting(true);
-    const { data: job, error } = await supabase.from("jobs").insert({
+    const { data: job, error } = await supabase.from("org_jobs").insert({
       organization_id: activeOrg.organization_id,
       customer_id: est.customer_id,
       estimate_id: est.id,

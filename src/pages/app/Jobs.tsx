@@ -30,7 +30,7 @@ import { JobsCalendar } from "@/components/JobsCalendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Database } from "@/integrations/supabase/types";
 
-type Job = Database["public"]["Tables"]["jobs"]["Row"] & { customers?: { name: string } | null };
+type Job = Database["public"]["Tables"]["org_jobs"]["Row"] & { customers?: { name: string } | null };
 type JobStatus = Database["public"]["Enums"]["job_status"];
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 
@@ -171,7 +171,7 @@ export default function Jobs() {
   // the same FastTract API consumed by the mobile app.
   const remove = async (id: string) => {
     if (!confirm("Delete this job?")) return;
-    const { error } = await supabase.from("jobs").delete().eq("id", id);
+    const { error } = await supabase.from("org_jobs").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Job deleted");
     await load();
@@ -181,7 +181,7 @@ export default function Jobs() {
     setCrewJob(j);
     setAddUserId("");
     setCrewOpen(true);
-    const { data } = await supabase.from("crew_assignments").select("id, user_id").eq("job_id", j.id);
+    const { data } = await supabase.from("org_crew_assignments").select("id, user_id").eq("job_id", j.id);
     setCrew(data ?? []);
   };
 
@@ -189,18 +189,18 @@ export default function Jobs() {
 
   const addCrew = async () => {
     if (!crewJob || !addUserId) return;
-    const { error } = await supabase.from("crew_assignments").insert({
+    const { error } = await supabase.from("org_crew_assignments").insert({
       job_id: crewJob.id,
       user_id: addUserId,
     });
     if (error) return toast.error(error.message);
     setAddUserId("");
-    const { data } = await supabase.from("crew_assignments").select("id, user_id").eq("job_id", crewJob.id);
+    const { data } = await supabase.from("org_crew_assignments").select("id, user_id").eq("job_id", crewJob.id);
     setCrew(data ?? []);
   };
 
   const removeCrew = async (id: string) => {
-    const { error } = await supabase.from("crew_assignments").delete().eq("id", id);
+    const { error } = await supabase.from("org_crew_assignments").delete().eq("id", id);
     if (error) return toast.error(error.message);
     setCrew((s) => s.filter((c) => c.id !== id));
   };

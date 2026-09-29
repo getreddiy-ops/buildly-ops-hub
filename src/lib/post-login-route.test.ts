@@ -53,3 +53,13 @@ describe("safeNextPath", () => {
     (destination) => expect(safeNextPath(destination)).toBeNull(),
   );
 });
+
+
+describe("post-login redirect normalization", () => {
+  it.each(["/\\\\evil.example", "/%5cevil.example", "/%2fevil.example", "/%0a/evil.example", "/\\n/evil.example", "/%invalid"])("rejects unsafe target %s", value => {
+    expect(safeNextPath(value)).toBeNull();
+  });
+  it("preserves a valid local route and query", () => {
+    expect(safeNextPath("/app/estimates?filter=draft")).toBe("/app/estimates?filter=draft");
+  });
+});

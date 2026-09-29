@@ -12,6 +12,7 @@ import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 import Demo from "./pages/Demo";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/e/:token" element={<PublicEstimate />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
             {import.meta.env.DEV && <Route path="/onboarding-preview" element={<Onboarding />} />}

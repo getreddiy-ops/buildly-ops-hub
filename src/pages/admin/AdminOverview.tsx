@@ -12,7 +12,7 @@ export default function AdminOverview() {
       const [o, u, j, a] = await Promise.all([
         supabase.from("organizations").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("jobs").select("id", { count: "exact", head: true }),
+        supabase.from("org_jobs").select("id", { count: "exact", head: true }),
         supabase.from("ai_actions").select("id", { count: "exact", head: true }),
       ]);
       setStats({ orgs: o.count ?? 0, users: u.count ?? 0, jobs: j.count ?? 0, actions: a.count ?? 0 });

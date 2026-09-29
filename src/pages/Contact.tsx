@@ -15,7 +15,7 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Contact — FastTract" description="Talk to the FastTract team about bringing a personal AI assistant into your business." path="/contact" />
+      <SEO title="Contact — FastTract" description="Talk to the FastTract team about contractor operations, estimates, jobs, scheduling, and crew workflows." path="/contact" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Button variant="ghost" asChild><Link to="/">Back</Link></Button>
