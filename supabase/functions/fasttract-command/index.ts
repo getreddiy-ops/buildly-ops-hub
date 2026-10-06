@@ -113,7 +113,7 @@ async function createJob(admin: any, organizationId: string, userId: string, tit
 async function clockIn(admin: any, organizationId: string, userId: string, jobTitle: string) {
   const job = await findJob(admin, organizationId, jobTitle);
   const { data: open, error: openError } = await admin
-    .from("time_entries")
+    .from("contractor_time_entries")
     .select("id,job_id,clock_in")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
@@ -123,10 +123,11 @@ async function clockIn(admin: any, organizationId: string, userId: string, jobTi
   if (open) throw new Error("You are already clocked in. Clock out before starting another job.");
 
   const { data, error } = await admin
-    .from("time_entries")
+    .from("contractor_time_entries")
     .insert({
       organization_id: organizationId,
       job_id: job.id,
+      job_title: job.title,
       user_id: userId,
       clock_in: new Date().toISOString(),
       status: "pending",
@@ -139,8 +140,8 @@ async function clockIn(admin: any, organizationId: string, userId: string, jobTi
 
 async function clockOut(admin: any, organizationId: string, userId: string, jobTitle?: string) {
   let query = admin
-    .from("time_entries")
-    .select("id,job_id,clock_in,jobs(title)")
+    .from("contractor_time_entries")
+    .select("id,job_id,job_title,clock_in")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
     .is("clock_out", null)
@@ -153,7 +154,7 @@ async function clockOut(admin: any, organizationId: string, userId: string, jobT
   if (!entry) throw new Error("No open clock-in was found.");
 
   if (jobTitle) {
-    const currentTitle = String(entry.jobs?.title ?? "");
+    const currentTitle = String(entry.job_title ?? "");
     if (currentTitle && !currentTitle.toLowerCase().includes(jobTitle.toLowerCase())) {
       throw new Error(`You are currently clocked into ${currentTitle}, not ${jobTitle}.`);
     }
@@ -162,14 +163,16 @@ async function clockOut(admin: any, organizationId: string, userId: string, jobT
   const clockOutAt = new Date();
   const minutes = Math.max(0, Math.round((clockOutAt.getTime() - Date.parse(entry.clock_in)) / 60000));
   const { error: updateError } = await admin
-    .from("time_entries")
+    .from("contractor_time_entries")
     .update({ clock_out: clockOutAt.toISOString() })
-    .eq("id", entry.id);
+    .eq("id", entry.id)
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId);
   if (updateError) throw updateError;
 
   return {
     action: "clock_out",
-    message: `Clocked out${entry.jobs?.title ? ` of ${entry.jobs.title}` : ""} — ${(minutes / 60).toFixed(2)} hours.`,
+    message: `Clocked out${entry.job_title ? ` of ${entry.job_title}` : ""} — ${(minutes / 60).toFixed(2)} hours.`,
     result: { id: entry.id, minutes, hours: minutes / 60 },
   };
 }

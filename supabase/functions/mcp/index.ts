@@ -89,14 +89,14 @@ async function resolveCustomer(token: string, oid: string, args: Record<string, 
 async function resolveJob(token: string, oid: string, args: Record<string, unknown>) {
   const providedId = typeof args.job_id === "string" ? args.job_id.trim() : "";
   if (providedId) {
-    const rows = await rest(token, `jobs?id=eq.${encodeURIComponent(providedId)}&organization_id=eq.${encodeURIComponent(oid)}&select=id,title,status,customer_id&limit=1`);
+    const rows = await rest(token, `org_jobs?id=eq.${encodeURIComponent(providedId)}&organization_id=eq.${encodeURIComponent(oid)}&select=id,title,status,customer_id&limit=1`);
     if (!rows?.[0]) throw new Error("Job not found in this FastTract organization.");
     return rows[0];
   }
 
   const title = typeof args.job_title === "string" ? args.job_title.trim() : "";
   if (!title) throw new Error("Provide job_id or job_title.");
-  const matches = await rest(token, `jobs?organization_id=eq.${encodeURIComponent(oid)}&title=ilike.${encodeURIComponent(title)}&select=id,title,status,customer_id&limit=5`);
+  const matches = await rest(token, `org_jobs?organization_id=eq.${encodeURIComponent(oid)}&title=ilike.${encodeURIComponent(title)}&select=id,title,status,customer_id&limit=5`);
   if (matches.length === 0) throw new Error(`No job titled "${title}" was found.`);
   if (matches.length > 1) throw new Error(`More than one job matched "${title}". Provide job_id.`);
   return matches[0];
@@ -395,7 +395,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
 
   if (name === "list_jobs") {
     const limit = Math.min(Math.max(Number(args.limit || 25), 1), 100);
-    let path = `jobs?organization_id=eq.${encodeURIComponent(oid)}&select=id,title,status,address,scheduled_start,scheduled_end,budget,customer_id,customers(name)&order=created_at.desc&limit=${limit}`;
+    let path = `org_jobs?organization_id=eq.${encodeURIComponent(oid)}&select=id,title,status,address,scheduled_start,scheduled_end,budget,customer_id,customers(name)&order=created_at.desc&limit=${limit}`;
     if (typeof args.status === "string" && args.status) path += `&status=eq.${encodeURIComponent(args.status)}`;
     const rows = await rest(token, path);
     return toolOk(JSON.stringify(rows), { jobs: rows });
@@ -424,7 +424,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
     if (args.confirm !== true) {
       return toolOk(`Not yet applied. This would create job "${title}"${customer ? ` for ${customer.name}` : ""} directly in FastTract. Review the details, then call again with confirm: true.`, { pending: true, preview: job });
     }
-    const rows = await rest(token, "jobs", { method: "POST", body: JSON.stringify(job) });
+    const rows = await rest(token, "org_jobs", { method: "POST", body: JSON.stringify(job) });
     const created = rows?.[0];
     return created?.id
       ? toolOk(`Created FastTract job ${created.title}.`, { job: created })
@@ -484,7 +484,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
 
   if (name === "list_invoices") {
     const limit = Math.min(Math.max(Number(args.limit || 25), 1), 100);
-    let path = `invoices?organization_id=eq.${encodeURIComponent(oid)}&select=id,number,status,issue_date,due_date,subtotal,tax_rate,tax_amount,total,amount_paid,customer_id,customers(name),created_at&order=created_at.desc&limit=${limit}`;
+    let path = `org_invoices?organization_id=eq.${encodeURIComponent(oid)}&select=id,number,status,issue_date,due_date,subtotal,tax_rate,tax_amount,total,amount_paid,customer_id,customers(name),created_at&order=created_at.desc&limit=${limit}`;
     if (typeof args.status === "string" && args.status) path += `&status=eq.${encodeURIComponent(args.status)}`;
     const rows = await rest(token, path);
     return toolOk(JSON.stringify(rows), { invoices: rows });
@@ -521,14 +521,14 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
     if (args.confirm !== true) {
       return toolOk(`Not yet applied. This would create invoice ${number} for ${customer.name} totaling $${total.toFixed(2)} directly in FastTract. Review the details, then call again with confirm: true.`, { pending: true, preview });
     }
-    const rows = await rest(token, "invoices", { method: "POST", body: JSON.stringify(invoice) });
+    const rows = await rest(token, "org_invoices", { method: "POST", body: JSON.stringify(invoice) });
     const created = rows?.[0];
     if (!created?.id) return toolErr("Invoice was created but no ID was returned.");
     try {
       const lineRows = items.map((item, position) => ({ invoice_id: created.id, ...item, position }));
-      await rest(token, "invoice_line_items", { method: "POST", body: JSON.stringify(lineRows) });
+      await rest(token, "org_invoice_line_items", { method: "POST", body: JSON.stringify(lineRows) });
     } catch (error) {
-      try { await rest(token, `invoices?id=eq.${encodeURIComponent(created.id)}`, { method: "DELETE" }); } catch { /* best effort rollback */ }
+      try { await rest(token, `org_invoices?id=eq.${encodeURIComponent(created.id)}`, { method: "DELETE" }); } catch { /* best effort rollback */ }
       return toolErr(`Invoice line items failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     return toolOk(`Created FastTract invoice ${number} for ${customer.name} totaling $${total.toFixed(2)}.`, { invoice: created, line_items: items });
@@ -539,7 +539,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
     const invoiceNumber = typeof args.invoice_number === "string" ? args.invoice_number.trim() : "";
     if (!invoiceId && !invoiceNumber) return toolErr("Provide invoice_id or invoice_number.");
     const filter = invoiceId ? `id=eq.${encodeURIComponent(invoiceId)}` : `number=eq.${encodeURIComponent(invoiceNumber)}`;
-    const matches = await rest(token, `invoices?organization_id=eq.${encodeURIComponent(oid)}&${filter}&select=id,number,status,total,amount_paid,customers(name)&limit=2`);
+    const matches = await rest(token, `org_invoices?organization_id=eq.${encodeURIComponent(oid)}&${filter}&select=id,number,status,total,amount_paid,customers(name)&limit=2`);
     if (matches.length === 0) return toolErr("Invoice not found.");
     if (matches.length > 1) return toolErr("More than one invoice matched. Provide invoice_id.");
     const invoice = matches[0];
@@ -547,7 +547,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
     if (args.confirm !== true) {
       return toolOk(`Not yet applied. This would mark invoice ${invoice.number || invoice.id} paid in full for $${Number(invoice.total).toFixed(2)}. Review, then call again with confirm: true.`, { pending: true, preview: invoice });
     }
-    const rows = await rest(token, `invoices?id=eq.${encodeURIComponent(invoice.id)}&organization_id=eq.${encodeURIComponent(oid)}`, {
+    const rows = await rest(token, `org_invoices?id=eq.${encodeURIComponent(invoice.id)}&organization_id=eq.${encodeURIComponent(oid)}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "paid", amount_paid: Number(invoice.total) }),
     });
@@ -557,16 +557,17 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
   if (name === "clock_in") {
     let job: any;
     try { job = await resolveJob(token, oid, args); } catch (error) { return toolErr(error instanceof Error ? error.message : String(error)); }
-    const open = await rest(token, `time_entries?organization_id=eq.${encodeURIComponent(oid)}&user_id=eq.${encodeURIComponent(userId)}&clock_out=is.null&select=id,job_id,clock_in,jobs(title)&order=clock_in.desc&limit=1`);
-    if (open?.[0]) return toolErr(`You are already clocked in${open[0].jobs?.title ? ` to ${open[0].jobs.title}` : ""}. Clock out first.`, { openEntry: open[0] });
+    const open = await rest(token, `contractor_time_entries?organization_id=eq.${encodeURIComponent(oid)}&user_id=eq.${encodeURIComponent(userId)}&clock_out=is.null&select=id,job_id,job_title,clock_in&order=clock_in.desc&limit=1`);
+    if (open?.[0]) return toolErr(`You are already clocked in${open[0].job_title ? ` to ${open[0].job_title}` : ""}. Clock out first.`, { openEntry: open[0] });
     if (args.confirm !== true) {
       return toolOk(`Not yet applied. This would clock you into "${job.title}" now. Review, then call again with confirm: true.`, { pending: true, preview: { job_id: job.id, job_title: job.title } });
     }
-    const rows = await rest(token, "time_entries", {
+    const rows = await rest(token, "contractor_time_entries", {
       method: "POST",
       body: JSON.stringify({
         organization_id: oid,
         job_id: job.id,
+        job_title: job.title,
         user_id: userId,
         clock_in: new Date().toISOString(),
         status: "pending",
@@ -588,19 +589,19 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
         return toolErr(error instanceof Error ? error.message : String(error));
       }
     }
-    let path = `time_entries?organization_id=eq.${encodeURIComponent(oid)}&user_id=eq.${encodeURIComponent(userId)}&clock_out=is.null&select=id,job_id,clock_in,note,jobs(title)&order=clock_in.desc&limit=1`;
+    let path = `contractor_time_entries?organization_id=eq.${encodeURIComponent(oid)}&user_id=eq.${encodeURIComponent(userId)}&clock_out=is.null&select=id,job_id,job_title,clock_in,note&order=clock_in.desc&limit=1`;
     if (jobId) path += `&job_id=eq.${encodeURIComponent(jobId)}`;
     const open = await rest(token, path);
     if (!open?.[0]) return toolErr(jobId ? `No open time entry was found for ${jobTitle}.` : "You are not currently clocked in.");
     const entry = open[0];
-    const label = entry.jobs?.title || jobTitle || "your current job";
+    const label = entry.job_title || jobTitle || "your current job";
     if (args.confirm !== true) {
       return toolOk(`Not yet applied. This would clock you out of ${label} now. Review, then call again with confirm: true.`, { pending: true, preview: entry });
     }
     const note = typeof args.note === "string" && args.note.trim()
       ? [entry.note, args.note.trim()].filter(Boolean).join("\n")
       : entry.note;
-    const rows = await rest(token, `time_entries?id=eq.${encodeURIComponent(entry.id)}&organization_id=eq.${encodeURIComponent(oid)}`, {
+    const rows = await rest(token, `contractor_time_entries?id=eq.${encodeURIComponent(entry.id)}&organization_id=eq.${encodeURIComponent(oid)}`, {
       method: "PATCH",
       body: JSON.stringify({ clock_out: new Date().toISOString(), note: note || null }),
     });

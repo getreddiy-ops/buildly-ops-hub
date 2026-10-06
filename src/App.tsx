@@ -8,7 +8,7 @@ import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOff
 import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
 
 import Landing from "./pages/Landing";
-import Pricing from "./pages/Pricing";
+import Pricing from "./pages/GhlPricing";
 import Contact from "./pages/Contact";
 import Demo from "./pages/Demo";
 import Login from "./pages/Login";
@@ -55,7 +55,7 @@ import Assistant from "./pages/app/Assistant";
 import CommandCenter from "./pages/app/CommandCenter";
 import Messages from "./pages/app/Messages";
 import PhoneAssistant from "./pages/app/PhoneAssistant";
-import Billing from "./pages/app/Billing";
+import Billing from "./pages/app/GhlBilling";
 import BusinessProfile from "./pages/app/BusinessProfile";
 import Branding from "./pages/app/Branding";
 import Developer from "./pages/app/Developer";

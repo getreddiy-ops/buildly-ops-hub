@@ -14,7 +14,7 @@ import {
 } from "../_shared/ghl.ts";
 
 type Entity = "lead" | "customer" | "job";
-const ENTITY_TABLE: Record<Entity, string> = { lead: "leads", customer: "customers", job: "jobs" };
+const ENTITY_TABLE: Record<Entity, string> = { lead: "leads", customer: "customers", job: "org_jobs" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
