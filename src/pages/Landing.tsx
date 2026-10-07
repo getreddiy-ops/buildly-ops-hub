@@ -5,6 +5,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { FAQ } from "@/components/marketing/FAQ";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { SALES_PLANS } from "@/lib/sales";
 import {
   ArrowRight, Calculator, Check, CheckCircle2, ClipboardCheck,
   FileSignature, FileText, Phone, Receipt, ShieldCheck, Users2,
@@ -64,7 +65,7 @@ const softwareSchema = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description: "A Contractor OS for leads, estimates, jobs, scheduling, teams, time tracking, invoices, and job costing.",
-  offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
+  offers: { "@type": "Offer", price: "197", priceCurrency: "USD" },
   brand: { "@type": "Brand", name: "FastTract" },
   url: "https://fasttract.org/",
 };
@@ -150,7 +151,7 @@ export default function Landing() {
             FastTract connects leads, estimates, jobs, schedules, crews, invoices, and job costs from the first inquiry through final payment. Core workflows work without an AI provider.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
+            <Button size="lg" asChild><Link to="/pricing">Choose your FastTract plan</Link></Button>
             <Button size="lg" variant="outline" asChild><Link to="/demo">Watch product tour</Link></Button>
           </div>
           <TrialNote />
@@ -226,14 +227,14 @@ export default function Landing() {
         <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Simple monthly pricing</p>
-            <h2 className="mt-3 text-3xl font-bold">One core plan for the work contractors run every day.</h2>
-            <p className="mt-4 text-muted-foreground">FastTract is $69 per company each month after a 7-day trial. No AI provider is required. Optional AI connections are planned for later.</p>
-            <Button className="mt-6" asChild><Link to="/pricing">See the FastTract plan <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+            <h2 className="mt-3 text-3xl font-bold">Choose the FastTract plan for your business.</h2>
+            <p className="mt-4 text-muted-foreground">Choose Basic, Pro, or Enterprise through FastTract’s existing secure checkout. Your subscription and billing stay with your original account.</p>
+            <Button className="mt-6" asChild><Link to="/pricing">Compare FastTract plans <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
           <div className="grid gap-4">
-            {[["FastTract", "$69", "Core Contractor OS"]].map(([name, price, detail]) => (
+            {SALES_PLANS.map(({name, monthly, description}) => (
               <div key={name} className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold">{name}</h3><p className="mt-4 text-3xl font-bold">{price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p><p className="mt-2 text-xs text-muted-foreground">{detail}</p>
+                <h3 className="font-semibold">{name}</h3><p className="mt-4 text-3xl font-bold">${monthly}<span className="text-sm font-normal text-muted-foreground">/mo</span></p><p className="mt-2 text-xs text-muted-foreground">{description}</p>
               </div>
             ))}
           </div>
@@ -245,7 +246,7 @@ export default function Landing() {
           <h2 className="text-3xl font-bold">Bring your office and field work together.</h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">Set up your company, invite your crew, and start tracking customers, estimates, jobs, time, and costs. AI is optional.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Button size="lg" asChild><Link to="/signup">Start 7-day free trial</Link></Button>
+            <Button size="lg" asChild><Link to="/pricing">Choose your FastTract plan</Link></Button>
             <Button size="lg" variant="outline" asChild><Link to="/demo">See FastTract in action</Link></Button>
           </div>
           <TrialNote />

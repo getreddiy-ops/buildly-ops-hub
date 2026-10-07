@@ -36,7 +36,7 @@ const footerCols = [
       { to: "/blog", label: "Blog" },
       { to: "/contact", label: "Contact" },
       { to: "/login", label: "Sign in" },
-      { to: "/signup", label: "Start free" },
+      { to: "/pricing", label: "Choose a plan" },
       { to: "/legal/privacy", label: "Privacy" },
       { to: "/legal/terms", label: "Terms" },
       { to: "/legal/refunds", label: "Refunds" },
@@ -59,7 +59,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" asChild><Link to="/login">Sign in</Link></Button>
-          <Button asChild><Link to="/signup">Start Free</Link></Button>
+          <Button asChild><Link to="/pricing">Choose a plan</Link></Button>
         </div>
       </header>
 

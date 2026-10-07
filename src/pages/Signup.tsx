@@ -152,7 +152,7 @@ export default function Signup() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {inviteToken
                   ? "Create your account to join the FastTract team that invited you."
-                  : "Create your account, set up your company, then choose a 7-day trial plan."}
+                  : "Create your account and set up your company. If you already purchased FastTract, use the email from your original checkout."}
               </p>
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div><Label htmlFor="name">Full name</Label>
