@@ -28,6 +28,7 @@ import { AiFormHelper } from "@/components/AiFormHelper";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { PhotoEstimateDialog } from "@/components/PhotoEstimateDialog";
+import { ConcreteCalculator } from "@/components/ConcreteCalculator";
 import type { Database } from "@/integrations/supabase/types";
 import { estimateKnowledgeRules, estimateKnowledgeTemplates } from "@/lib/estimateKnowledge";
 
@@ -48,7 +49,7 @@ const headerSchema = z.object({
   customer_id: z.string().uuid("Pick a customer"),
   status: z.enum(["draft", "sent", "approved", "rejected"]),
   tax: z.number().min(0).max(100),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  notes: z.string().trim().max(4000).optional().or(z.literal("")),
 });
 
 const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -109,6 +110,16 @@ export default function Estimates() {
     setItems(result.items.length ? result.items : [{ description: "", quantity: 1, unit_price: 0 }]);
     setOpen(true);
   };
+  const applyConcreteDraft = (result: { title: string; notes: string; items: LineItem[] }) => {
+    setTitle(result.title);
+    setNotes((prev) => {
+      const block = result.notes;
+      if (!prev.trim()) return block;
+      if (prev.includes("CONCRETE QUANTITY WORKSHEET")) return block + "\n\n" + prev;
+      return block + "\n\n" + prev;
+    });
+    setItems(result.items.length ? result.items : [{ description: "", quantity: 1, unit_price: 0 }]);
+  };
   const applyTemplate = (templateId: string) => {
     const template = estimateKnowledgeTemplates.find((item) => item.id === templateId);
     if (!template) return;
@@ -144,7 +155,6 @@ export default function Estimates() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, searchParams]);
-
 
   const save = async () => {
     const parsed = headerSchema.safeParse({ title, customer_id: customerId, status, tax: Number(taxPct), notes });
@@ -270,6 +280,9 @@ export default function Estimates() {
                       ))}
                     </div>
                   </div>
+                )}
+                {!editing && (
+                  <ConcreteCalculator onApply={applyConcreteDraft} />
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
