@@ -80,9 +80,14 @@ export default function Approvals() {
   const attachJob = async (e: Entry, jobId: string) => {
     setWorking(e.id);
     const job = allJobs.find((j) => j.id === jobId);
-    const { error } = await supabase.from(TIME_ENTRY_TABLE).update({ job_id: jobId, job_title: job?.title ?? null }).eq("id", e.id);
+    const { data, error } = await supabase
+      .from(TIME_ENTRY_TABLE)
+      .update({ job_id: jobId, job_title: job?.title ?? null })
+      .eq("id", e.id)
+      .select("id");
     setWorking(null);
     if (error) return toast.error(error.message);
+    if (!data || data.length !== 1) return toast.error("Could not attach job — refresh and try again");
     toast.success("Job attached");
     setEntries((s) => s.map((x) => x.id === e.id ? { ...x, job_id: jobId, job_title: job?.title ?? null } : x));
   };
@@ -94,7 +99,7 @@ export default function Approvals() {
     const hours = status === "approved"
       ? (override !== undefined && override !== "" ? Number(override) : rawHours(e))
       : 0;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(TIME_ENTRY_TABLE)
       .update({
         status,
@@ -102,9 +107,14 @@ export default function Approvals() {
         approved_by: user.id,
         approved_at: new Date().toISOString(),
       })
-      .eq("id", e.id);
+      .eq("id", e.id)
+      .eq("status", "pending")
+      .select("id");
     setWorking(null);
     if (error) return toast.error(error.message);
+    if (!data || data.length !== 1) {
+      return toast.error("Update did not apply — refresh and try again");
+    }
     toast.success(status === "approved" ? "Approved" : "Rejected");
     setEntries((s) => s.filter((x) => x.id !== e.id));
   };
