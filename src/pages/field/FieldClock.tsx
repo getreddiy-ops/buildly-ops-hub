@@ -222,7 +222,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         toast.warning("Location was unavailable. Your time will still be recorded.");
       }
       const selectedJob = jobs.find((job) => job.id === jobId);
-      const { error } = await supabase.from(TIME_ENTRY_TABLE).insert({
+      const { data, error } = await supabase.from(TIME_ENTRY_TABLE).insert({
         organization_id: activeOrg.organization_id,
         user_id: user.id,
         job_id: jobId,
@@ -232,8 +232,9 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         clock_in_lng: position?.coords.longitude ?? null,
         status: "pending",
         note: jobId ? null : (activity.trim() || "General work"),
-      });
+      }).select("id").maybeSingle();
       if (error) throw error;
+      if (!data?.id) throw new Error("Clock-in did not save. Please try again.");
       toast.success(jobId ? "Clocked in to the selected job" : "Clocked in — assign the entry later");
       setManualJob("__none__"); setActivity(""); setDetected(null);
       await load();
@@ -257,7 +258,7 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         setPerm("denied");
         toast.warning("Location was unavailable. Your clock-out will still be saved.");
       }
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TIME_ENTRY_TABLE)
         .update({
           clock_out: new Date().toISOString(),
@@ -267,8 +268,12 @@ export default function FieldClock({ embedded = false, onEntryChanged }: FieldCl
         .eq("id", openEntry.id)
         .eq("user_id", user.id)
         .eq("organization_id", activeOrg.organization_id)
-        .is("clock_out", null);
+        .is("clock_out", null)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length !== 1) {
+        throw new Error("Clock-out did not save. Refresh and try again if you are still clocked in.");
+      }
       toast.success("Clocked out — time entry saved");
       await load();
       onEntryChanged?.();
