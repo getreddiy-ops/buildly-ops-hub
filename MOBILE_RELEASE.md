@@ -40,8 +40,14 @@ signing team/profile.
 
 ## Permissions
 
-FastTract asks for microphone access only when the user chooses voice input.
-Camera access is optional and is not required by the current onboarding flow.
+FastTract asks for microphone access when the user chooses voice input or speaks
+with an assistant. Camera access is optional and supports taking estimate photos.
+Location access supports job-site selection and recording the clock-in location;
+the app does not request background location access.
+The iOS purpose descriptions are in `ios/App/App/Info.plist` and are checked by
+the unit suite. On a physical iPhone, test both granting and denying camera,
+microphone, and location access, including retrying after a denial. These static
+checks do not verify runtime permission handling.
 Before store submission, verify that every declared native permission is used
 and that its explanation matches the in-app consent screen.
 

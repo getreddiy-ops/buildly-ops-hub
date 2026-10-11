@@ -25,7 +25,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>FastTract uses the microphone only when you choose to speak with Ava.</string>
+	<string>FastTract uses the microphone when you choose voice input or speak with an assistant.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>FastTract uses the camera when you choose to take photos for an estimate.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FastTract uses your location when you clock in to help identify the job site and record your clock-in location.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
