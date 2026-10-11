@@ -1,3 +1,6 @@
+import { FolderCard } from "@/components/workspace/FolderCard";
+import { workspaceGroups } from "@/components/workspace/navigation";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -36,6 +39,7 @@ function StatTile({ label, value, to, icon: Icon }: { label: string; value: stri
 
 export default function Dashboard() {
   const { user, activeOrg } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const [loading, setLoading] = useState(true);
   const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
@@ -115,7 +119,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${firstName}'s day`} description={todayLabel} />
+      <PageHeader title={`Welcome back, ${firstName}`} description={todayLabel} actions={<Button asChild><Link to="/app/jobs">Open job folders <ArrowRight className="h-4 w-4" /></Link></Button>} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{workspaceGroups.slice(1).map(g => <Link key={g.to} to={g.to} className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"><g.icon className="mb-4 h-5 w-5 text-primary" /><p className="text-sm font-semibold">{g.label}</p><p className="mt-1 text-xs text-muted-foreground">{g.description}</p></Link>)}</div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Active jobs" value={activeJobCount} to="/app/jobs" icon={Briefcase} />
@@ -124,6 +129,7 @@ export default function Dashboard() {
         <StatTile label="Unpaid invoices" value={fmt(unpaidTotal)} to="/app/invoices" icon={Receipt} />
       </div>
 
+      {!loading && upcomingJobs.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold">Upcoming job folders</h2><Link to="/app/jobs" className="text-xs text-primary">View all jobs →</Link></div><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{upcomingJobs.slice(0, 3).map(job => <FolderCard key={job.id} job={job} onOpen={() => navigate(`/app/jobs/${job.id}`)} />)}</div></section>}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -137,7 +143,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-2">
               {upcomingJobs.map((job) => (
-                <Link key={job.id} to="/app/jobs" className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm hover:bg-secondary/40">
+                <Link key={job.id} to={`/app/jobs/${job.id}`} className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm hover:bg-secondary/40">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{job.title}</div>
                     <div className="truncate text-xs text-muted-foreground">{job.customers?.name ?? "No customer"}</div>

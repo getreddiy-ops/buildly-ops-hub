@@ -152,3 +152,34 @@
 @media (prefers-reduced-motion: reduce) {
   .ava-wave { animation: none; }
 }
+
+/* Scoped workspace palette: charcoal surfaces and a single evergreen accent. */
+.dark.workspace-theme {
+  --background: 220 17% 8%;
+  --foreground: 210 20% 94%;
+  --card: 220 15% 11%;
+  --card-foreground: 210 20% 94%;
+  --popover: 220 15% 11%;
+  --popover-foreground: 210 20% 94%;
+  --secondary: 220 12% 17%;
+  --muted: 220 13% 14%;
+  --muted-foreground: 215 12% 65%;
+  --border: 220 12% 20%;
+  --input: 220 12% 22%;
+}
+.workspace-folder {
+  position: relative;
+  margin-top: 12px;
+}
+.workspace-folder::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: -10px;
+  width: 66px;
+  height: 11px;
+  border: 1px solid hsl(var(--border));
+  border-bottom: 0;
+  border-radius: 8px 12px 0 0;
+  background: hsl(var(--card));
+}
