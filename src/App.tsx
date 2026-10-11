@@ -1,3 +1,6 @@
+import WorkspaceHub from "./pages/app/WorkspaceHub";
+import JobFolder from "./pages/app/JobFolder";
+import WorkspacePreview from "./pages/WorkspacePreview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -104,6 +107,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/workspace-preview" element={<WorkspacePreview />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/e/:token" element={<PublicEstimate />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
@@ -150,6 +154,9 @@ const App = () => (
               <Route path="invoices" element={<Invoices />} />
               <Route path="contracts" element={<Contracts />} />
               <Route path="jobs" element={<Jobs />} />
+              <Route path="jobs/:id" element={<JobFolder />} />
+              <Route path="money" element={<WorkspaceHub section="Money" />} />
+              <Route path="company" element={<WorkspaceHub section="Company" />} />
               <Route path="crew" element={<Crew />} />
               <Route path="vendors" element={<Vendors />} />
               <Route path="materials" element={<Materials />} />

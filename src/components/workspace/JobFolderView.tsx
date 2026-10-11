@@ -1,0 +1,26 @@
+import { useState } from "react";
+import { ArrowLeft, MapPin, CalendarDays, Wallet, FileText, FolderOpen, Image } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import type { FolderJob } from "./FolderCard";
+export type FolderRecord = { id: string; title: string; detail: string; amount?: number; to?: string };
+export type JobFolderData = { job: FolderJob & { description: string | null }; estimates: FolderRecord[]; invoices: FolderRecord[]; time: FolderRecord[]; crew: string[] };
+const money = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+export function JobFolderView({ data, onBack, onNavigate, onManage }: { data: JobFolderData; onBack: () => void; onNavigate: (path: string) => void; onManage?: () => void }) {
+  const [tab, setTab] = useState("overview");
+  const { job } = data;
+  const records = (rows: FolderRecord[], empty: string) => rows.length ? <div className="space-y-3">{rows.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"><div className="min-w-0"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 text-xs text-muted-foreground">{row.detail}</p></div><div className="flex items-center gap-3">{row.amount !== undefined && <span className="text-sm font-semibold">{money(row.amount)}</span>}{row.to && <Button size="sm" variant="outline" onClick={() => onNavigate(row.to!)}>Open</Button>}</div></div>)}</div> : <div className="rounded-xl border border-dashed border-border p-10 text-center"><FolderOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><p className="text-sm text-muted-foreground">{empty}</p></div>;
+  return <div className="space-y-7">
+    <button onClick={onBack} className="flex min-h-10 items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> All job folders</button>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><p className="mb-2 text-xs uppercase tracking-[.18em] text-primary">{job.customers?.name || "Job folder"}</p><h1 className="break-words text-3xl font-semibold tracking-tight">{job.title}</h1><p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4 shrink-0" />{job.address || "Address not set"}</p></div><StatusBadge status={job.status} /></div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList className="mb-6 grid h-auto w-full grid-cols-2 gap-1 bg-card p-1 sm:grid-cols-5">{[["overview", "Overview"], ["estimates", "Estimates"], ["invoices", "Invoices"], ["time", "Time & crew"], ["files", "Photos & files"]].map(([value,label]) => <TabsTrigger key={value} value={value} className="min-h-11 whitespace-normal">{label}</TabsTrigger>)}</TabsList>
+      <TabsContent value="overview" className="space-y-6"><div className="grid gap-4 sm:grid-cols-3">{[{ icon: CalendarDays, label: "Scheduled start", value: job.scheduled_start ? new Date(job.scheduled_start).toLocaleDateString() : "Not scheduled" }, { icon: Wallet, label: "Job budget", value: job.budget == null ? "Not set" : money(job.budget) }, { icon: FileText, label: "Linked records", value: `${data.estimates.length} estimates · ${data.invoices.length} invoices` }].map(item => <div key={item.label} className="rounded-xl border border-border bg-card p-5"><item.icon className="mb-4 h-5 w-5 text-primary" /><p className="text-xs text-muted-foreground">{item.label}</p><p className="mt-2 text-sm font-semibold">{item.value}</p></div>)}</div><div className="rounded-xl border border-border bg-card p-6"><h2 className="mb-3 font-semibold">Scope of work</h2><p className="whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">{job.description || "No scope notes have been added to this job."}</p></div>{onManage && <Button variant="outline" onClick={onManage}>Edit job details</Button>}</TabsContent>
+      <TabsContent value="estimates">{records(data.estimates, "No estimate is linked to this job yet.")}</TabsContent>
+      <TabsContent value="invoices">{records(data.invoices, "No invoices are linked to this job yet.")}</TabsContent>
+      <TabsContent value="time" className="space-y-5"><div className="rounded-xl border border-border bg-card p-5"><h2 className="mb-3 text-sm font-semibold">Assigned crew</h2><p className="text-sm text-muted-foreground">{data.crew.length ? data.crew.join(" · ") : "No crew assigned yet."}</p></div>{records(data.time, "No time has been recorded against this job yet.")}</TabsContent>
+      <TabsContent value="files"><div className="rounded-xl border border-dashed border-border p-10 text-center"><Image className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><h2 className="font-semibold">Project photos & files</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">Job file storage is not connected in this version. Existing estimate documents remain available in the Estimates tab.</p><Button className="mt-5" variant="outline" onClick={() => setTab("estimates")}>View linked estimates</Button></div></TabsContent>
+    </Tabs>
+  </div>;
+}

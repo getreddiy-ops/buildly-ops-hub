@@ -1,3 +1,5 @@
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { FolderCard } from "@/components/workspace/FolderCard";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,12 +61,16 @@ const fmtDate = (s: string | null) => s
 
 export default function Jobs() {
   const { activeOrg } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [rows, setRows] = useState<Job[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [members, setMembers] = useState<{ user_id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [view, setView] = useState<"folders" | "list" | "calendar">("folders");
   const [editing, setEditing] = useState<Job | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
@@ -128,6 +134,12 @@ export default function Jobs() {
     });
     setOpen(true);
   };
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    const job = rows.find(j => j.id === editId);
+    if (job) { openEdit(job); setSearchParams({}, { replace: true }); }
+  }, [rows, searchParams, setSearchParams]);
 
   const save = async () => {
     const parsed = schema.safeParse({
@@ -205,11 +217,13 @@ export default function Jobs() {
     setCrew((s) => s.filter((c) => c.id !== id));
   };
 
+  const visibleRows = rows.filter(j => (statusFilter === "all" || j.status === statusFilter) && `${j.title} ${j.customers?.name ?? ""} ${j.address ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+
   return (
     <div>
       <PageHeader
-        title="Jobs"
-        description="Schedule, assign crew, and track from start to completion."
+        title="Job folders"
+        description="Every project, in its place. Open a folder to see the details."
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -251,7 +265,7 @@ export default function Jobs() {
                 <Field label="Title">
                   <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Customer">
                     <div className="flex gap-2">
                       <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
@@ -285,7 +299,7 @@ export default function Jobs() {
                 <Field label="Address">
                   <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Scheduled start">
                     <Input
                       type="datetime-local"
@@ -325,14 +339,16 @@ export default function Jobs() {
       />
 
       {rows.length > 0 && (
-        <Tabs value={view} onValueChange={(v) => setView(v as "list" | "calendar")} className="mb-4">
+        <Tabs value={view} onValueChange={(v) => setView(v as "folders" | "list" | "calendar")} className="mb-4">
           <TabsList>
+            <TabsTrigger value="folders">Folders</TabsTrigger>
             <TabsTrigger value="list">List</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
           </TabsList>
         </Tabs>
       )}
 
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row"><Input aria-label="Search job folders" placeholder="Search jobs, customers, or addresses…" value={search} onChange={e => setSearch(e.target.value)} className="sm:max-w-md" /><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger aria-label="Filter by status" className="sm:w-48"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem>{STATUSES.map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}</SelectContent></Select><span className="self-center text-xs text-muted-foreground sm:ml-auto">{visibleRows.length} folders</span></div>
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : rows.length === 0 ? (
@@ -342,8 +358,12 @@ export default function Jobs() {
           description="Create a job and assign crew to it."
           action={<Button onClick={openNew}><Plus className="h-4 w-4" /> New job</Button>}
         />
+      ) : visibleRows.length === 0 ? (
+        <EmptyState icon={Briefcase} title="No matching folders" description="Try another search or status." action={<Button variant="outline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Clear filters</Button>} />
+      ) : view === "folders" ? (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{visibleRows.map(job => <FolderCard key={job.id} job={job} onOpen={() => navigate(`/app/jobs/${job.id}`)} />)}</div>
       ) : view === "calendar" ? (
-        <JobsCalendar jobs={rows} onSelectJob={openEdit} />
+        <JobsCalendar jobs={visibleRows} onSelectJob={openEdit} />
       ) : (
         <div className="rounded-lg border border-border">
           <Table>
@@ -357,9 +377,9 @@ export default function Jobs() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((j) => (
+              {visibleRows.map((j) => (
                 <TableRow key={j.id}>
-                  <TableCell className="font-medium">{j.title}</TableCell>
+                  <TableCell className="font-medium"><button className="text-left hover:text-primary" onClick={() => navigate(`/app/jobs/${j.id}`)}>{j.title}</button></TableCell>
                   <TableCell className="text-muted-foreground text-sm">{j.customers?.name ?? "—"}</TableCell>
                   <TableCell><StatusBadge status={j.status} /></TableCell>
                   <TableCell className="text-muted-foreground text-sm">{fmtDate(j.scheduled_start)}</TableCell>
