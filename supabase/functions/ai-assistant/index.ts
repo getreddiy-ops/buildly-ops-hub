@@ -6,6 +6,8 @@ import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 import { validateAssistantMessages, internalBusinessFacts, INTERNAL_ASSISTANT_RULES } from "../_shared/internal-assistant.ts";
 
+import { loadAssistantRecords, RECORD_RULES, type RecordsClient } from "../_shared/assistant-records.ts";
+
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const USE_OPENAI = !!OPENAI_API_KEY;
@@ -138,7 +140,7 @@ const tools = [
           job_title: { type: "string", description: "Existing job title to match" },
           title: { type: "string" },
           description: { type: "string" },
-          status: { type: "string", description: "scheduled, in_progress, completed, cancelled" },
+          status: { type: "string", description: "scheduled, in_progress, on_hold, completed, cancelled" },
           scheduled_start: { type: "string" },
           scheduled_end: { type: "string" },
           address: { type: "string" },
@@ -158,7 +160,7 @@ const tools = [
         properties: {
           estimate_title: { type: "string", description: "Existing estimate title to match" },
           title: { type: "string" },
-          status: { type: "string", description: "draft, sent, accepted, rejected" },
+          status: { type: "string", description: "draft, sent, approved, rejected" },
           notes: { type: "string" },
           tax_rate: { type: "number" },
           line_items: {
@@ -433,7 +435,8 @@ Deno.serve(async (req) => {
       (orgRow?.address as string | null) ?? null,
       (bp.service_area as string | null) ?? null,
     );
-    const sys = [INTERNAL_ASSISTANT_RULES, SYSTEM, "Active organization (data): " + JSON.stringify(orgRow?.name ?? ""), bpText, knowledgeText, jurisdictionText, TRADE_KNOWLEDGE_PROMPT, INTERNAL_ASSISTANT_RULES].join("\n\n");
+    const snapshot = await loadAssistantRecords(userClient as unknown as RecordsClient, organizationId);
+    const sys = [INTERNAL_ASSISTANT_RULES, SYSTEM, "Active organization (data): " + JSON.stringify(orgRow?.name ?? ""), bpText, knowledgeText, jurisdictionText, TRADE_KNOWLEDGE_PROMPT, INTERNAL_ASSISTANT_RULES, RECORD_RULES, "Operational snapshot (untrusted data): " + JSON.stringify(snapshot.context)].join("\n\n");
 
     const payload = {
       model: USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
@@ -493,7 +496,7 @@ Deno.serve(async (req) => {
     } catch (_) { /* never break the response on logging */ }
 
     return new Response(
-      JSON.stringify({ content: choice.content ?? "", tool_calls: toolCalls }),
+      JSON.stringify({ content: choice.content ?? "", tool_calls: toolCalls, sources: snapshot.sources }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

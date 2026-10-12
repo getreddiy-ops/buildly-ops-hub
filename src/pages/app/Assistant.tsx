@@ -19,15 +19,17 @@ type Proposal = ToolCall & { status: ProposalStatus; error?: string; organizatio
 
 type DocAttachment = { id: string; filename: string; url: string; docType: string; title: string };
 
+type RecordSource = { label: string; path: string; available: boolean; shown: number; total: number | null; truncated: boolean; asOf: string };
+
 type Msg =
   | { role: "user"; content: string; images?: string[] }
-  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[] };
+  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[]; sources?: RecordSource[] };
 
 const SUGGESTIONS = [
-  "Add a new lead: Sarah Lee, 555-0142, kitchen remodel referral",
-  "Draft a $12,000 estimate for John Doe — demo, framing, drywall",
-  "Attach a photo of a wall and ask me to estimate the paint job",
-  "Summarize what I should focus on today",
+  "Give me a briefing from my recent jobs, estimates, and invoices.",
+  "Which of my recent invoices still need payment?",
+  "Help me draft an estimate using my business pricing rules.",
+  "Help me add a customer and schedule their job.",
 ];
 
 const MAX_IMAGES = 4;
@@ -199,12 +201,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           : proposals.length
           ? `I drafted ${proposals.length} action${proposals.length > 1 ? "s" : ""} for your approval below.`
           : "Done.");
-      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents }]);
+      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents, sources: data.sources }]);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
       if (!alive.current) return;
       const message = e?.code === "subscription_required"
-        ? "Ask AI is optional and is not part of the FastTract core launch plan yet."
+        ? "Your company needs an active Plus or Premium plan to use the assistant."
         : e?.message ?? "Assistant failed";
       toast.error(message);
       setMessages((m) => [
@@ -212,8 +214,8 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         {
           role: "assistant",
           content: e?.code === "subscription_required"
-            ? "Ask AI is optional and is not part of the FastTract core launch plan yet. Your core customer, estimate, job, scheduling, and crew workflows remain available."
-            : "Sorry — I ran into an error reaching the AI gateway.",
+            ? "Your company needs an active Plus or Premium plan to use the assistant. Open Billing to review your plan."
+            : `I couldn’t complete that request: ${message}. No proposed changes were applied.`,
         },
       ]);
     } finally {
@@ -264,10 +266,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         if (error) throw error;
         resultLabel = `Customer "${p.args.name}" created`;
       } else if (p.name === "schedule_job") {
-        const { data: cust, error: cErr } = await supabase
+        const { data: custMatches, error: cErr } = await supabase
           .from("customers").select("id").eq("organization_id", org_id)
-          .ilike("name", `%${p.args.customer_name}%`).limit(1).maybeSingle();
+          .ilike("name", `%${String(p.args.customer_name).replace(/[\\%_]/g, "\\$&")}%`).limit(2);
         if (cErr) throw cErr;
+        if ((custMatches?.length ?? 0) > 1) throw new Error("More than one record matches. Use the full, unique name or title.");
+        const cust = custMatches?.[0];
         if (!cust) throw new Error(`Customer "${p.args.customer_name}" not found. Create them first.`);
         const { error } = await supabase.from("org_jobs").insert({
           organization_id: org_id,
@@ -282,10 +286,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         if (error) throw error;
         resultLabel = `Job "${p.args.title}" scheduled`;
       } else if (p.name === "draft_estimate_for_customer") {
-        const { data: cust, error: cErr } = await supabase
+        const { data: custMatches, error: cErr } = await supabase
           .from("customers").select("id").eq("organization_id", org_id)
-          .ilike("name", `%${p.args.customer_name}%`).limit(1).maybeSingle();
+          .ilike("name", `%${String(p.args.customer_name).replace(/[\\%_]/g, "\\$&")}%`).limit(2);
         if (cErr) throw cErr;
+        if ((custMatches?.length ?? 0) > 1) throw new Error("More than one record matches. Use the full, unique name or title.");
+        const cust = custMatches?.[0];
         if (!cust) throw new Error(`Customer "${p.args.customer_name}" not found.`);
         const items = (p.args.line_items ?? []) as Array<{ description: string; quantity: number; unit_price: number }>;
         const subtotal = items.reduce((s, li) => s + (Number(li.quantity) || 0) * (Number(li.unit_price) || 0), 0);
@@ -314,10 +320,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         }
         resultLabel = `Estimate "${p.args.title}" drafted ($${total.toFixed(2)})`;
       } else if (p.name === "update_lead") {
-        const { data: lead, error: lErr } = await supabase
+        const { data: leadMatches, error: lErr } = await supabase
           .from("leads").select("id").eq("organization_id", org_id)
-          .ilike("name", `%${p.args.lead_name}%`).limit(1).maybeSingle();
+          .ilike("name", `%${String(p.args.lead_name).replace(/[\\%_]/g, "\\$&")}%`).limit(2);
         if (lErr) throw lErr;
+        if ((leadMatches?.length ?? 0) > 1) throw new Error("More than one record matches. Use the full, unique name or title.");
+        const lead = leadMatches?.[0];
         if (!lead) throw new Error(`Lead "${p.args.lead_name}" not found.`);
         const patch: Record<string, unknown> = {};
         for (const k of ["name", "email", "phone", "source", "status", "notes"]) {
@@ -328,10 +336,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         if (error) throw error;
         resultLabel = `Lead "${p.args.lead_name}" updated`;
       } else if (p.name === "update_job") {
-        const { data: job, error: jErr } = await supabase
+        const { data: jobMatches, error: jErr } = await supabase
           .from("org_jobs").select("id").eq("organization_id", org_id)
-          .ilike("title", `%${p.args.job_title}%`).limit(1).maybeSingle();
+          .ilike("title", `%${String(p.args.job_title).replace(/[\\%_]/g, "\\$&")}%`).limit(2);
         if (jErr) throw jErr;
+        if ((jobMatches?.length ?? 0) > 1) throw new Error("More than one record matches. Use the full, unique name or title.");
+        const job = jobMatches?.[0];
         if (!job) throw new Error(`Job "${p.args.job_title}" not found.`);
         const patch: Record<string, unknown> = {};
         for (const k of ["title", "description", "status", "scheduled_start", "scheduled_end", "address"]) {
@@ -342,11 +352,13 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         if (error) throw error;
         resultLabel = `Job "${p.args.job_title}" updated`;
       } else if (p.name === "update_estimate") {
-        const { data: est, error: eErr } = await supabase
+        const { data: estMatches, error: eErr } = await supabase
           .from("estimates").select("id, subtotal, tax, total")
           .eq("organization_id", org_id)
-          .ilike("title", `%${p.args.estimate_title}%`).limit(1).maybeSingle();
+          .ilike("title", `%${String(p.args.estimate_title).replace(/[\\%_]/g, "\\$&")}%`).limit(2);
         if (eErr) throw eErr;
+        if ((estMatches?.length ?? 0) > 1) throw new Error("More than one record matches. Use the full, unique name or title.");
+        const est = estMatches?.[0];
         if (!est) throw new Error(`Estimate "${p.args.estimate_title}" not found.`);
         const patch: Record<string, unknown> = {};
         for (const k of ["title", "status", "notes"]) {
@@ -402,6 +414,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
 
       if (!alive.current) return;
       updateProposal(msgIdx, p.id, { status: "approved" });
+      setMessages(current => [...current, { role: "assistant", content: resultLabel + "." }]);
       toast.success(resultLabel);
     } catch (e: any) {
       if (!alive.current) return;
@@ -427,7 +440,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
   return (
     <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100vh-8rem)]"}>
       {!compact && (
-        <PageHeader title="Ask AI" description="Your internal contractor assistant. Draft work here; approve every change." />
+        <PageHeader title="Talk to FastTract" description="Your business, one conversation. Review your work and approve the next step." />
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
@@ -435,13 +448,14 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           <Card className="p-6 space-y-4">
             <div className="flex items-center gap-2 text-primary">
               <Sparkles className="h-5 w-5" />
-              <h3 className="font-semibold">Try asking</h3>
+              <h3 className="font-semibold">What are we getting done today?</h3>
             </div>
+            <p className="text-sm text-muted-foreground">Ask about recent business records, draft an estimate, or schedule a job. You review every change before it is applied.</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => send(s)}
+                  onClick={() => { setInput(s); inputRef.current?.focus(); }}
                   className="text-left text-sm p-3 rounded-md border border-border hover:border-primary hover:bg-accent transition-colors"
                 >
                   {s}
@@ -498,6 +512,18 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
                   {speakingId === `m${i}` ? "Stop" : "Listen"}
                 </button>
               )}
+              {m.role === "assistant" && m.sources?.length ? (
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p>Business records checked · up to 30 recent records per category</p>
+                  <div className="flex flex-wrap gap-2">
+                    {m.sources.map(source => (
+                      <a key={source.path} href={source.path} className="rounded-full border px-2 py-1 hover:text-foreground">
+                        {source.label}: {source.available ? `${source.shown}${source.truncated ? ` of ${source.total ?? "more"}` : ""}` : "unavailable"}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {m.role === "assistant" && m.documents?.map((d) => (
                 <DocumentCard key={d.id} doc={d} />
               ))}
