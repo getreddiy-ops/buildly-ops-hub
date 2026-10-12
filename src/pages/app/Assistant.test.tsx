@@ -64,3 +64,25 @@ describe('Ask AI company isolation',()=>{
   expect(mocks.invoke).not.toHaveBeenCalled();
  });
 });
+
+it('shows record provenance and unavailable categories without claiming a full ledger', async()=>{
+ mocks.invoke.mockResolvedValue({data:{content:'Recent records',tool_calls:[],sources:[
+  {label:'Invoices',path:'/app/invoices',available:true,shown:30,total:45,truncated:true},
+  {label:'Jobs',path:'/app/jobs',available:false,shown:0,total:null,truncated:false},
+ ]},error:null});
+ render(<Assistant/>);send();
+ expect(await screen.findByRole('link',{name:'Invoices: 30 of 45'})).toHaveAttribute('href','/app/invoices');
+ expect(screen.getByRole('link',{name:'Jobs: unavailable'})).toBeInTheDocument();
+});
+it('refuses an ambiguous customer match before scheduling a job', async()=>{
+ mocks.invoke.mockResolvedValue({data:{content:'Review schedule',tool_calls:[{id:'p1',name:'schedule_job',args:{customer_name:'John',title:'Driveway'},needsApproval:true}]},error:null});
+ const limit=vi.fn().mockResolvedValue({data:[{id:'a'},{id:'b'}],error:null});
+ const query={select:vi.fn(),eq:vi.fn(),ilike:vi.fn(),limit};
+ query.select.mockReturnValue(query);query.eq.mockReturnValue(query);query.ilike.mockReturnValue(query);
+ mocks.from.mockReturnValue(query);
+ render(<Assistant/>);send();
+ fireEvent.click(await screen.findByRole('button',{name:'Approve & apply'}));
+ expect(await screen.findByText(/More than one record matches/)).toBeInTheDocument();
+ expect(mocks.from).toHaveBeenCalledTimes(1);
+ expect(mocks.from).toHaveBeenCalledWith('customers');
+});
