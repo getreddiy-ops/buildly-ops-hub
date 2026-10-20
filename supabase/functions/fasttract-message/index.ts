@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { emailDeliveryStatus } from "../_shared/message-delivery.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 type Channel = "sms" | "email";
-type AdminClient = ReturnType<typeof createClient>;
+type AdminClient = SupabaseClient;
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -153,7 +153,7 @@ async function queueEmail(args: {
   }
 
   const dispatch = await runEmailDispatcher();
-  return { ...data, dispatch };
+  return { ...data, messageId: typeof data.messageId === "string" ? data.messageId : null, dispatch };
 }
 
 async function logMessage(admin: AdminClient, record: {
@@ -193,6 +193,17 @@ Deno.serve(async (req) => {
     const requestedChannel = String(body.channel ?? "sms").toLowerCase();
     if (!["sms", "email"].includes(requestedChannel)) return json({ error: "Invalid message channel" }, 400);
     const channel: Channel = requestedChannel === "email" ? "email" : "sms";
+
+    if (body.action === "status" && organizationId) {
+      const { admin } = await requireMember(req, organizationId);
+      const { data: number } = await admin.from("phone_assistants").select("twilio_phone_number")
+        .eq("organization_id", organizationId).eq("enabled", true)
+        .not("twilio_phone_number", "is", null).limit(1).maybeSingle();
+      return json({
+        emailReady: Boolean(Deno.env.get("RESEND_API_KEY") || LOVABLE_API_KEY),
+        smsReady: Boolean(((TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) || (LOVABLE_API_KEY && TWILIO_API_KEY)) && number?.twilio_phone_number),
+      });
+    }
 
     if (!organizationId || !customerId || !message) {
       return json({ error: "organizationId, customerId and message are required" }, 400);

@@ -26,6 +26,23 @@ export default function Messages() {
   const [channel, setChannel] = useState<Channel>("sms");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [delivery, setDelivery] = useState<{ emailReady: boolean; smsReady: boolean } | null>(null);
+  const [deliveryError, setDeliveryError] = useState("");
+
+  useEffect(() => {
+    let current = true;
+    setDelivery(null);
+    setDeliveryError("");
+    if (!activeOrg) return;
+    supabase.functions.invoke("fasttract-message", { body: { action: "status", organizationId: activeOrg.organization_id } })
+      .then(({ data, error }) => {
+        if (!current) return;
+        if (error || typeof data?.emailReady !== "boolean" || typeof data?.smsReady !== "boolean") {
+          setDeliveryError("Could not verify delivery setup. Please reload before sending.");
+        } else setDelivery(data);
+      }).catch(() => { if (current) setDeliveryError("Could not verify delivery setup. Please reload before sending."); });
+    return () => { current = false; };
+  }, [activeOrg?.organization_id]);
 
   useEffect(() => {
     if (!activeOrg) return;
@@ -42,7 +59,8 @@ export default function Messages() {
 
   const customer = useMemo(() => customers.find((c) => c.id === customerId) ?? null, [customers, customerId]);
   const destination = channel === "sms" ? customer?.phone : customer?.email;
-  const canSend = !!destination && !!message.trim();
+  const providerReady = channel === "sms" ? delivery?.smsReady : delivery?.emailReady;
+  const canSend = !!providerReady && !!destination && !!message.trim();
 
   const send = async () => {
     if (!activeOrg || !customer || !canSend) return;
@@ -82,6 +100,11 @@ export default function Messages() {
   return (
     <div>
       <PageHeader title="Messages" description="Send customer texts and email directly through FastTract." />
+      <p role="status" className="mb-4 rounded-lg border p-3 text-sm">
+        {deliveryError || (!delivery ? "Checking delivery setup…" : providerReady
+          ? "Sending service configured. Submission does not confirm recipient delivery."
+          : `${channel === "sms" ? "Text" : "Email"} delivery needs setup. Contact your account administrator to connect the sending service${channel === "sms" ? " and a sending number" : ""}.`)}
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
@@ -137,10 +160,10 @@ export default function Messages() {
         <Card>
           <CardHeader>
             <CardTitle>FastTract messaging</CardTitle>
-            <CardDescription>No CRM bridge required.</CardDescription>
+            <CardDescription>Delivery requires a configured sending service.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Texts and emails are sent from FastTract and logged to the FastTract message history.</p>
+            <p>FastTract submits messages to your configured service and logs the attempt. Queued or submitted messages are not confirmed deliveries.</p>
             <p>Use messaging for appointment confirmations, estimate follow-ups, arrival notices, and payment reminders.</p>
           </CardContent>
         </Card>
