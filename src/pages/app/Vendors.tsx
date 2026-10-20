@@ -1,3 +1,5 @@
+import { addressFields, emptyAddressParts, formatAddress, parseAddress } from "@/components/AddressFields";
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +36,7 @@ const schema = z.object({
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
-const empty = { name: "", contact_name: "", email: "", phone: "", website: "", address: "", notes: "" };
+const empty = { ...emptyAddressParts, name: "", contact_name: "", email: "", phone: "", website: "", address: "", notes: "" };
 
 export default function Vendors() {
   const { activeOrg } = useAuth();
@@ -69,14 +71,14 @@ export default function Vendors() {
       email: v.email ?? "",
       phone: v.phone ?? "",
       website: v.website ?? "",
-      address: v.address ?? "",
+      ...parseAddress(v.address ?? ""),
       notes: v.notes ?? "",
     });
     setOpen(true);
   };
 
   const save = async () => {
-    const parsed = schema.safeParse(form);
+    const parsed = schema.safeParse({ ...form, address: formatAddress(form) });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (!activeOrg) return;
     setSaving(true);
@@ -136,6 +138,11 @@ export default function Vendors() {
                   />
                 </div>
               </DialogHeader>
+<FormWizard footer={<DialogFooter>
+                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              </DialogFooter>}>
+
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <Field label="Contact name"><Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} /></Field>
@@ -144,13 +151,11 @@ export default function Vendors() {
                   <Field label="Phone"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
                 </div>
                 <Field label="Website"><Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></Field>
-                <Field label="Address"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
+                {addressFields(form, (parts) => setForm({ ...form, ...parts }))}
                 <Field label="Notes"><Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
               </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-              </DialogFooter>
+
+</FormWizard>
             </DialogContent>
           </Dialog>
         }

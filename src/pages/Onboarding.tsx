@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { pendingOnboarding } from "@/lib/onboarding-reset";
 import { useVoiceRecorder, useVoiceSpeaker } from "@/hooks/useVoice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +95,9 @@ export default function Onboarding() {
   } = useAuth();
 
   const isPreview = import.meta.env.DEV && window.location.pathname === "/onboarding-preview";
-  const draftKey = `fasttract-ava-onboarding-${user?.id || "preview"}`;
+  const resetMembership = pendingOnboarding(memberships);
+  const resetProfile = (resetMembership?.organization?.business_profile || {}) as Record<string, any>;
+  const draftKey = `fasttract-ava-onboarding-${user?.id || "preview"}-${resetMembership?.organization_id || "new"}-${resetProfile.setup?.reset_requested_at || "initial"}`;
 
   const [started, setStarted] = useState(false);
   const [consentMic, setConsentMic] = useState(false);
@@ -149,10 +152,11 @@ export default function Onboarding() {
   useEffect(() => {
     if (isPreview || loading) return;
     if (!user) return void navigate("/login", { replace: true });
+    if (resetMembership) return;
     if (memberships.length > 0) return void navigate("/app", { replace: true });
     if (isPlatformAdmin) navigate("/admin", { replace: true });
     else if (isAgent) navigate("/agent", { replace: true });
-  }, [user, loading, memberships, isPlatformAdmin, isAgent, navigate, isPreview]);
+  }, [user, loading, memberships, isPlatformAdmin, isAgent, navigate, isPreview, resetMembership]);
 
   useEffect(() => {
     const saved = localStorage.getItem(draftKey);
@@ -308,19 +312,29 @@ export default function Onboarding() {
       });
     }
 
-    const { data: org, error } = await supabase
-      .from("organizations")
-      .insert({
+    const orgValues = {
         name: answers.businessName,
-        owner_id: user.id,
-        created_by: user.id,
         email: user.email,
         website: answers.website === "Skipped" ? null : (brand.website || answers.website),
         phone: answers.phone,
-        brand_color: brand.primaryColor,
-        brand_color_secondary: brand.secondaryColor,
-        business_profile: businessProfile,
-      })
+        ...(!resetMembership || brand.website ? {
+          brand_color: brand.primaryColor,
+          brand_color_secondary: brand.secondaryColor,
+        } : {}),
+        business_profile: resetMembership ? {
+          ...businessProfile,
+          ...resetProfile,
+          assistant: businessProfile.assistant,
+          business: { ...resetProfile.business, ...businessProfile.business },
+          website_review: businessProfile.website_review,
+          service_area: businessProfile.service_area,
+          setup: { ...resetProfile.setup, ...businessProfile.setup, onboarding_required: false },
+        } : businessProfile,
+      };
+    const orgQuery = resetMembership
+      ? supabase.from("organizations").update(orgValues).eq("id", resetMembership.organization_id!)
+      : supabase.from("organizations").insert({ ...orgValues, owner_id: user.id, created_by: user.id });
+    const { data: org, error } = await orgQuery
       .select()
       .single();
 
@@ -333,7 +347,7 @@ export default function Onboarding() {
       });
     }
 
-    const { error: memberError } = await supabase.from("organization_members").insert({
+    const { error: memberError } = resetMembership ? { error: null } : await supabase.from("organization_members").insert({
       organization_id: org.id,
       user_id: user.id,
       role: "owner",

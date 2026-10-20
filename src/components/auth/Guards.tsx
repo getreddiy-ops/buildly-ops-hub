@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { pendingOnboarding } from "@/lib/onboarding-reset";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -14,6 +15,7 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   const { user, loading, memberships, isPlatformAdmin, isAgent } = useAuth();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
+  if (pendingOnboarding(memberships)) return <Navigate to="/onboarding" replace />;
   if (memberships.length === 0) {
     if (isPlatformAdmin) return <Navigate to="/admin" replace />;
     if (isAgent) return <Navigate to="/agent" replace />;

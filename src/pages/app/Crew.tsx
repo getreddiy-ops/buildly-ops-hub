@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,6 +169,11 @@ export default function Crew() {
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader><DialogTitle>Invite a teammate</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+                  <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button onClick={invite} disabled={saving}>{saving ? "Sending…" : "Create invite"}</Button>
+                </DialogFooter>}>
+
                 <div className="grid gap-3">
                   <Field label="Email"><Input type="email" value={invEmail} onChange={(e) => setInvEmail(e.target.value)} /></Field>
                   <Field label="Role">
@@ -177,10 +183,8 @@ export default function Crew() {
                     </Select>
                   </Field>
                 </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button onClick={invite} disabled={saving}>{saving ? "Sending…" : "Create invite"}</Button>
-                </DialogFooter>
+
+</FormWizard>
               </DialogContent>
             </Dialog>
           )

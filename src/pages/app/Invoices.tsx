@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +23,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Receipt, MoreHorizontal, Plus, Trash2, Eye, Printer, Send } from "lucide-react";
+import { Receipt, MoreHorizontal, Plus, Eye, Printer, Send } from "lucide-react";
 import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
@@ -231,6 +232,11 @@ export default function Invoices() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Edit invoice" : "New invoice"}</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          </DialogFooter>}>
+
           <div className="grid max-h-[70vh] gap-4 overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Invoice number"><Input value={number} onChange={(e) => setNumber(e.target.value)} /></Field>
@@ -262,38 +268,25 @@ export default function Invoices() {
               <Field label="Due date"><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
             </div>
 
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Line items</Label>
-                <Button size="sm" variant="outline"
-                  onClick={() => setItems((s) => [...s, { description: "", quantity: 1, unit_price: 0 }])}>
-                  <Plus className="h-3.5 w-3.5" /> Add row
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {items.map((it, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2">
-                    <Input className="col-span-6" placeholder="Description"
-                      value={it.description} onChange={(e) => setItem(idx, { description: e.target.value })} />
-                    <Input className="col-span-2" type="number" min={0} step="0.01" placeholder="Qty"
-                      value={it.quantity} onChange={(e) => setItem(idx, { quantity: parseFloat(e.target.value) || 0 })} />
-                    <Input className="col-span-3" type="number" min={0} step="0.01" placeholder="Unit price"
-                      value={it.unit_price} onChange={(e) => setItem(idx, { unit_price: parseFloat(e.target.value) || 0 })} />
-                    <Button className="col-span-1" size="icon" variant="ghost"
-                      onClick={() => setItems((s) => s.filter((_, i) => i !== idx))}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
+            <Field label="Manage line items">
+   <p className="mb-3 text-sm text-muted-foreground">Add the work you want to include, then enter each detail on its own screen.</p>
+   <Button type="button" variant="outline" onClick={() => setItems((current) => [...current, { description: "", quantity: 1, unit_price: 0 }])}>Add line item</Button>
+   <p className="mt-2 text-sm">{items.length} line {items.length === 1 ? "item" : "items"}</p>
+ </Field>
+ {items.map((item, index) => <div key={index} className="grid gap-3">
+   <Field label={`Item ${index + 1}: description`}>
+     <Input value={item.description} onChange={(event) => setItem(index, { description: event.target.value })} />
+     <Button type="button" variant="ghost" onClick={() => setItems((current) => current.filter((_, i) => i !== index))}>Remove this item</Button>
+   </Field>
+   <Field label={`Item ${index + 1}: quantity`}><Input type="number" min={0} step="0.01" value={item.quantity} onChange={(event) => setItem(index, { quantity: parseFloat(event.target.value) || 0 })} /></Field>
+   <Field label={`Item ${index + 1}: unit price (USD)`}><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(event) => setItem(index, { unit_price: parseFloat(event.target.value) || 0 })} /></Field>
+ </div>)}
+ <div className="grid grid-cols-3 gap-3">
               <Field label="Tax %">
                 <Input type="number" min={0} step="0.01" value={taxPct}
                   onChange={(e) => setTaxPct(parseFloat(e.target.value) || 0)} />
               </Field>
-              <div className="col-span-2 ml-auto w-full max-w-xs space-y-1 text-sm">
+              <div data-wizard-label="Totals" className="col-span-2 ml-auto w-full max-w-xs space-y-1 text-sm">
                 <Row label="Subtotal" value={fmt(subtotal)} />
                 <Row label={`Tax (${taxPct || 0}%)`} value={fmt(taxAmt)} />
                 <div className="border-t border-border pt-1"><Row label="Total" value={fmt(total)} bold /></div>
@@ -303,10 +296,8 @@ export default function Invoices() {
             <Field label="Notes"><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
             <Field label="Terms"><Textarea rows={3} value={terms} onChange={(e) => setTerms(e.target.value)} /></Field>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+
+</FormWizard>
         </DialogContent>
       </Dialog>
 

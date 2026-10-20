@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useMemo, useState } from "react";
 import { Mail, MessageSquare, Send, Smartphone } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -88,7 +89,9 @@ export default function Messages() {
             <CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5" /> New message</CardTitle>
             <CardDescription>Select a customer and send without leaving FastTract.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-5"><FormWizard footer={<Button onClick={send} disabled={!canSend || sending}>
+              <Send className="mr-2 h-4 w-4" /> {sending ? "Sending…" : `Send ${channel === "sms" ? "text" : "email"}`}
+            </Button>}>
             <div className="space-y-2">
               <Label>Customer</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
@@ -127,9 +130,7 @@ export default function Messages() {
               />
             </div>
 
-            <Button onClick={send} disabled={!canSend || sending}>
-              <Send className="mr-2 h-4 w-4" /> {sending ? "Sending…" : `Send ${channel === "sms" ? "text" : "email"}`}
-            </Button>
+            </FormWizard>
           </CardContent>
         </Card>
 
