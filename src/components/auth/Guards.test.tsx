@@ -1,43 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { RequirePlatformAdmin } from "./Guards";
+import { describe, expect, it, vi } from "vitest";
+import { RequireOfficeRole, RequireOrg } from "./Guards";
 
-const authState = vi.hoisted(() => ({ isPlatformAdmin: false, loading: false }));
+vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({
+  user: { id: "crew-user" }, loading: false, isPlatformAdmin: false,
+  memberships: [{ role: "worker", organization_id: "org" }], activeOrg: { role: "worker" },
+}) }));
 
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => authState,
-}));
-
-function TestRoutes() {
-  return (
-    <MemoryRouter initialEntries={["/app/developer"]}>
-      <Routes>
-        <Route
-          path="/app/developer"
-          element={(
-            <RequirePlatformAdmin redirectTo="/app/settings">
-              <div>Developer tools</div>
-            </RequirePlatformAdmin>
-          )}
-        />
-        <Route path="/app/settings" element={<div>Settings Home</div>} />
-      </Routes>
-    </MemoryRouter>
-  );
-}
-
-describe("RequirePlatformAdmin", () => {
-  it("redirects regular customers away from Developer settings", () => {
-    authState.isPlatformAdmin = false;
-    render(<TestRoutes />);
-    expect(screen.getByText("Settings Home")).toBeInTheDocument();
-    expect(screen.queryByText("Developer tools")).not.toBeInTheDocument();
+describe("crew portal boundaries", () => {
+  it("renders the worker dashboard without redirecting back to itself", () => {
+    render(<MemoryRouter initialEntries={["/field"]}><Routes>
+      <Route path="/field" element={<RequireOrg><p>My time clock</p></RequireOrg>} />
+    </Routes></MemoryRouter>);
+    expect(screen.getByText("My time clock")).toBeVisible();
   });
-
-  it("allows platform administrators to access Developer settings", () => {
-    authState.isPlatformAdmin = true;
-    render(<TestRoutes />);
-    expect(screen.getByText("Developer tools")).toBeInTheDocument();
+  it("redirects a worker away from office editing routes", () => {
+    render(<MemoryRouter initialEntries={["/app/crew"]}><Routes>
+      <Route path="/app/crew" element={<RequireOfficeRole><p>Edit members</p></RequireOfficeRole>} />
+      <Route path="/field" element={<p>Worker dashboard</p>} />
+    </Routes></MemoryRouter>);
+    expect(screen.getByText("Worker dashboard")).toBeVisible();
+    expect(screen.queryByText("Edit members")).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 export function RequireOrg({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
   const { user, loading, memberships, isPlatformAdmin, isAgent } = useAuth();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
@@ -24,7 +25,7 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   // Worker-only memberships never see the office app — push them to the field app.
   const roles = memberships.map((m) => m.role);
   const hasOffice = roles.some((r) => r === "owner" || r === "admin");
-  if (!hasOffice && roles.every((r) => r === "worker")) {
+  if (!pathname.startsWith("/field") && !hasOffice && roles.every((r) => r === "worker")) {
     return <Navigate to="/field" replace />;
   }
   return <>{children}</>;

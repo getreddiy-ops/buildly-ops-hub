@@ -160,7 +160,7 @@ export default function Crew() {
     <div>
       <PageHeader
         title="Crew"
-        description="Your team, their roles, and pay rates."
+        description="Crew members with the worker role get their own dashboard: time clock and assigned open jobs, with no job editing. Owners and admins manage the business."
         actions={
           isAdmin && (
             <Dialog open={open} onOpenChange={setOpen}>
