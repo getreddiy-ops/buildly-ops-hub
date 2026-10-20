@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { documentTables, emailDeliveryStatus } from '../_shared/message-delivery.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -119,9 +120,7 @@ Deno.serve(async (req) => {
     if ((channel === 'sms' || channel === 'both') && !to_phone) return json({ error: 'to_phone required' }, 400)
 
     const svc = createClient(SUPABASE_URL, SERVICE_ROLE)
-    const table = docType === 'estimate' ? 'estimates' : 'invoices'
-    const liTable = docType === 'estimate' ? 'estimate_line_items' : 'invoice_line_items'
-    const fk = docType === 'estimate' ? 'estimate_id' : 'invoice_id'
+    const { table, items: liTable, foreignKey: fk } = documentTables(docType)
 
     const { data: doc, error: docErr } = await svc
       .from(table)
@@ -180,6 +179,9 @@ Deno.serve(async (req) => {
     const results: Record<string, any> = {}
 
     if (channel === 'email' || channel === 'both') {
+      if (!Deno.env.get('RESEND_API_KEY') && !LOVABLE_API_KEY) {
+        return json({ error: 'Email delivery is not configured. Connect an email provider before sending.', code: 'email_not_configured' }, 503)
+      }
       const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
         method: 'POST',
         headers: {
@@ -196,7 +198,13 @@ Deno.serve(async (req) => {
       })
       const emailJson = await emailRes.json().catch(() => ({}))
       const dispatch = emailRes.ok ? await dispatchEmailQueue() : { ok: false }
-      results.email = { ok: emailRes.ok, ...emailJson, dispatched: dispatch.ok }
+      const { data: delivery } = typeof emailJson.messageId === 'string'
+        ? await svc.from('email_send_log').select('status').eq('message_id', emailJson.messageId)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        : { data: null }
+      const status = emailDeliveryStatus(delivery?.status)
+      results.email = { ...emailJson, ok: emailRes.ok && emailJson.success !== false && !emailJson.error && status !== 'failed', status,
+        dispatched: status === 'submitted', dispatcherStarted: dispatch.ok }
       if (!emailRes.ok) console.error('email send failed', emailJson)
     }
 

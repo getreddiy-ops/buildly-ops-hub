@@ -63,8 +63,8 @@ export function SendDocumentDialog({
     if (error) return toast.error(error.message);
     const r = (data as any)?.results || {};
     const msgs: string[] = [];
-    if (r.email) msgs.push(r.email.ok ? "Email queued" : `Email failed: ${r.email.error || r.email.reason || "unknown"}`);
-    if (r.sms) msgs.push(r.sms.ok ? "SMS sent" : `SMS failed: ${typeof r.sms.error === "string" ? r.sms.error : "unknown"}`);
+      if (r.email) msgs.push(r.email.ok ? (r.email.status === "submitted" ? "Email accepted by provider" : "Email queued; delivery unconfirmed") : `Email failed: ${r.email.error || r.email.reason || "Check delivery settings"}`);
+      if (r.sms) msgs.push(r.sms.ok ? "Text submitted; delivery unconfirmed" : `SMS failed: ${typeof r.sms.error === "string" ? r.sms.error : "unknown"}`);
     if ((data as any)?.success) toast.success(msgs.join(" · ") || "Sent");
     else toast.error(msgs.join(" · ") || "Send failed");
     if ((data as any)?.success) {
