@@ -45,6 +45,7 @@ async function requireMember(req: Request, organizationId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!member) throw new Error("Forbidden");
+  if (!["owner", "admin"].includes(member.role)) throw new Error("Forbidden");
 
   return { admin, user: userData.user };
 }

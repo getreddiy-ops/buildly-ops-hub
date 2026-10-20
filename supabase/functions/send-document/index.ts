@@ -131,11 +131,12 @@ Deno.serve(async (req) => {
 
     const { data: member } = await svc
       .from('organization_members')
-      .select('id')
+      .select('id,role')
       .eq('user_id', user.id)
       .eq('organization_id', doc.organization_id)
       .maybeSingle()
     if (!member) return json({ error: 'Forbidden' }, 403)
+    if (!['owner', 'admin'].includes(member.role)) return json({ error: 'Forbidden' }, 403)
 
     const { data: items } = await svc
       .from(liTable)
