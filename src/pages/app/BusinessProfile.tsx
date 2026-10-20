@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -113,7 +114,12 @@ export default function BusinessProfile() {
         </CardContent>
       </Card>
 
-      {/* 1 — Industry & services */}
+      <FormWizard footer={<div className="sticky bottom-4 flex justify-end">
+        <Button size="lg" onClick={save} disabled={saving} className="shadow-lg">
+          {saving ? "Saving…" : "Save business profile"}
+        </Button>
+      </div>}>
+{/* 1 — Industry & services */}
       <Card>
         <CardHeader>
           <CardTitle>1. Industry & services</CardTitle>
@@ -131,7 +137,7 @@ export default function BusinessProfile() {
               {SUB_TRADE_SUGGESTIONS.map((t) => {
                 const on = profile.sub_trades?.includes(t);
                 return (
-                  <button key={t} type="button" onClick={() => toggleTrade(t)}
+                  <button key={t} aria-pressed={on} type="button" onClick={() => toggleTrade(t)}
                     className={`rounded-full border px-3 py-1 text-xs transition ${on
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-muted hover:border-primary/50"}`}>
@@ -326,17 +332,13 @@ export default function BusinessProfile() {
         <CardHeader>
           <CardTitle>6. Anything else the AI should know</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent><div data-wizard-label="Additional business notes">
           <Textarea rows={4} value={profile.notes ?? ""} onChange={(e) => update("notes", e.target.value)}
             placeholder="Seasonal promos, partner referrals, certifications, hiring status, anything specific about how you run the business." />
-        </CardContent>
+        </div></CardContent>
       </Card>
 
-      <div className="sticky bottom-4 flex justify-end">
-        <Button size="lg" onClick={save} disabled={saving} className="shadow-lg">
-          {saving ? "Saving…" : "Save business profile"}
-        </Button>
-      </div>
+      </FormWizard>
     </div>
   );
 }

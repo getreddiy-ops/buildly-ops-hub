@@ -1,3 +1,5 @@
+import { addressFields, emptyAddressParts, formatAddress, parseAddress } from "@/components/AddressFields";
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Upload, Trash2, Palette } from "lucide-react";
 
@@ -22,7 +24,8 @@ export default function Branding() {
 
   const [name, setName] = useState("");
   const [legalName, setLegalName] = useState("");
-  const [address, setAddress] = useState("");
+  const [addressParts, setAddressParts] = useState({ address: "", ...emptyAddressParts });
+  const address = formatAddress(addressParts);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
@@ -38,7 +41,7 @@ export default function Branding() {
     if (!branding) return;
     setName(branding.name ?? "");
     setLegalName(branding.legal_name ?? "");
-    setAddress(branding.address ?? "");
+    setAddressParts(parseAddress(branding.address ?? ""));
     setPhone(branding.phone ?? "");
     setEmail(branding.email ?? "");
     setWebsite(branding.website ?? "");
@@ -144,7 +147,8 @@ export default function Branding() {
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
         <div className="space-y-6">
-          <Card className="p-5">
+          <FormWizard footer={<Button onClick={save} disabled={saving} className="w-full">{saving ? "Saving…" : "Save branding"}</Button>}>
+          <Card data-wizard-label="Company logo" className="p-5">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Logo
             </h2>
@@ -247,14 +251,7 @@ export default function Branding() {
                 <Label>Legal business name</Label>
                 <Input value={legalName} onChange={(e) => setLegalName(e.target.value)} />
               </div>
-              <div>
-                <Label>Address</Label>
-                <Textarea
-                  rows={2}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-              </div>
+              {addressFields(addressParts, setAddressParts)}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Phone</Label>
@@ -280,20 +277,18 @@ export default function Branding() {
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Document templates
             </h2>
-            <Tabs value={activeDoc} onValueChange={(v) => setActiveDoc(v as DocType)}>
+            <div className="grid gap-3"><div><Label>Document type</Label><Tabs value={activeDoc} onValueChange={(v) => setActiveDoc(v as DocType)}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="estimate">Estimate</TabsTrigger>
                 <TabsTrigger value="invoice">Invoice</TabsTrigger>
                 <TabsTrigger value="contract">Contract</TabsTrigger>
-              </TabsList>
-              {(["estimate", "invoice", "contract"] as DocType[]).map((d) => (
-                <TabsContent key={d} value={d} className="space-y-3 pt-3">
+              </TabsList></Tabs></div>
                   <div>
                     <Label>Header message</Label>
                     <Textarea
                       rows={2}
                       placeholder="Thanks for considering us…"
-                      value={docs[d]?.header ?? ""}
+                      value={docs[activeDoc]?.header ?? ""}
                       onChange={(e) => updateDoc("header", e.target.value)}
                     />
                   </div>
@@ -301,7 +296,7 @@ export default function Branding() {
                     <Label>Notes (shown above terms)</Label>
                     <Textarea
                       rows={2}
-                      value={docs[d]?.notes ?? ""}
+                      value={docs[activeDoc]?.notes ?? ""}
                       onChange={(e) => updateDoc("notes", e.target.value)}
                     />
                   </div>
@@ -310,7 +305,7 @@ export default function Branding() {
                     <Textarea
                       rows={5}
                       placeholder="Payment due within 30 days…"
-                      value={docs[d]?.terms ?? ""}
+                      value={docs[activeDoc]?.terms ?? ""}
                       onChange={(e) => updateDoc("terms", e.target.value)}
                     />
                   </div>
@@ -318,18 +313,14 @@ export default function Branding() {
                     <Label>Footer</Label>
                     <Input
                       placeholder="Thank you for your business!"
-                      value={docs[d]?.footer ?? ""}
+                      value={docs[activeDoc]?.footer ?? ""}
                       onChange={(e) => updateDoc("footer", e.target.value)}
                     />
                   </div>
-                </TabsContent>
-              ))}
-            </Tabs>
+                </div>
           </Card>
 
-          <Button onClick={save} disabled={saving} className="w-full">
-            {saving ? "Saving…" : "Save branding"}
-          </Button>
+          </FormWizard>
         </div>
 
         <div className="lg:sticky lg:top-6 lg:self-start">

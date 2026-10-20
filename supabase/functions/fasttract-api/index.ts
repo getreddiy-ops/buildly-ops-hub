@@ -99,6 +99,7 @@ async function resolveActor(req: Request, url: URL, body: any): Promise<Actor> {
 }
 
 function requireScope(actor: Actor, scope: "read" | "write") {
+  if (scope === "write" && actor.authType === "jwt" && !["owner", "admin"].includes(actor.role)) throw new Error("Forbidden");
   if (actor.authType === "api_key" && !actor.scopes.includes(scope)) throw new Error("Forbidden");
 }
 

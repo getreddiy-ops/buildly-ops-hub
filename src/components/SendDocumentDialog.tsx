@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,8 +63,8 @@ export function SendDocumentDialog({
     if (error) return toast.error(error.message);
     const r = (data as any)?.results || {};
     const msgs: string[] = [];
-    if (r.email) msgs.push(r.email.ok ? "Email queued" : `Email failed: ${r.email.error || r.email.reason || "unknown"}`);
-    if (r.sms) msgs.push(r.sms.ok ? "SMS sent" : `SMS failed: ${typeof r.sms.error === "string" ? r.sms.error : "unknown"}`);
+      if (r.email) msgs.push(r.email.ok ? (r.email.status === "submitted" ? "Email accepted by provider" : "Email queued; delivery unconfirmed") : `Email failed: ${r.email.error || r.email.reason || "Check delivery settings"}`);
+      if (r.sms) msgs.push(r.sms.ok ? "Text submitted; delivery unconfirmed" : `SMS failed: ${typeof r.sms.error === "string" ? r.sms.error : "unknown"}`);
     if ((data as any)?.success) toast.success(msgs.join(" · ") || "Sent");
     else toast.error(msgs.join(" · ") || "Send failed");
     if ((data as any)?.success) {
@@ -78,6 +79,14 @@ export function SendDocumentDialog({
         <DialogHeader>
           <DialogTitle>Send {docType} {customerName ? `to ${customerName}` : ""}</DialogTitle>
         </DialogHeader>
+<FormWizard footer={<DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={send} disabled={sending}>
+            <Send className="mr-2 h-4 w-4" />
+            {sending ? "Sending…" : "Send"}
+          </Button>
+        </DialogFooter>}>
+
         <div className="space-y-3">
           <div className="grid gap-1.5">
             <Label className="text-xs text-muted-foreground">Send via</Label>
@@ -108,13 +117,8 @@ export function SendDocumentDialog({
               placeholder="Thanks for your business — let me know if you have any questions." />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={send} disabled={sending}>
-            <Send className="mr-2 h-4 w-4" />
-            {sending ? "Sending…" : "Send"}
-          </Button>
-        </DialogFooter>
+
+</FormWizard>
       </DialogContent>
     </Dialog>
   );

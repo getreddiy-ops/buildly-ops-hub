@@ -7,7 +7,7 @@ type AppRole = "platform_admin" | "agent" | "owner" | "admin" | "worker";
 interface Membership {
   organization_id: string;
   role: AppRole;
-  organization: { id: string; name: string; slug: string | null };
+  organization: { id: string; name: string; slug: string | null; business_profile?: unknown };
 }
 
 interface AuthContextValue {
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = async (uid: string) => {
     const { data: mems } = await supabase
       .from("organization_members")
-      .select("organization_id, role, organization:organizations(id,name,slug)")
+      .select("organization_id, role, organization:organizations(id,name,slug,business_profile)")
       .eq("user_id", uid);
     const { data: roles } = await supabase
       .from("user_roles")

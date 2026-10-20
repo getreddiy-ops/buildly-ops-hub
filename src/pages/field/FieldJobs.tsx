@@ -29,7 +29,7 @@ export default function FieldJobs() {
         .eq("user_id", user.id);
       const list = ((data ?? []) as any[])
         .map((r) => r.jobs)
-        .filter((j) => j && j.organization_id === activeOrg.organization_id)
+        .filter((j) => j && j.organization_id === activeOrg.organization_id && !["completed", "cancelled"].includes(j.status))
         .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""));
       setJobs(list);
       setLoading(false);

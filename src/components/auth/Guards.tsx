@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { pendingOnboarding } from "@/lib/onboarding-reset";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -11,9 +12,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 export function RequireOrg({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
   const { user, loading, memberships, isPlatformAdmin, isAgent } = useAuth();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
+  if (pendingOnboarding(memberships)) return <Navigate to="/onboarding" replace />;
   if (memberships.length === 0) {
     if (isPlatformAdmin) return <Navigate to="/admin" replace />;
     if (isAgent) return <Navigate to="/agent" replace />;
@@ -22,7 +25,7 @@ export function RequireOrg({ children }: { children: ReactNode }) {
   // Worker-only memberships never see the office app — push them to the field app.
   const roles = memberships.map((m) => m.role);
   const hasOffice = roles.some((r) => r === "owner" || r === "admin");
-  if (!hasOffice && roles.every((r) => r === "worker")) {
+  if (!pathname.startsWith("/field") && !hasOffice && roles.every((r) => r === "worker")) {
     return <Navigate to="/field" replace />;
   }
   return <>{children}</>;
