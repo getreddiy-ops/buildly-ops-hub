@@ -5,19 +5,50 @@
   "auth": {
     "type": "oauth",
     "issuer": "https://qjusjfdrtposrthlcjeu.supabase.co/auth/v1",
-    "accepted_audiences": ["authenticated"]
+    "accepted_audiences": [
+      "authenticated"
+    ]
   },
   "mcp": {
     "server": {
       "name": "fasttract-mcp",
-      "version": "0.3.1",
+      "version": "0.5.0",
       "title": "FastTract MCP"
     },
     "tools": [
       {
+        "name": "list_organizations",
+        "title": "List my businesses",
+        "description": "List businesses the signed-in user belongs to and their roles. Choose the intended business before other tools when more than one is available.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
         "name": "list_customers",
         "title": "List customers",
-        "description": "List customers visible to the signed-in user's organization.",
+        "description": "List customers in the signed-in user's FastTract organization.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -26,17 +57,42 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "search": { "type": "string" },
-            "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 }
+            "search": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
           },
           "additionalProperties": false
         },
-        "outputSchema": null
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
       },
       {
         "name": "create_customer",
         "title": "Create customer",
-        "description": "Preview, then create a customer in FastTract and sync it to GoHighLevel.",
+        "description": "Preview, then create a customer directly in FastTract.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -45,21 +101,651 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": { "type": "string", "minLength": 1 },
-            "email": { "type": "string" },
-            "phone": { "type": "string" },
-            "address": { "type": "string" },
-            "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
           },
-          "required": ["name"],
+          "required": [
+            "name"
+          ],
           "additionalProperties": false
         },
-        "outputSchema": null
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "list_jobs",
+        "title": "List jobs",
+        "description": "List FastTract jobs with customer, schedule, status, and budget.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "scheduled",
+                "in_progress",
+                "on_hold",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "create_job",
+        "title": "Create job",
+        "description": "Preview, then create a job directly in FastTract.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "customer_name": {
+              "type": "string",
+              "description": "Exact customer name when customer_id is not supplied."
+            },
+            "description": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "scheduled",
+                "in_progress",
+                "on_hold",
+                "completed",
+                "cancelled"
+              ],
+              "default": "scheduled"
+            },
+            "scheduled_start": {
+              "type": "string",
+              "description": "ISO-8601 date/time."
+            },
+            "scheduled_end": {
+              "type": "string",
+              "description": "ISO-8601 date/time."
+            },
+            "budget": {
+              "type": "number",
+              "minimum": 0
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "list_estimates",
+        "title": "List estimates",
+        "description": "List FastTract estimates and acceptance/deposit status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "approved",
+                "rejected"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
       },
       {
         "name": "create_estimate",
-        "title": "Create estimate in HighLevel",
-        "description": "Preview, then create a FastTract estimate and create the matching estimate in GoHighLevel.",
+        "title": "Create estimate",
+        "description": "Preview, then create a customer estimate and line items directly in FastTract.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "customer_name": {
+              "type": "string",
+              "description": "Exact customer name when customer_id is not supplied."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "approved",
+                "rejected"
+              ],
+              "default": "draft"
+            },
+            "tax": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0,
+              "description": "Tax amount in dollars."
+            },
+            "deposit_required": {
+              "type": "number",
+              "minimum": 0
+            },
+            "notes": {
+              "type": "string"
+            },
+            "line_items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "description",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "required": [
+            "title",
+            "line_items"
+          ],
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "list_invoices",
+        "title": "List invoices",
+        "description": "List FastTract invoices with payment status and balances.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "paid",
+                "overdue",
+                "void"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "create_invoice",
+        "title": "Create invoice",
+        "description": "Preview, then create an invoice and line items directly in FastTract.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "customer_name": {
+              "type": "string",
+              "description": "Exact customer name when customer_id is not supplied."
+            },
+            "number": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "paid",
+                "overdue",
+                "void"
+              ],
+              "default": "draft"
+            },
+            "issue_date": {
+              "type": "string",
+              "description": "YYYY-MM-DD. Defaults to today."
+            },
+            "due_date": {
+              "type": "string",
+              "description": "YYYY-MM-DD."
+            },
+            "tax_rate": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0,
+              "description": "Tax percentage, for example 8.5."
+            },
+            "notes": {
+              "type": "string"
+            },
+            "terms": {
+              "type": "string"
+            },
+            "line_items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "description",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "required": [
+            "line_items"
+          ],
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "mark_invoice_paid",
+        "title": "Mark invoice paid",
+        "description": "Preview, then mark a FastTract invoice paid in full.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "invoice_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "invoice_number": {
+              "type": "string"
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "clock_in",
+        "title": "Clock in",
+        "description": "Preview, then clock the signed-in user into a FastTract job.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "job_title": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "clock_out",
+        "title": "Clock out",
+        "description": "Preview, then close the signed-in user's open FastTract time entry.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "job_title": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
+      },
+      {
+        "name": "send_customer_message",
+        "title": "Send customer message",
+        "description": "Preview, then send a customer SMS or email through FastTract messaging.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -68,33 +754,55 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "title": { "type": "string", "minLength": 1 },
-            "customer_id": { "type": "string", "format": "uuid" },
-            "customer_name": { "type": "string", "description": "Customer name to resolve when customer_id is not supplied." },
-            "lead_id": { "type": "string", "format": "uuid" },
-            "status": { "type": "string", "enum": ["draft", "sent", "accepted", "declined"], "default": "draft" },
-            "tax": { "type": "number", "minimum": 0, "default": 0 },
-            "notes": { "type": "string" },
-            "line_items": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "properties": {
-                  "description": { "type": "string", "minLength": 1 },
-                  "quantity": { "type": "number", "exclusiveMinimum": 0 },
-                  "unit_price": { "type": "number", "minimum": 0 }
-                },
-                "required": ["description", "quantity", "unit_price"],
-                "additionalProperties": false
-              }
+            "customer_id": {
+              "type": "string",
+              "format": "uuid"
             },
-            "confirm": { "type": "boolean", "description": "Set true only after reviewing the preview." }
+            "customer_name": {
+              "type": "string",
+              "description": "Exact customer name when customer_id is not supplied."
+            },
+            "channel": {
+              "type": "string",
+              "enum": [
+                "sms",
+                "email"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Set true only after reviewing the preview."
+            },
+            "organization_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business ID returned by list_organizations. Required if you belong to multiple businesses."
+            }
           },
-          "required": ["title", "line_items"],
+          "required": [
+            "channel",
+            "message"
+          ],
           "additionalProperties": false
         },
-        "outputSchema": null
+        "securitySchemes": [
+          {
+            "type": "oauth2",
+            "scopes": []
+          }
+        ],
+        "_meta": {
+          "securitySchemes": [
+            {
+              "type": "oauth2",
+              "scopes": []
+            }
+          ]
+        }
       }
     ]
   }

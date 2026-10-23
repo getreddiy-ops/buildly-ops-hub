@@ -20,7 +20,9 @@ project_id = "qjusjfdrtposrthlcjeu"
   [functions.fasttract-message]
     verify_jwt = true
   [functions.mcp]
-    verify_jwt = true
+    # MCP discovery is public. Every data tool validates the token with Auth
+    # and rechecks organization membership before using RLS-scoped requests.
+    verify_jwt = false
   [functions.ghl-oauth-callback]
     verify_jwt = false
   [functions.ghl-oauth-start]
