@@ -7,7 +7,9 @@ has an iOS project and a successful unsigned Simulator build. A signed device
 archive, Apple membership, App Store Connect record, upload, physical-device test,
 and complete privacy/metadata review have not been verified.
 
-This release preparation branches from main commit
+This release preparation preserves the deployed release branch
+`codex/working-web-release` at `bd7a221ff18ee13834ca9395b9eda8286bd71484`, including
+its crew-access and workflow changes beyond main commit
 `2dc058bbc400056d41236d97fbc41e85392e145f`. The existing older local checkout was
 `82d2ce11f8b4f5cae0bdb16599a3a182dd4337c0`; it was preserved.
 
@@ -65,12 +67,13 @@ This release preparation branches from main commit
 
 ## Required release order
 
-Local verification of this preparation: 115 tests passed; production web build,
+Initial main-based verification: 115 tests passed; production web build,
 TypeScript check and Capacitor iOS sync passed. The new migration passed isolated
 PostgreSQL (PGlite) checks for idempotency, cross-user isolation, client status
 protection, anonymous denial and Auth deletion cascade. The changed release UI
-files passed targeted lint. Repository-wide lint reports 280 existing findings
-(239 errors, 41 warnings); this preparation does not claim a clean global lint.
+files passed targeted lint. Main-based repository-wide lint reported 280 existing findings
+(239 errors, 41 warnings). Repeat verification on the final branch that includes
+the deployed source; this preparation does not claim a clean global lint.
 
 The production dependency audit dropped from 16 findings (including 4 critical)
 to 7 (0 critical, 4 high, 3 moderate) after the native runtime and compatible

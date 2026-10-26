@@ -2,7 +2,7 @@ name: FastTract iOS quality gate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, codex/working-web-release]
   push:
     branches: [main]
     paths:
