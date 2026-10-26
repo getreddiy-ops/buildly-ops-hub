@@ -37,6 +37,7 @@ jobs:
     steps:
       - name: Verify supported Xcode
         run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
           xcodebuild -version
           major=$(xcodebuild -version | awk '/^Xcode / {split($2,v,"."); print v[1]}')
           test "$major" -ge 26

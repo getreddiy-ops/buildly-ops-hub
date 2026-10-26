@@ -57,7 +57,9 @@ This release preparation branches from main commit
   processors and legal retention still require business verification.
 - Capacitor's vulnerable 8.4.2 native runtime is replaced with patched 8.4.3;
   confirm the resolved Swift package also says 8.4.3 after sync.
-- Xcode 26+ is checked in CI. The iOS quality job now also runs for pull requests.
+- CI explicitly selects Xcode 26.3 and checks Xcode 26+. The first preparation
+  job exposed the runner's old Xcode 16.4 default; a rerun must validate this fix.
+  The iOS quality job now also runs for pull requests.
 - Archive script validates team ID, build number and version, then builds a signed
   Release archive. It does not upload, export an IPA or submit for review.
 
