@@ -1,3 +1,5 @@
+import { addressFields, emptyAddressParts, formatAddress, parseAddress } from "@/components/AddressFields";
+import { FormWizard } from "@/components/FormWizard";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FolderCard } from "@/components/workspace/FolderCard";
 import { useEffect, useMemo, useState } from "react";
@@ -49,7 +51,7 @@ const schema = z.object({
   scheduled_end: z.string().optional().or(z.literal("")),
 });
 
-const empty = {
+const empty = { ...emptyAddressParts,
   title: "", customer_id: "", status: "scheduled" as JobStatus,
   address: "", description: "", budget: "" as string | number,
   scheduled_start: "", scheduled_end: "",
@@ -126,7 +128,7 @@ export default function Jobs() {
       title: j.title ?? "",
       customer_id: j.customer_id ?? "",
       status: j.status,
-      address: j.address ?? "",
+      ...parseAddress(j.address ?? ""),
       description: j.description ?? "",
       budget: j.budget ?? "",
       scheduled_start: j.scheduled_start ? j.scheduled_start.slice(0, 16) : "",
@@ -144,6 +146,7 @@ export default function Jobs() {
   const save = async () => {
     const parsed = schema.safeParse({
       ...form,
+      address: formatAddress(form),
       budget: form.budget === "" ? undefined : Number(form.budget),
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
@@ -260,6 +263,11 @@ export default function Jobs() {
                   />
                 </div>
               </DialogHeader>
+<FormWizard footer={<DialogFooter>
+                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              </DialogFooter>}>
+
 
               <div className="grid gap-3 max-h-[70vh] overflow-y-auto pr-1">
                 <Field label="Title">
@@ -296,9 +304,7 @@ export default function Jobs() {
                     </Select>
                   </Field>
                 </div>
-                <Field label="Address">
-                  <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                </Field>
+                {addressFields(form, (parts) => setForm({ ...form, ...parts }))}
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Scheduled start">
                     <Input
@@ -329,10 +335,8 @@ export default function Jobs() {
                 </Field>
               </div>
 
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-              </DialogFooter>
+
+</FormWizard>
             </DialogContent>
           </Dialog>
         }

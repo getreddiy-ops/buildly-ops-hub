@@ -2,7 +2,8 @@ import WorkspaceHub from "./pages/app/WorkspaceHub";
 import JobFolder from "./pages/app/JobFolder";
 import WorkspacePreview from "./pages/WorkspacePreview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import FieldDashboard from "./pages/field/FieldDashboard";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -180,13 +181,9 @@ const App = () => (
             </Route>
 
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
-              <Route index element={<FieldClock />} />
+              <Route index element={<FieldDashboard />} />
               <Route path="jobs" element={<FieldJobs />} />
-              <Route path="crew" element={<FieldCrew />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><FieldAssistant /></PaywallGate>} />
-              <Route path="map" element={<FieldMap />} />
-              <Route path="profile" element={<FieldProfile />} />
+              <Route path="*" element={<Navigate to="/field" replace />} />
             </Route>
 
             <Route path="/agent" element={<RequireAuth><RequireAgent><AgentShell /></RequireAgent></RequireAuth>}>

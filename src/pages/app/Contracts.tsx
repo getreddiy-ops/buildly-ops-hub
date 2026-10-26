@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -186,6 +187,11 @@ export default function Contracts() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Edit contract" : "New contract"}</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          </DialogFooter>}>
+
           <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
             <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3">
@@ -221,10 +227,8 @@ export default function Contracts() {
               </Field>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+
+</FormWizard>
         </DialogContent>
       </Dialog>
 

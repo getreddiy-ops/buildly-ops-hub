@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -338,6 +339,13 @@ function NewRequestDialog({
   return (
     <DialogContent>
       <DialogHeader><DialogTitle>Request time off</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+        <Button onClick={submit} disabled={saving}>
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Submit request
+        </Button>
+      </DialogFooter>}>
+
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Start</Label><Input type="date" value={startDate} onChange={(e) => setStart(e.target.value)} /></div>
@@ -364,12 +372,8 @@ function NewRequestDialog({
           <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Family trip, doctor visit…" />
         </div>
       </div>
-      <DialogFooter>
-        <Button onClick={submit} disabled={saving}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Submit request
-        </Button>
-      </DialogFooter>
+
+</FormWizard>
     </DialogContent>
   );
 }
