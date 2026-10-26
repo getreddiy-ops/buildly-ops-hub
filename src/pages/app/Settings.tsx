@@ -255,6 +255,7 @@ export default function Settings() {
           <Button variant="outline" onClick={logout}>
             <LogOut className="mr-2 h-4 w-4" /> Sign out
           </Button>
+          <Button variant="outline" asChild><Link to="/account">Account & privacy</Link></Button>
         </CardContent>
       </Card>
     </div>

@@ -1752,6 +1752,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_account_deletion_request: {
+        Args: Record<PropertyKey, never>
+        Returns: { requested_at: string; status: string }[]
+      }
+      request_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

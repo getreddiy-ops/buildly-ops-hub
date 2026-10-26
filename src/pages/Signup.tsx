@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { trackSignup } from "@/lib/gtag";
+import { authEmailRedirect, isNativeApp } from "@/lib/native";
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
@@ -53,7 +54,7 @@ export default function Signup() {
           full_name: fullName,
           ...(inviteTokenHash ? { invite_token_hash: inviteTokenHash } : {}),
         },
-        emailRedirectTo: window.location.origin + "/onboarding",
+        emailRedirectTo: authEmailRedirect("/onboarding"),
       },
     });
     setLoading(false);
@@ -86,7 +87,7 @@ export default function Signup() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: pendingEmail,
-      options: { emailRedirectTo: window.location.origin + "/onboarding" },
+      options: { emailRedirectTo: authEmailRedirect("/onboarding") },
     });
     setResending(false);
     if (error) {
@@ -152,7 +153,7 @@ export default function Signup() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {inviteToken
                   ? "Create your account to join the FastTract team that invited you."
-                  : "Create your account and set up your company. If you already purchased FastTract, use the email from your original checkout."}
+                  : isNativeApp() ? "Create your account to join your company's FastTract workspace." : "Create your account and set up your company. If you already purchased FastTract, use the email from your original checkout."}
               </p>
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div><Label htmlFor="name">Full name</Label>
@@ -165,7 +166,7 @@ export default function Signup() {
                   {loading ? "Creating…" : inviteToken ? "Create account & join team" : "Create account & continue"}
                 </Button>
               </form>
-              {!inviteToken && (
+              {!inviteToken && !isNativeApp() && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   You will review pricing before entering payment details.
                 </p>
