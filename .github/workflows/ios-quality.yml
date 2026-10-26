@@ -1,6 +1,8 @@
 name: FastTract iOS quality gate
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -33,6 +35,11 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zx4gzhfijwHArY8ZqUNsUA_0C7xRkE_
 
     steps:
+      - name: Verify supported Xcode
+        run: |
+          xcodebuild -version
+          major=$(xcodebuild -version | awk '/^Xcode / {split($2,v,"."); print v[1]}')
+          test "$major" -ge 26
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -47,6 +54,9 @@ jobs:
 
       - name: Run unit tests
         run: npm test
+
+      - name: Block critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=critical
 
       - name: Build web application
         run: npm run build

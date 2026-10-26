@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { FASTTRACT_CHECKOUT_URL } from "@/lib/sales";
+import { isNativeApp } from "@/lib/native";
 
 export default function GhlBilling() {
   const { isActive, loading, refetch } = useSubscription();
@@ -20,13 +21,13 @@ export default function GhlBilling() {
       </div>
       <p className="text-sm text-muted-foreground">If your purchase is not reflected here, support will verify the original subscription and connect your company access.</p>
     </Card>
-    <Card className="space-y-4 p-6">
+    {!isNativeApp() && <Card className="space-y-4 p-6">
       <h2 className="text-lg font-semibold">New to FastTract?</h2>
       <p className="text-muted-foreground">Compare Basic, Pro, and Enterprise, then choose your plan at our existing secure checkout.</p>
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="outline"><Link to="/pricing">Compare plans</Link></Button>
         <Button asChild><a href={FASTTRACT_CHECKOUT_URL}>Open secure checkout</a></Button>
       </div>
-    </Card>
+    </Card>}
   </div>;
 }

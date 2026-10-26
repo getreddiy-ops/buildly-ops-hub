@@ -1,4 +1,5 @@
 import { GOOGLE_ADS_ID, GADS_SIGNUP_LABEL, GADS_TRIAL_LABEL } from "./ads-config";
+import { isNativeApp } from "./native";
 
 declare global {
   interface Window {
@@ -10,6 +11,7 @@ declare global {
 let loaded = false;
 
 export function loadGoogleAds() {
+  if (isNativeApp()) return;
   if (loaded || typeof window === "undefined") return;
   if (!GOOGLE_ADS_ID) return;
   loaded = true;
@@ -29,11 +31,13 @@ export function loadGoogleAds() {
 }
 
 export function trackPageview(path: string) {
+  if (isNativeApp()) return;
   if (!GOOGLE_ADS_ID || typeof window === "undefined" || !window.gtag) return;
   window.gtag("config", GOOGLE_ADS_ID, { page_path: path });
 }
 
 function fireConversion(label: string, value?: number) {
+  if (isNativeApp()) return;
   if (!GOOGLE_ADS_ID || !label) return;
   if (typeof window === "undefined" || !window.gtag) return;
   window.gtag("event", "conversion", {

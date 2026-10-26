@@ -9,6 +9,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOfficeRole } from "@/components/auth/Guards";
 import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
+import { NativeBoundary } from "@/components/NativeBoundary";
+import Account from "./pages/Account";
 
 import Landing from "./pages/Landing";
 import Pricing from "./pages/GhlPricing";
@@ -102,7 +104,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GoogleAdsTracker />
+          <NativeBoundary>
           <Routes>
+            <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
@@ -211,6 +215,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </NativeBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
