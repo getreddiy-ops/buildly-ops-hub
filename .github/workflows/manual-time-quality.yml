@@ -1,0 +1,23 @@
+name: Manual job time quality
+on:
+  pull_request:
+    branches: [main, codex/working-web-release]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --maxWorkers=2
+      - run: npm run test:manual-time-db
+      - run: npx tsc -p tsconfig.app.json --noEmit
+      - run: npx eslint src/components/ManualTimeEntry.tsx src/components/ManualTimeEntry.test.tsx src/lib/manual-time.ts src/lib/manual-time.test.ts src/pages/app/TimeTracking.tsx
+      - run: npm run build
