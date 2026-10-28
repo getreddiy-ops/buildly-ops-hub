@@ -1476,6 +1476,8 @@ export type Database = {
       }
       contractor_time_entries: {
         Row: {
+          entry_source: string
+          entered_by: string | null
           approved_at: string | null
           approved_by: string | null
           approved_hours: number | null
@@ -1496,6 +1498,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          entry_source?: string
+          entered_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_hours?: number | null
@@ -1516,6 +1520,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          entry_source?: string
+          entered_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_hours?: number | null
@@ -1752,6 +1758,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      record_manual_job_time: {
+        Args: { p_entry_id: string; p_organization_id: string; p_user_id: string; p_job_id: string; p_clock_in: string; p_clock_out: string; p_note?: string | null }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
