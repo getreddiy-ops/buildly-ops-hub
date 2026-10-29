@@ -520,8 +520,16 @@ export type Database = {
           },
         ]
       }
+      invoice_item_catalog: {
+        Row: { id: string; organization_id: string; category: string; description: string; unit: string; quantity: number; unit_price: number; created_at: string }
+        Insert: { id?: string; organization_id: string; category: string; description: string; unit: string; quantity?: number; unit_price?: number; created_at?: string }
+        Update: { id?: string; organization_id?: string; category?: string; description?: string; unit?: string; quantity?: number; unit_price?: number; created_at?: string }
+        Relationships: []
+      }
       org_invoice_line_items: {
         Row: {
+          category: string
+          unit: string
           created_at: string
           description: string
           id: string
@@ -532,6 +540,8 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          category?: string
+          unit?: string
           created_at?: string
           description: string
           id?: string
@@ -542,6 +552,8 @@ export type Database = {
           unit_price?: number
         }
         Update: {
+          category?: string
+          unit?: string
           created_at?: string
           description?: string
           id?: string

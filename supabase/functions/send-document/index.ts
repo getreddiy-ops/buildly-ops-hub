@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
     const { data: items } = await svc
       .from(liTable)
-      .select('description, quantity, unit_price, total')
+      .select(docType === 'invoice' ? 'description, category, unit, quantity, unit_price, total' : 'description, quantity, unit_price, total')
       .eq(fk, docId)
       .order('position')
 
@@ -160,7 +160,9 @@ Deno.serve(async (req) => {
       customerName: cust.name,
       message,
       lineItems: (items || []).map((li: any) => ({
-        description: li.description,
+        description: docType === 'invoice'
+          ? `${li.category ? `${li.category}: ` : ''}${li.description}${li.unit ? ` (${li.unit})` : ''}`
+          : li.description,
         quantity: Number(li.quantity),
         unit_price: Number(li.unit_price),
         total: Number(li.total),
