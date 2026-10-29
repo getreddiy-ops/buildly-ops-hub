@@ -1,4 +1,4 @@
-import { FormWizard } from "@/components/FormWizard";
+import { InvoiceLineEditor, blankInvoiceLine, type InvoiceLine, type SavedInvoiceItem } from "@/components/InvoiceLineEditor";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +29,7 @@ import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { toLocalDateInputValue } from "@/lib/local-date";
 
-type LineItem = { id?: string; description: string; quantity: number; unit_price: number };
+type LineItem = InvoiceLine;
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
 type InvStatus = (typeof STATUSES)[number];
 
@@ -55,10 +55,41 @@ export default function Invoices() {
   const [taxPct, setTaxPct] = useState(0);
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState("");
-  const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: 1, unit_price: 0 }]);
+  const [items, setItems] = useState<LineItem[]>([blankInvoiceLine()]);
+
+  const [catalog, setCatalog] = useState<SavedInvoiceItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [savingItem, setSavingItem] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setCatalog([]);
+    if (!activeOrg) return;
+    setCatalogLoading(true);
+    supabase.from("invoice_item_catalog").select("*").eq("organization_id", activeOrg.organization_id).order("category").order("description").then(({ data, error }) => {
+      if (cancelled) return;
+      setCatalogLoading(false);
+      if (error) toast.error("Could not load saved invoice items: " + error.message);
+      else setCatalog(data ?? []);
+    });
+    return () => { cancelled = true; };
+  }, [activeOrg?.organization_id]);
+
+  const saveCatalogItem = async (item: LineItem) => {
+    if (!activeOrg || savingItem) return;
+    if (!item.description.trim() || !item.category.trim() || !item.unit.trim()) return toast.error("Enter a description, category and unit before saving an item");
+    if (![item.quantity, item.unit_price].every(n => Number.isFinite(n) && n >= 0)) return toast.error("Quantity and price must be valid, nonnegative numbers");
+    setSavingItem(true);
+    const { data, error } = await supabase.from("invoice_item_catalog").upsert({
+      organization_id: activeOrg.organization_id, description: item.description.trim(), category: item.category.trim(), unit: item.unit.trim(), quantity: item.quantity, unit_price: item.unit_price,
+    }, { onConflict: "organization_id,category,description,unit" }).select("*").single();
+    setSavingItem(false);
+    if (error) return toast.error("Could not save item: " + error.message);
+    setCatalog(current => [...current.filter(entry => entry.id !== data.id), data].sort((a, b) => a.category.localeCompare(b.category) || a.description.localeCompare(b.description)));
+    toast.success("Item saved to your company library");
+  };
 
   const subtotal = useMemo(
-    () => items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0),
+    () => items.filter(i => i.description.trim()).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0),
     [items],
   );
   const taxAmt = subtotal * (Number(taxPct) || 0) / 100;
@@ -83,7 +114,7 @@ export default function Invoices() {
     setNumber(""); setCustomerId(""); setStatus("draft");
     setIssueDate(toLocalDateInputValue());
     setDueDate(""); setTaxPct(0); setNotes(""); setTerms("");
-    setItems([{ description: "", quantity: 1, unit_price: 0 }]);
+    setItems([blankInvoiceLine()]);
   };
   const openNew = () => {
     setEditing(null);
@@ -106,9 +137,10 @@ export default function Invoices() {
     setTaxPct(Number(inv.tax_rate) || 0);
     setNotes(inv.notes ?? "");
     setTerms(inv.terms ?? "");
-    const { data: li } = await supabase.from("org_invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
+    const { data: li, error } = await supabase.from("org_invoice_line_items").select("*").eq("invoice_id", inv.id).order("position");
+    if (error) return toast.error("Could not load invoice items: " + error.message);
     setItems((li ?? []).map((r) => ({
-      id: r.id, description: r.description ?? "",
+      id: r.id, description: r.description ?? "", category: r.category ?? "Other", unit: r.unit ?? "ea",
       quantity: Number(r.quantity), unit_price: Number(r.unit_price),
     })));
     setOpen(true);
@@ -119,6 +151,7 @@ export default function Invoices() {
     if (!customerId) return toast.error("Pick a customer");
     const valid = items.filter((i) => i.description.trim());
     if (valid.length === 0) return toast.error("Add at least one line item");
+    if (valid.some(i => ![i.quantity, i.unit_price].every(n => Number.isFinite(n) && n >= 0)) || !Number.isFinite(taxPct) || taxPct < 0) return toast.error("Quantities, prices and tax must be valid, nonnegative numbers");
     setSaving(true);
     const header = {
       number: number || null, customer_id: customerId, status,
@@ -131,7 +164,8 @@ export default function Invoices() {
       const { error } = await supabase.from("org_invoices").update(header).eq("id", editing.id);
       if (error) { setSaving(false); return toast.error(error.message); }
       invoiceId = editing.id;
-      await supabase.from("org_invoice_line_items").delete().eq("invoice_id", invoiceId);
+      const { error: deleteError } = await supabase.from("org_invoice_line_items").delete().eq("invoice_id", invoiceId);
+      if (deleteError) { setSaving(false); return toast.error(deleteError.message); }
     } else {
       const { data, error } = await supabase.from("org_invoices")
         .insert({ ...header, organization_id: activeOrg.organization_id, created_by: user.id })
@@ -141,7 +175,8 @@ export default function Invoices() {
     }
     const payload = valid.map((i, idx) => ({
       invoice_id: invoiceId,
-      description: i.description,
+      description: i.description.trim(),
+      category: i.category.trim() || "Other", unit: i.unit.trim() || "ea",
       quantity: Number(i.quantity) || 0,
       unit_price: Number(i.unit_price) || 0,
       total: (Number(i.quantity) || 0) * (Number(i.unit_price) || 0),
@@ -168,8 +203,6 @@ export default function Invoices() {
     setPreviewing({ ...inv, line_items: li ?? [] });
   };
 
-  const setItem = (idx: number, patch: Partial<LineItem>) =>
-    setItems((s) => s.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
 
   return (
     <div>
@@ -230,20 +263,17 @@ export default function Invoices() {
 
       {/* Edit / create dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="flex h-[94dvh] w-[96vw] max-w-[1500px] flex-col gap-3 p-4 sm:p-6">
           <DialogHeader><DialogTitle>{editing ? "Edit invoice" : "New invoice"}</DialogTitle></DialogHeader>
-<FormWizard footer={<DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>}>
-
-          <div className="grid max-h-[70vh] gap-4 overflow-y-auto pr-1">
+          <div className="grid min-h-0 flex-1 grid-rows-[minmax(160px,32%)_1fr] gap-4 lg:grid-cols-[minmax(380px,0.9fr)_minmax(0,1.1fr)] lg:grid-rows-1">
+          <div className="order-2 min-h-0 overflow-y-auto pr-2 lg:order-1">
+          <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Invoice number"><Input value={number} onChange={(e) => setNumber(e.target.value)} /></Field>
+              <Field label="Invoice number"><Input aria-label="Invoice number" value={number} onChange={(e) => setNumber(e.target.value)} /></Field>
               <Field label="Customer">
                 <div className="flex gap-2">
                   <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectTrigger aria-label="Customer" className="flex-1"><SelectValue placeholder="Select customer" /></SelectTrigger>
                     <SelectContent>
                       {customers.length === 0
                         ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers yet</div>
@@ -260,30 +290,18 @@ export default function Invoices() {
             <div className="grid grid-cols-3 gap-3">
               <Field label="Status">
                 <Select value={status} onValueChange={(v) => setStatus(v as InvStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Status"><SelectValue /></SelectTrigger>
                   <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Issue date"><Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></Field>
-              <Field label="Due date"><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
+              <Field label="Issue date"><Input aria-label="Issue date" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></Field>
+              <Field label="Due date"><Input aria-label="Due date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
             </div>
 
-            <Field label="Manage line items">
-   <p className="mb-3 text-sm text-muted-foreground">Add the work you want to include, then enter each detail on its own screen.</p>
-   <Button type="button" variant="outline" onClick={() => setItems((current) => [...current, { description: "", quantity: 1, unit_price: 0 }])}>Add line item</Button>
-   <p className="mt-2 text-sm">{items.length} line {items.length === 1 ? "item" : "items"}</p>
- </Field>
- {items.map((item, index) => <div key={index} className="grid gap-3">
-   <Field label={`Item ${index + 1}: description`}>
-     <Input value={item.description} onChange={(event) => setItem(index, { description: event.target.value })} />
-     <Button type="button" variant="ghost" onClick={() => setItems((current) => current.filter((_, i) => i !== index))}>Remove this item</Button>
-   </Field>
-   <Field label={`Item ${index + 1}: quantity`}><Input type="number" min={0} step="0.01" value={item.quantity} onChange={(event) => setItem(index, { quantity: parseFloat(event.target.value) || 0 })} /></Field>
-   <Field label={`Item ${index + 1}: unit price (USD)`}><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(event) => setItem(index, { unit_price: parseFloat(event.target.value) || 0 })} /></Field>
- </div>)}
+            <InvoiceLineEditor items={items} onChange={setItems} catalog={catalog} onSaveItem={saveCatalogItem} savingItem={savingItem} catalogLoading={catalogLoading} />
  <div className="grid grid-cols-3 gap-3">
               <Field label="Tax %">
-                <Input type="number" min={0} step="0.01" value={taxPct}
+                <Input aria-label="Tax percent" type="number" min={0} step="0.01" value={taxPct}
                   onChange={(e) => setTaxPct(parseFloat(e.target.value) || 0)} />
               </Field>
               <div data-wizard-label="Totals" className="col-span-2 ml-auto w-full max-w-xs space-y-1 text-sm">
@@ -293,11 +311,26 @@ export default function Invoices() {
               </div>
             </div>
 
-            <Field label="Notes"><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
-            <Field label="Terms"><Textarea rows={3} value={terms} onChange={(e) => setTerms(e.target.value)} /></Field>
+            <Field label="Notes"><Textarea aria-label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+            <Field label="Terms"><Textarea aria-label="Terms" rows={3} value={terms} onChange={(e) => setTerms(e.target.value)} /></Field>
           </div>
 
-</FormWizard>
+          </div>
+          <section aria-label="Live invoice preview" className="order-1 min-h-0 overflow-auto rounded-lg border bg-muted/40 p-2 lg:order-2 lg:p-4">
+            <p className="mb-2 text-sm font-medium">Live invoice preview</p>
+            <DocumentPreview branding={branding} type="invoice" documentNumber={number}
+              customerName={customers.find(c => c.id === customerId)?.name}
+              customerAddress={customers.find(c => c.id === customerId)?.address ?? undefined}
+              issueDate={issueDate} dueDate={dueDate || undefined}
+              lineItems={items.filter(item => item.description.trim()).map(item => ({ ...item, total: item.quantity * item.unit_price }))}
+              subtotal={subtotal} taxRate={taxPct} taxAmount={taxAmt} total={total}
+              template={{ ...branding?.document_defaults?.invoice, notes, terms }} />
+          </section>
+          </div>
+          <DialogFooter className="border-t pt-3">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save invoice"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -323,7 +356,7 @@ export default function Invoices() {
                 issueDate={previewing.issue_date}
                 dueDate={previewing.due_date ?? undefined}
                 lineItems={(previewing.line_items ?? []).map((li: any) => ({
-                  description: li.description,
+                  description: li.description, category: li.category, unit: li.unit,
                   quantity: Number(li.quantity),
                   unit_price: Number(li.unit_price),
                   total: Number(li.total),
