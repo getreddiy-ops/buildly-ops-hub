@@ -50,7 +50,7 @@ export default function TradePage() {
           name: `FastTract for ${launch.trade} Contractors`,
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web, iOS, Android",
-          offers: { "@type": "Offer", price: "69", priceCurrency: "USD" },
+          offers: { "@type": "Offer", price: "197", priceCurrency: "USD" },
           description: launch.description,
         }}
       />

@@ -107,9 +107,9 @@ export default function SuperControls() {
               <Select value={tier} onValueChange={(v) => setTier(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="base">Base ($69)</SelectItem>
-                  <SelectItem value="plus">Plus ($169)</SelectItem>
-                  <SelectItem value="premium">Premium ($269)</SelectItem>
+                  <SelectItem value="base">Base ($197)</SelectItem>
+                  <SelectItem value="plus">Plus ($297)</SelectItem>
+                  <SelectItem value="premium">Premium ($397)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
