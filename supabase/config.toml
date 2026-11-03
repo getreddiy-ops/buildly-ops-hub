@@ -21,21 +21,9 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = true
   [functions.mcp]
     verify_jwt = true
-  [functions.ghl-oauth-callback]
-    verify_jwt = false
-  [functions.ghl-oauth-start]
-    verify_jwt = true
-  [functions.ghl-sync]
-    verify_jwt = true
-  [functions.ghl-connection]
-    verify_jwt = true
-  [functions.ghl-command]
-    verify_jwt = true
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]
-    verify_jwt = false
-  [functions.highlevel-webhook]
     verify_jwt = false
   [functions.preview-transactional-email]
     verify_jwt = false

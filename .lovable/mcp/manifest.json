@@ -36,7 +36,7 @@
       {
         "name": "create_customer",
         "title": "Create customer",
-        "description": "Preview, then create a customer in FastTract and sync it to GoHighLevel.",
+        "description": "Preview, then create a customer in FastTract.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -58,12 +58,12 @@
       },
       {
         "name": "create_estimate",
-        "title": "Create estimate in HighLevel",
-        "description": "Preview, then create a FastTract estimate and create the matching estimate in GoHighLevel.",
+        "title": "Create estimate",
+        "description": "Preview, then create a FastTract estimate.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "openWorldHint": true
+          "openWorldHint": false
         },
         "inputSchema": {
           "type": "object",

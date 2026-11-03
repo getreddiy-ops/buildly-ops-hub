@@ -67,12 +67,6 @@ needs `SUPABASE_DB_PASSWORD` (project Settings -> Database).
 |---|---|---|---|
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` | Frontend build | Required (already committed) | Supabase client connection. Anon key -- safe client-side, RLS enforces access. |
 | `VITE_PAYMENTS_CLIENT_TOKEN` | Frontend build | Required (already committed) | Paddle.js client-side checkout token. |
-| `GHL_CLIENT_ID`, `GHL_CLIENT_SECRET` | `ghl-oauth-start`, `ghl-oauth-callback` | Required for GHL | From your GoHighLevel Marketplace App (marketplace.gohighlevel.com -> My Apps). |
-| `GHL_STATE_SECRET` | `ghl-oauth-start`, `ghl-oauth-callback` | Required for GHL | Any random string (`openssl rand -hex 32`) -- internal only, signs the OAuth handoff. Never sent to GHL. |
-| `GHL_REDIRECT_URI` | `ghl-oauth-start` | Optional | Override if your Marketplace App's redirect URI differs from `https://<project-ref>.supabase.co/functions/v1/ghl-oauth-callback`. |
-| `GHL_SCOPES` | `ghl-oauth-start` | Optional | Override the default OAuth scope list. |
-| `GHL_SUCCESS_URL`, `GHL_ERROR_URL` | `ghl-oauth-callback` | Optional | Where to redirect after connect; default is `app.fasttract.org/app/preferences`. |
-| `GHL_USER_TYPE` | `ghl-oauth-callback` | Optional | Defaults to `Location`. |
 | `LOVABLE_API_KEY` | `ai-assistant`, `estimate-from-photos`, Paddle/Twilio gateway calls | Required unless `OPENAI_API_KEY` is set | Lovable's connector gateway key -- used as the AI/Paddle/Twilio proxy when no direct provider key is configured. |
 | `OPENAI_API_KEY` | `ai-assistant`, `estimate-from-photos` | Optional | If set, calls OpenAI directly instead of the Lovable AI Gateway. |
 | `PADDLE_SANDBOX_API_KEY`, `PADDLE_LIVE_API_KEY` | `get-paddle-price`, `paddle-customer-portal` | Required for billing | Paddle dashboard -> Developer Tools -> Authentication. FastTract's own SaaS subscription billing only -- never customer invoices. |
