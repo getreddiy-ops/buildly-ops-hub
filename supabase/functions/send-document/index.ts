@@ -37,7 +37,7 @@ async function sendTwilioMessage(to: string, from: string, body: string) {
   }
 
   // Temporary compatibility while existing Twilio credentials are moved into
-  // FastTract's Supabase secrets. No GHL dependency is involved.
+  // FastTract's Supabase secrets.
   if (LOVABLE_API_KEY && TWILIO_API_KEY) {
     const response = await fetch(`${TWILIO_GATEWAY}/Messages.json`, {
       method: 'POST',
