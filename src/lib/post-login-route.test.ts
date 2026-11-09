@@ -2,6 +2,21 @@ import { describe, expect, it } from "vitest";
 import { resolvePostLoginRoute, safeNextPath } from "./post-login-route";
 
 describe("resolvePostLoginRoute", () => {
+  it("routes a reset owner to onboarding even with an existing company and platform role", () => {
+    expect(resolvePostLoginRoute({
+      memberships: [{ role: "owner", organization: { business_profile: { setup: { onboarding_required: true } } } }],
+      isPlatformAdmin: true,
+      isAgent: false,
+    })).toBe("/onboarding");
+  });
+
+  it("does not reroute a worker when the company owner is repeating onboarding", () => {
+    expect(resolvePostLoginRoute({
+      memberships: [{ role: "worker", organization: { business_profile: { setup: { onboarding_required: true } } } }],
+      isPlatformAdmin: false,
+      isAgent: false,
+    })).toBe("/field");
+  });
   it("sends platform administrators to the admin console", () => {
     expect(resolvePostLoginRoute({
       memberships: [{ role: "owner" }],

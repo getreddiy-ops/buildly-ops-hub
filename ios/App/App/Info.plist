@@ -30,6 +30,10 @@
 	<string>FastTract uses the camera when you choose to take photos for an estimate.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>FastTract uses your location when you clock in to help identify the job site and record your clock-in location.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FastTract accesses your photo library so you can attach existing job photos to an estimate or invoice.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

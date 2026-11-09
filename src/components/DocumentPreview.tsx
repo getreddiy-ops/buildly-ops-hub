@@ -2,6 +2,8 @@ import { Branding, DocumentTemplate } from "@/hooks/useBranding";
 import { GENERIC_DOCUMENT_LEGAL_NOTICE } from "@/lib/document-legal-notice";
 
 interface LineItem {
+  category?: string;
+  unit?: string;
   description: string;
   quantity: number;
   unit_price: number;
@@ -122,8 +124,8 @@ export function DocumentPreview({
           <tbody>
             {lineItems.map((li, i) => (
               <tr key={i} className="border-b border-slate-100">
-                <td className="px-3 py-2">{li.description}</td>
-                <td className="px-3 py-2 text-right">{li.quantity}</td>
+                <td className="px-3 py-2">{li.category && <div className="text-xs font-semibold text-slate-500">{li.category}</div>}{li.description}</td>
+                <td className="px-3 py-2 text-right">{li.quantity}{li.unit ? ` ${li.unit}` : ""}</td>
                 <td className="px-3 py-2 text-right">{money(li.unit_price)}</td>
                 <td className="px-3 py-2 text-right">{money(li.total)}</td>
               </tr>

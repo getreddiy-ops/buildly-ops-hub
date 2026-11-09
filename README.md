@@ -96,6 +96,43 @@ Native packaging is configured with Capacitor. See
 [MOBILE_RELEASE.md](./MOBILE_RELEASE.md) for build, signing, device-test, and
 store-submission requirements.
 
+## Connect ChatGPT to native FastTract
+
+The native MCP endpoint is
+`https://qjusjfdrtposrthlcjeu.supabase.co/functions/v1/mcp`.
+It uses FastTract sign-in and the caller's existing database RLS permissions;
+it does not use the old white-label CRM connection or a shared admin key.
+
+Production setup (the code alone does not enable the authorization server):
+
+1. In Supabase **Authentication → OAuth Server**, enable OAuth and set the
+   authorization path to `/.lovable/oauth/consent`.
+2. Ensure **Authentication → URL Configuration → Site URL** is the live
+   FastTract frontend (`https://fasttract-app.vercel.app` until custom-domain
+   DNS has been verified). The consent page must be served from that origin.
+3. Register the ChatGPT OAuth client using its exact callback URL, or enable
+   dynamic registration if using ChatGPT's automatic registration flow.
+   Client registration does not itself approve data access; each person must
+   sign in and approve the connection.
+4. Add the MCP endpoint as a custom ChatGPT connection and choose OAuth.
+   Morgan and Branden each authorize their own FastTract account.
+5. Test `list_organizations`, choose the intended business, then test a
+   read-only query before previewing any writes.
+
+OAuth resource metadata and tool descriptions are public; all data calls
+validate the user with Supabase Auth. Missing or invalid tokens receive a
+401 with OAuth discovery metadata. The `mcp` function intentionally performs
+its own authentication so discovery can work before sign-in. Every data call
+rechecks business membership, and office writes require owner/admin access.
+If someone belongs to multiple businesses, calls must supply `organization_id`
+from `list_organizations`; the server refuses to guess. No server-wide active
+business or shared user session is stored.
+
+Available tools cover businesses, customers, jobs, estimates, invoices,
+clock-in/out, and customer messages. Writes use a preview/confirmation step.
+`mark_invoice_paid` records a payment already received; it does not transfer
+funds. Payroll processing and bank transfers are not implemented by these tools.
+
 Do not commit Supabase service-role keys, Paddle secrets, Twilio credentials, or
 other production secrets. Public client tokens belong only in the documented
 frontend environment variables; server secrets belong in Supabase function

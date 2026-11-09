@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -201,6 +202,11 @@ export default function Costing() {
                       </DialogTrigger>
                       <DialogContent className="max-w-md">
                         <DialogHeader><DialogTitle>Add cost to {selected.title}</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+                          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                          <Button onClick={saveCost} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+                        </DialogFooter>}>
+
                         <div className="grid gap-3">
                           <Field label="Category">
                             <Select value={category} onValueChange={(v) => setCategory(v as any)}>
@@ -218,10 +224,8 @@ export default function Costing() {
                             </Field>
                           </div>
                         </div>
-                        <DialogFooter>
-                          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                          <Button onClick={saveCost} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-                        </DialogFooter>
+
+</FormWizard>
                       </DialogContent>
                     </Dialog>
                   )}

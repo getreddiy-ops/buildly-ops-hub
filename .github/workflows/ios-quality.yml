@@ -1,6 +1,8 @@
 name: FastTract iOS quality gate
 
 on:
+  pull_request:
+    branches: [main, codex/working-web-release]
   push:
     branches: [main]
     paths:
@@ -33,6 +35,12 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zx4gzhfijwHArY8ZqUNsUA_0C7xRkE_
 
     steps:
+      - name: Verify supported Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          major=$(xcodebuild -version | awk '/^Xcode / {split($2,v,"."); print v[1]}')
+          test "$major" -ge 26
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -47,6 +55,9 @@ jobs:
 
       - name: Run unit tests
         run: npm test
+
+      - name: Block critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=critical
 
       - name: Build web application
         run: npm run build
@@ -84,6 +95,19 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
+      - name: Build unsigned Release for iOS devices
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
       - name: Record quality gate summary
         if: success()
         run: |
@@ -92,3 +116,5 @@ jobs:
           echo '- Production web assets compiled' >> "$GITHUB_STEP_SUMMARY"
           echo '- Capacitor sync completed' >> "$GITHUB_STEP_SUMMARY"
           echo '- Native iOS project compiled for Simulator' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Release configuration compiled for iOS devices without signing' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Apple signing, archive validation, and TestFlight upload are separate unverified gates' >> "$GITHUB_STEP_SUMMARY"

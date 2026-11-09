@@ -3,7 +3,6 @@ import { Wrench } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { PastDueBanner } from "@/components/PastDueBanner";
-import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { WorkspaceFrame } from "@/components/workspace/WorkspaceFrame";
 import { workspaceGroups } from "@/components/workspace/navigation";
 export function getSettingsGroup(isPlatformAdmin: boolean) {
@@ -15,8 +14,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Owner";
-  return <WorkspaceFrame path={pathname} name={name} company={activeOrg?.organization?.name || "My company"} admin={isPlatformAdmin} onSignOut={async () => { await signOut(); navigate("/"); }}>
+  return <WorkspaceFrame weatherUserId={user?.id} path={pathname} name={name} company={activeOrg?.organization?.name || "My company"} admin={isPlatformAdmin} onSignOut={async () => { await signOut(); navigate("/"); }}>
     <PaymentTestModeBanner /><PastDueBanner /><Outlet />
-    {pathname !== "/app" && <FloatingAssistant />}
   </WorkspaceFrame>;
 }

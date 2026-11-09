@@ -22,4 +22,4 @@ export const SettingsPage = () => (
     </div>
   </StubPage>
 );
-export const FieldProfile = () => <StubPage title="Profile" description="Your account and preferences." icon={User} emptyTitle="Profile" emptyDescription="Edit your name, photo, and notification preferences." />;
+export const FieldProfile = () => <StubPage title="Profile" description="Your account and preferences." icon={User} emptyTitle="Account & privacy" emptyDescription="Manage privacy and request permanent account deletion."><Button asChild><Link to="/account">Account & privacy</Link></Button></StubPage>;

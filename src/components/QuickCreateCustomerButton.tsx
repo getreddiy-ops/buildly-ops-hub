@@ -1,3 +1,5 @@
+import { addressFields, emptyAddressParts, formatAddress } from "@/components/AddressFields";
+import { FormWizard } from "@/components/FormWizard";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FastTractApi } from "@/lib/fasttractApi";
@@ -27,14 +29,16 @@ export function QuickCreateCustomerButton({
   const { activeOrg } = useAuth();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "" });
+  const empty = { ...emptyAddressParts, firstName: "", lastName: "", middleName: "", email: "", phone: "", address: "" };
+  const [form, setForm] = useState(empty);
 
-  const reset = () => setForm({ name: "", email: "", phone: "", address: "" });
+  const reset = () => setForm(empty);
 
   const save = async () => {
     if (!activeOrg) return;
-    const name = form.name.trim();
+    const name = [form.firstName, form.middleName, form.lastName].map((part) => part.trim()).filter(Boolean).join(" ");
     if (!name) return toast.error("Name is required");
+    if (name.length > 120) return toast.error("Full name must be at most 120 characters");
 
     setSaving(true);
     try {
@@ -42,7 +46,7 @@ export function QuickCreateCustomerButton({
         name,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
-        address: form.address.trim() || null,
+        address: formatAddress(form) || null,
       }) as { data?: { id: string; name: string } };
       if (!result.data) throw new Error("FastTract did not return the new customer.");
       toast.success("Customer created");
@@ -65,10 +69,15 @@ export function QuickCreateCustomerButton({
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>New customer</DialogTitle></DialogHeader>
+<FormWizard footer={<DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Create customer"}</Button>
+        </DialogFooter>}>
+
         <div className="grid gap-3">
-          <Row label="Name">
-            <Input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </Row>
+          <Row label="First name"><Input required maxLength={120} autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></Row>
+          <Row label="Last name (optional)"><Input maxLength={120} autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></Row>
+          <Row label="Middle name (optional)"><Input maxLength={120} autoComplete="additional-name" value={form.middleName} onChange={(e) => setForm({ ...form, middleName: e.target.value })} /></Row>
           <div className="grid grid-cols-2 gap-3">
             <Row label="Email">
               <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
@@ -77,14 +86,10 @@ export function QuickCreateCustomerButton({
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </Row>
           </div>
-          <Row label="Address">
-            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-          </Row>
+          {addressFields(form, (parts) => setForm({ ...form, ...parts }))}
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Create customer"}</Button>
-        </DialogFooter>
+
+</FormWizard>
       </DialogContent>
     </Dialog>
   );

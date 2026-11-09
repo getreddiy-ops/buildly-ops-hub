@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -14,6 +14,7 @@ import { Clock, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import FieldClock from "@/pages/field/FieldClock";
 import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
+import { ManualTimeEntry } from "@/components/ManualTimeEntry";
 
 interface Entry {
   id: string;
@@ -28,6 +29,9 @@ interface Entry {
   approved_hours: number | null;
   status: string;
   job_title: string | null;
+  entry_source: string;
+  entered_by: string | null;
+  note: string | null;
 }
 
 type TimeScope = "week" | "month" | "all";
@@ -48,9 +52,13 @@ export default function TimeTracking() {
   const [names, setNames] = useState<Record<string, string>>({});
   const [scope, setScope] = useState<TimeScope>("week");
   const [loading, setLoading] = useState(true);
+  const loadSequence = useRef(0);
+  const currentOrg = useRef(activeOrg?.organization_id);
+  currentOrg.current = activeOrg?.organization_id;
 
   const load = useCallback(async () => {
-    if (!activeOrg) return;
+    if (!activeOrg || activeOrg.organization_id !== currentOrg.current) return;
+    const sequence = ++loadSequence.current;
     setLoading(true);
     let q = supabase.from(TIME_ENTRY_TABLE).select("*").eq("organization_id", activeOrg.organization_id);
     if (!isAdmin && user) q = q.eq("user_id", user.id);
@@ -60,18 +68,20 @@ export default function TimeTracking() {
       q = q.gte("clock_in", since.toISOString());
     }
     const { data, error } = await q.order("clock_in", { ascending: false });
+    if (sequence !== loadSequence.current || currentOrg.current !== activeOrg.organization_id) return;
     if (error) toast.error(error.message);
     const list = (data ?? []) as unknown as Entry[];
     setEntries(list);
-    const ids = Array.from(new Set(list.map((e) => e.user_id)));
+    const ids = Array.from(new Set(list.flatMap(e => [e.user_id, e.entered_by].filter((id): id is string => Boolean(id)))));
     if (ids.length) {
       const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+      if (sequence !== loadSequence.current || currentOrg.current !== activeOrg.organization_id) return;
       const map: Record<string, string> = {};
       (profs ?? []).forEach((profile) => {
         map[profile.id] = profile.full_name || profile.email || profile.id.slice(0, 8);
       });
       setNames(map);
-    }
+    } else setNames({});
     setLoading(false);
   }, [activeOrg, isAdmin, scope, user]);
 
@@ -87,6 +97,8 @@ export default function TimeTracking() {
         title="Time Tracking"
         description={isAdmin ? "All crew time entries." : "Your time entries."}
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && activeOrg && user && <ManualTimeEntry key={activeOrg.organization_id} organizationId={activeOrg.organization_id} actorId={user.id} onSaved={() => { if (scope === "all") void load(); else setScope("all"); }} />}
           <Select value={scope} onValueChange={(value) => setScope(value as TimeScope)}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -95,6 +107,7 @@ export default function TimeTracking() {
               <SelectItem value="all">All time</SelectItem>
             </SelectContent>
           </Select>
+          </div>
         }
       />
 
@@ -135,13 +148,14 @@ export default function TimeTracking() {
             <TableBody>
               {entries.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{names[e.user_id] ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{names[e.user_id] ?? "—"}{e.entry_source === "manual" && <div className="text-xs font-normal text-muted-foreground">Manual · entered by {names[e.entered_by ?? ""] ?? "company admin"}</div>}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.job_title ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{fmtDate(e.clock_in)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{e.clock_out ? fmtDate(e.clock_out) : <span className="text-primary">Active</span>}</TableCell>
                   <TableCell className="text-right tabular-nums">{e.clock_out ? fmtHrs(hrs(e)) : "—"}</TableCell>
                   <TableCell><StatusBadge status={e.status} /></TableCell>
                   <TableCell>
+                    {e.entry_source === "manual" && <span className="text-xs text-muted-foreground" title={e.note ?? undefined}>{e.note || "Manually entered — no GPS"}</span>}
                     <div className="flex items-center gap-3 text-xs">
                       {e.clock_in_lat != null && (
                         <a

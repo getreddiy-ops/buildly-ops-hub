@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -153,9 +154,18 @@ export function PhotoEstimateDialog({ organizationId, onDraftReady }: PhotoEstim
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>AI photo estimate</DialogTitle>
-        </DialogHeader>
+        </DialogHeader><FormWizard footer={<DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          {draft ? (
+            <Button onClick={useDraft}>Use this draft</Button>
+          ) : (
+            <Button onClick={analyze} disabled={analyzing || images.length === 0}>
+              {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing…</> : "Analyze photos"}
+            </Button>
+          )}
+        </DialogFooter>}>
 
-        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800">
+        <div data-wizard-label="Before you begin" className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             The AI estimates measurements from objects it recognizes in your photos (doors, outlet
@@ -239,16 +249,7 @@ export function PhotoEstimateDialog({ organizationId, onDraftReady }: PhotoEstim
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          {draft ? (
-            <Button onClick={useDraft}>Use this draft</Button>
-          ) : (
-            <Button onClick={analyze} disabled={analyzing || images.length === 0}>
-              {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing…</> : "Analyze photos"}
-            </Button>
-          )}
-        </DialogFooter>
+        </FormWizard>
       </DialogContent>
     </Dialog>
   );

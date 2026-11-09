@@ -12,7 +12,7 @@ export default function Privacy() {
       </header>
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8 prose prose-invert">
         <h1 className="text-4xl font-semibold mb-2">Privacy Notice</h1>
-        <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-muted-foreground">Last updated: October 26, 2026</p>
 
         <p className="mt-6">This Privacy Notice explains how Lynchmarc LLC ("we", "us", "our"), operating FastTract, collects and processes your personal data. We act as the data controller for personal data collected through FastTract.</p>
 
@@ -22,6 +22,7 @@ export default function Privacy() {
           <li><strong>Business data:</strong> customers, leads, jobs, estimates, invoices, contracts, and related records you input.</li>
           <li><strong>Usage and telemetry:</strong> device identifiers, IP address, browser, pages visited, feature usage.</li>
           <li><strong>Location data:</strong> GPS coordinates submitted by crew during clock-in/clock-out, only when used.</li>
+          <li><strong>Optional photos and voice:</strong> photos you choose for estimates and audio you choose to submit to assistant features, processed by the service providers needed for those features.</li>
           <li><strong>Support communications:</strong> messages and attachments you send us.</li>
         </ul>
 
@@ -29,7 +30,7 @@ export default function Privacy() {
         <ul className="list-disc pl-6">
           <li>Provide and operate the service (performance of contract).</li>
           <li>Authenticate users and secure the platform (legitimate interests, legal obligation).</li>
-          <li>Process payments and manage subscriptions (performance of contract — handled by Paddle).</li>
+          <li>Process payments and manage subscriptions through your original payment provider (performance of contract).</li>
           <li>Customer support and account communications (performance of contract).</li>
           <li>Product improvement and analytics (legitimate interests).</li>
           <li>Marketing communications (consent, where required).</li>
@@ -38,7 +39,7 @@ export default function Privacy() {
         <h2 className="mt-8 text-2xl font-semibold">3. Data Sharing</h2>
         <p>We share personal data with:</p>
         <ul className="list-disc pl-6">
-          <li><strong>Paddle.com</strong> — our Merchant of Record for sale of subscriptions, billing, tax compliance, and invoicing.</li>
+          <li><strong>Payment providers</strong> — your original FastTract checkout and billing provider, including HighLevel and its payment processors or Paddle where applicable. Customer payments for contracting work use the connected payment provider.</li>
           <li><strong>Service providers / subprocessors</strong> — hosting, database, AI providers (for AI Assistant and Phone Assistant features), telephony providers (Twilio, ElevenLabs) when you enable phone features.</li>
           <li><strong>Professional advisers</strong> — legal and accounting where necessary.</li>
           <li><strong>Authorities</strong> — when required by law.</li>
@@ -49,12 +50,14 @@ export default function Privacy() {
 
         <h2 className="mt-8 text-2xl font-semibold">5. Your Rights</h2>
         <p>Subject to applicable law, you may have rights to access, correct, delete, restrict, or export your personal data, and to object to processing or withdraw consent. To exercise these rights, contact us at the address below.</p>
+        <p>To initiate permanent account deletion while signed in, open <Link to="/account">Account &amp; privacy</Link>. Requests are processed within 30 days, with confirmation to your account email. Company ownership may need to be transferred; personal data required by law may be retained. Deleting your account does not automatically cancel an existing subscription.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">6. Security</h2>
         <p>We use appropriate technical and organisational measures including encryption in transit, access controls, and database row-level security to protect your data.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">7. Cookies</h2>
         <p>We use essential cookies required to operate the service (e.g. authentication). We may use limited analytics cookies to understand usage. You can manage cookies via your browser settings.</p>
+        <p>The native FastTract companion app does not load our Google advertising tracker.</p>
 
         <h2 className="mt-8 text-2xl font-semibold">8. International Transfers</h2>
         <p>Your data may be processed outside your country. Where applicable, we rely on appropriate safeguards such as Standard Contractual Clauses.</p>

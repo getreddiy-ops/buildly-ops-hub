@@ -2,13 +2,16 @@ import WorkspaceHub from "./pages/app/WorkspaceHub";
 import JobFolder from "./pages/app/JobFolder";
 import WorkspacePreview from "./pages/WorkspacePreview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import FieldDashboard from "./pages/field/FieldDashboard";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth, RequireOrg, RequireAgent, RequirePlatformAdmin, RequireOfficeRole } from "@/components/auth/Guards";
 import { GoogleAdsTracker } from "@/components/GoogleAdsTracker";
+import { NativeBoundary } from "@/components/NativeBoundary";
+import Account from "./pages/Account";
 
 import Landing from "./pages/Landing";
 import Pricing from "./pages/GhlPricing";
@@ -102,7 +105,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GoogleAdsTracker />
+          <NativeBoundary>
           <Routes>
+            <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
@@ -176,13 +181,9 @@ const App = () => (
             </Route>
 
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
-              <Route index element={<FieldClock />} />
+              <Route index element={<FieldDashboard />} />
               <Route path="jobs" element={<FieldJobs />} />
-              <Route path="crew" element={<FieldCrew />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="assistant" element={<PaywallGate feature="AI Assistant"><FieldAssistant /></PaywallGate>} />
-              <Route path="map" element={<FieldMap />} />
-              <Route path="profile" element={<FieldProfile />} />
+              <Route path="*" element={<Navigate to="/field" replace />} />
             </Route>
 
             <Route path="/agent" element={<RequireAuth><RequireAgent><AgentShell /></RequireAgent></RequireAuth>}>
@@ -211,6 +212,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </NativeBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

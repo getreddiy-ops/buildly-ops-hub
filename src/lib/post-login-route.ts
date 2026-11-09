@@ -2,10 +2,12 @@
 // Priority: platform_admin > worker (field app) > owner/admin/manager (office app)
 //         > agent-only > no memberships (onboarding).
 
+import { pendingOnboarding } from "./onboarding-reset";
 type Role = "platform_admin" | "agent" | "owner" | "admin" | "worker";
 
 interface Membership {
   role: Role | string;
+  organization?: { business_profile?: unknown };
 }
 
 interface Args {
@@ -15,6 +17,7 @@ interface Args {
 }
 
 export function resolvePostLoginRoute({ memberships, isPlatformAdmin, isAgent }: Args): string {
+  if (pendingOnboarding(memberships)) return "/onboarding";
   if (isPlatformAdmin) return "/admin";
 
   if (memberships.length > 0) {

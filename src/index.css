@@ -183,3 +183,213 @@
   border-radius: 8px 12px 0 0;
   background: hsl(var(--card));
 }
+
+/* Access-inspired office workspace. Scoped away from the public website. */
+:root.access-workspace, .access-theme {
+  color-scheme: light;
+  --background: 0 0% 96%; --foreground: 0 0% 16%;
+  --card: 0 0% 100%; --card-foreground: 0 0% 16%;
+  --popover: 0 0% 100%; --popover-foreground: 0 0% 16%;
+  --primary: 145 63% 28% !important; --primary-foreground: 0 0% 100% !important;
+  --secondary: 0 0% 92%; --secondary-foreground: 0 0% 20%;
+  --muted: 0 0% 94%; --muted-foreground: 0 0% 40%;
+  --accent: 145 30% 92% !important; --accent-foreground: 145 52% 22%;
+  --border: 0 0% 80%; --input: 0 0% 68%; --ring: 145 63% 28% !important;
+  --radius: 2px;
+}
+.access-app { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; min-height: 100vh; background: #d4d7db; color: #292929; }
+.access-chrome { position: sticky; top: 0; z-index: 35; background: #f3f3f3; }
+.access-titlebar { height: 36px; display: flex; align-items: center; gap: 24px; padding: 0 16px; background: #1b743e; color: white; }
+.access-brand { display: flex; gap: 9px; align-items: center; font-size: 14px; }
+.access-window-title { flex: 1; text-align: center; font-size: 12px; opacity: .95; }
+.access-user { max-width: 180px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.access-ribbon-tabs { display: flex; align-items: stretch; border-bottom: 1px solid #d4d4d4; height: 33px; }
+.access-file-menu { background: #155d32; color: white; padding: 0 21px; font-size: 12px; }
+.access-ribbon-tablist { height: 32px; padding: 0; gap: 0; border-radius: 0; background: transparent; }
+.access-ribbon-tablist [role=tab] { height: 33px; padding: 0 20px; border-radius: 0; color: #3b3b3b; font-size: 12px; font-weight: 400; box-shadow: none; }
+.access-ribbon-tablist [role=tab][data-state=active] { border-bottom: 2px solid #1b743e; background: #fafafa; color: #155d32; box-shadow: none; }
+.access-ribbon-panel[data-state=active] { display: flex; margin: 0; padding: 5px 10px 0; height: 99px; overflow-x: auto; gap: 0; border-bottom: 1px solid #bababa; background: linear-gradient(#fcfcfc,#efefef); }
+.access-command-group { flex-shrink: 0; padding: 0 12px; border-right: 1px solid #d6d6d6; display: flex; flex-direction: column; justify-content: space-between; }
+.access-command-group > div { display: flex; height: 66px; gap: 3px; }
+.access-command-group small { text-align: center; font-size: 10px; color: #777; height: 21px; padding-top: 3px; }
+.access-command { min-width: 63px; max-width: 95px; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 11px; text-align: center; border: 1px solid transparent; border-radius: 2px; line-height: 1.2; }
+.access-command svg { width: 26px; height: 26px; stroke-width: 1.5; color: #327b50; }
+.access-command:hover, .access-command[aria-pressed=true] { background: #e3f0e8; border-color: #9fc7ae; }
+.access-desktop { display: flex; min-height: calc(100vh - 193px); }
+.access-navigation { width: 224px; flex-shrink: 0; background: #f5f5f5; border-right: 1px solid #aeb2b6; display: flex; flex-direction: column; position: sticky; top: 168px; height: calc(100vh - 193px); }
+.access-navigation-heading { min-height: 37px; padding: 0 10px; display: flex; align-items: center; gap: 6px; font-size: 12px; background: #e8e8e8; border-bottom: 1px solid #c5c5c5; }
+.access-navigation-heading strong { flex: 1; font-weight: 600; }
+.access-navigation-heading button, .access-pane-toggle { padding: 5px; color: #666; }
+.access-object-search { margin: 8px; display: flex; align-items: center; gap: 6px; padding: 5px 6px; background: white; border: 1px solid #bdbdbd; }
+.access-object-search input { width: 100%; min-width: 0; outline: none; background: white; font-size: 12px; }
+.access-object-search:focus-within { outline: 1px solid #1b743e; }
+.access-object-list { flex: 1; overflow-y: auto; padding: 2px 0 8px; }
+.access-object-group { display: flex; width: 100%; align-items: center; gap: 5px; padding: 7px 9px; background: #e7e7e7; border-top: 1px solid #d3d3d3; border-bottom: 1px solid #d3d3d3; font-size: 11px; font-weight: 600; }
+.access-object { display: flex; gap: 8px; align-items: center; min-height: 29px; margin: 1px 4px; padding: 4px 10px 4px 20px; font-size: 12px; border: 1px solid transparent; }
+.access-object svg { color: #327b50; flex-shrink: 0; }
+.access-object:hover { background: #e3eee8; }
+.access-object.is-active { background: #d7ebdf; border-color: #98bea7; color: #163c27; }
+.access-signout { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid #ccc; color: #666; font-size: 11px; }
+.access-document-area { flex: 1; min-width: 0; padding: 0 8px 8px; background: #d4d7db; }
+.access-document-tabs { display: flex; align-items: flex-end; min-height: 36px; gap: 2px; overflow-x: auto; }
+.access-pane-toggle { align-self: center; flex-shrink: 0; }
+.access-document-tab { flex-shrink: 0; display: flex; align-items: center; background: #e5e5e5; border: 1px solid #b8b8b8; border-bottom: 0; border-radius: 3px 3px 0 0; height: 30px; }
+.access-document-tab > a { display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; }
+.access-document-tab > a svg { color: #1b743e; }
+.access-document-tab > button { padding: 5px; margin-right: 3px; }
+.access-document-tab.is-active { background: white; height: 33px; border-top: 2px solid #1b743e; font-weight: 600; }
+.access-document-content { background: #fafafa; min-height: calc(100vh - 238px); border: 1px solid #b8b8b8; padding: 22px 24px 70px; }
+.access-statusbar { min-height: 25px; display: flex; align-items: center; gap: 9px; padding: 3px 12px; border-top: 1px solid #b8b8b8; background: #eee; color: #555; font-size: 11px; position: sticky; bottom: 0; z-index: 25; }
+.access-ready-dot { height: 6px; width: 6px; border-radius: 50%; background: #6b9258; }
+.access-status-document { border-left: 1px solid #ccc; padding-left: 10px; margin-left: 10px; }
+.access-theme .rounded-xl, .access-theme .rounded-lg, .access-theme .rounded-2xl { border-radius: 2px; }
+.access-theme main h1 { font-size: 22px; font-weight: 400; letter-spacing: 0; }
+.access-theme main input, .access-theme main textarea, .access-theme main [role=combobox] { border-radius: 1px; background: white; }
+.access-theme main table th { background: #e8e8e8; color: #333; font-weight: 600; }
+.access-theme main table td, .access-theme main table th { border: 1px solid #d4d4d4; padding: 7px 10px; font-size: 12px; }
+.access-theme main table tbody tr:nth-child(even) { background: #f0f4f8; }
+.access-theme main table tbody tr:hover { background: #e3f0e8; }
+:root.access-workspace [role=dialog] { border-radius: 2px; border-top: 4px solid #1b743e; background: #f8f8f8; color: #292929; }
+:root.access-workspace [role=dialog] input, :root.access-workspace [role=dialog] textarea { background: white; border-radius: 1px; }
+@media (max-width: 767px) {
+  .access-window-title { display: none; }
+  .access-user { margin-left: auto; }
+  .access-ribbon-tablist [role=tab] { padding: 0 12px; }
+  .access-navigation { position: fixed; top: 168px; left: 0; z-index: 40; width: min(280px,85vw); box-shadow: 4px 0 14px #0002; }
+  .access-command-group { padding: 0 6px; }
+  .access-document-content { padding: 18px 12px 75px; }
+}
+@media print {
+  .access-chrome, .access-navigation, .access-document-tabs, .access-statusbar { display: none !important; }
+  .access-document-content { padding: 0; border: 0; }
+}
+
+.access-brand img { width: 26px; height: 26px; object-fit: contain; background: white; border-radius: 2px; padding: 2px; }
+
+/* Modern FastTract desktop: retain the ribbon structure with lighter surfaces. */
+.access-app { background: #eef2f0; font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif; }
+.access-titlebar { height: 48px; background: #123d2a; padding: 0 22px; gap: 26px; }
+.access-brand { font-size: 17px; letter-spacing: -.35px; gap: 10px; }
+.access-brand img { width: 30px; height: 30px; border-radius: 7px; padding: 3px; }
+.access-window-title { text-align: left; font-size: 12px; color: #d0e4d8; }
+.access-user { color: #e0eee5; font-size: 12px; }
+.access-chrome { box-shadow: 0 1px 5px #173e2910; }
+.access-ribbon-tabs { height: 39px; background: #fff; border-color: #e0e7e2; padding: 0 12px; align-items: center; gap: 5px; }
+.access-file-menu { background: transparent; color: #52665a; font-weight: 600; padding: 8px 14px; border-radius: 6px; }
+.access-file-menu:hover { background: #edf4ef; }
+.access-ribbon-tablist { height: 38px; gap: 3px; }
+.access-ribbon-tablist [role=tab] { height: 38px; font-size: 12px; padding: 0 18px; color: #627068; font-weight: 500; }
+.access-ribbon-tablist [role=tab][data-state=active] { background: #fff; color: #19653b; border-bottom: 2px solid #278453; }
+.access-ribbon-panel[data-state=active] { height: 89px; padding: 7px 12px 0; background: #fafcfb; border-bottom: 1px solid #dae3dd; }
+.access-command-group { padding: 0 14px; border-color: #e3e9e5; }
+.access-command-group > div { height: 58px; gap: 6px; }
+.access-command { min-width: 66px; padding: 5px 9px; gap: 5px; border-radius: 8px; font-weight: 500; color: #41564a; transition: background .15s, border-color .15s; }
+.access-command svg { height: 22px; width: 22px; stroke-width: 1.65; color: #2c7950; }
+.access-command:hover, .access-command[aria-pressed=true] { background: #e9f3ed; border-color: #cfdfd4; }
+.access-command-group small { font-size: 9px; letter-spacing: .35px; color: #7d8d83; height: 21px; }
+.access-desktop { min-height: calc(100vh - 204px); }
+.access-navigation { width: 228px; background: #f8faf9; border-color: #dde5df; top: 176px; height: calc(100vh - 204px); }
+.access-navigation-heading { background: transparent; min-height: 45px; border-bottom: 0; padding: 0 15px; color: #607268; font-size: 11px; }
+.access-object-search { margin: 0 12px 14px; padding: 8px 10px; border-radius: 7px; border-color: #dce5df; color: #819087; box-shadow: 0 1px 2px #163c2704; }
+.access-object-list { padding: 0 8px 16px; }
+.access-object-group { background: transparent; border: 0; color: #809087; text-transform: uppercase; letter-spacing: 1px; font-size: 9px; padding: 14px 7px 6px; gap: 5px; }
+.access-object { border-radius: 6px; min-height: 33px; padding: 6px 10px 6px 18px; margin: 2px 0; color: #52645a; font-size: 12px; gap: 10px; }
+.access-object svg { color: #7a9384; stroke-width: 1.7; }
+.access-object:hover { background: #edf3ef; }
+.access-object.is-active { background: #e2eee6; border-color: transparent; color: #155c35; font-weight: 600; box-shadow: inset 3px 0 #268351; }
+.access-object.is-active svg { color: #227445; }
+.access-signout { color: #718278; border-color: #e3e9e5; padding: 12px 18px; }
+.access-document-area { background: #eef2f0; padding: 0 18px 18px; }
+.access-document-tabs { min-height: 48px; gap: 5px; align-items: center; }
+.access-document-tab { background: transparent; border: 1px solid transparent; border-radius: 7px; height: 32px; color: #718178; }
+.access-document-tab.is-active { background: white; height: 32px; border: 1px solid #dce5df; color: #27563c; box-shadow: 0 1px 3px #163c2708; }
+.access-document-tab > a { padding: 6px 11px; font-size: 11px; }
+.access-document-tab > a svg { color: #57876a; }
+.access-document-tab > button:hover { background: #e8f0eb; border-radius: 4px; }
+.access-document-content { background: #fff; border: 1px solid #dfe7e1; border-radius: 10px; padding: 28px 28px 60px; min-height: calc(100vh - 270px); box-shadow: 0 2px 8px #173b2805; }
+.access-theme main h1 { font-size: 25px; font-weight: 600; letter-spacing: -.65px; color: #193c28; }
+.access-theme main h2 { letter-spacing: -.3px; }
+.access-theme .rounded-lg, .access-theme .rounded-xl { border-radius: 8px; }
+.access-theme main input, .access-theme main textarea, .access-theme main [role=combobox] { border-radius: 6px; border-color: #d3ded6; }
+.access-theme main button { border-radius: 6px; }
+.access-theme main table th { background: #f1f6f3; color: #60756a; border-color: #e1e9e4; font-size: 11px; }
+.access-theme main table td { border-color: #e7ede9; padding: 10px 12px; }
+.access-theme main table tbody tr:nth-child(even) { background: #fafcfb; }
+.access-statusbar { background: #f7faf8; border-color: #dde6e0; color: #819087; font-size: 10px; min-height: 28px; padding: 5px 17px; }
+.access-status-document { border-color: #dce5df; }
+:root.access-workspace [role=dialog] { background: #fff; border: 1px solid #d9e4dc; border-radius: 12px; box-shadow: 0 24px 80px #102e2340; }
+:root.access-workspace [role=dialog] input, :root.access-workspace [role=dialog] textarea { border-radius: 6px; border-color: #ccdacf; }
+:root.access-workspace [role=dialog] button { border-radius: 6px; }
+@media (max-width: 767px) {
+  .access-titlebar { padding: 0 15px; }
+  .access-navigation { top: 176px; border-right: 1px solid #dce5df; box-shadow: 10px 0 30px #173b281a; }
+  .access-document-area { padding: 0 8px 10px; }
+  .access-document-content { padding: 22px 16px 55px; border-radius: 8px; }
+  .access-command-group { padding: 0 7px; }
+  .access-ribbon-tabs { padding: 0 4px; gap: 0; }
+  .access-ribbon-tablist [role=tab] { padding: 0 10px; }
+}
+
+/* Forecast-driven landscape, illustrated in code so no stock imagery is needed. */
+.has-weather { position: relative; isolation: isolate; background: transparent; }
+.weather-landscape { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: linear-gradient(#83bada 0%,#bfdae2 45%,#d8e1d4 80%); transition: background 3s; }
+.weather-neutral { background: linear-gradient(#a9c7d0,#dce8e3); }
+.weather-rain, .weather-storm { background: linear-gradient(#4c657c,#8cabb6 52%,#bcc9c1); }
+.weather-cloudy { background: linear-gradient(#8ca9bd,#c7d6dd 55%,#e2e8dd); }
+.weather-snow { background: linear-gradient(#899faf,#d5e3e9 60%,#edf2f1); }
+.weather-fog { background: linear-gradient(#a1b5be,#e2e6e3); }
+.weather-night { background: linear-gradient(#11283c,#2d5167 60%,#6a8d89); }
+.weather-orb { position: absolute; top: 14%; right: 11%; height: 115px; width: 115px; border-radius: 50%; background: #fff3be; box-shadow: 0 0 90px 55px #fff2c64a; animation: weather-glow 12s ease-in-out infinite alternate; }
+.weather-night .weather-orb { background: #f0f4e5; height: 65px; width: 65px; box-shadow: 0 0 65px 20px #d4e8ed22; }
+.weather-rain .weather-orb, .weather-storm .weather-orb, .weather-snow .weather-orb, .weather-neutral .weather-orb { opacity: .12; }
+.weather-mountains { position: absolute; bottom: 0; width: 100%; height: 64%; opacity: .8; }
+.weather-night .weather-mountains { filter: brightness(.52); }
+.weather-river { position: absolute; bottom: -14%; left: 39%; width: 23%; height: 38%; border-radius: 50%; background: linear-gradient(130deg,#91bbbf88,#d2e3dc66); transform: rotate(35deg); filter: blur(8px); }
+.weather-cloud { position: absolute; width: 420px; height: 120px; border-radius: 50%; background: #f5f9f5b0; filter: blur(22px); animation: weather-drift 75s linear infinite alternate; }
+.cloud-one { top: 17%; left: -8%; }
+.cloud-two { top: 34%; left: 52%; width: 560px; animation-duration: 105s; animation-delay: -35s; }
+.cloud-three { top: 8%; left: 42%; width: 300px; animation-duration: 90s; animation-delay: -18s; }
+.weather-clear .weather-cloud { opacity: .36; }
+.weather-night .weather-cloud { background: #98afbf44; }
+.weather-rain .weather-cloud, .weather-storm .weather-cloud { background: #516c80a6; width: 700px; }
+.weather-stars { display: none; position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 10% 14%,#fff9 90%,transparent),radial-gradient(1px 1px at 27% 26%,#fffb 90%,transparent),radial-gradient(1px 1px at 55% 12%,#fff8 90%,transparent),radial-gradient(1px 1px at 68% 34%,#fff8 90%,transparent),radial-gradient(1px 1px at 39% 7%,#fffa 90%,transparent); background-size: 490px 390px; }
+.weather-night.weather-clear .weather-stars { display: block; }
+.weather-particles { position: absolute; inset: 0; overflow: hidden; }
+.weather-particles i { position: absolute; top: -10%; width: 1px; height: 35px; background: #ebf8ff75; animation: weather-fall linear infinite; }
+.weather-snow .weather-particles i { width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px #fff8; }
+.weather-fog::after { content: ''; position: absolute; inset: 35% -15% 0; background: linear-gradient(transparent,#eef2edb0,transparent); filter: blur(25px); animation: weather-drift 40s ease-in-out infinite alternate; }
+.weather-paused *, .weather-paused::after { animation-play-state: paused !important; }
+.has-weather .access-desktop, .has-weather .access-document-area { background: transparent; }
+.has-weather .access-document-area { padding-top: 100px; }
+.has-weather .access-document-content { background: #fffffff0; backdrop-filter: blur(12px); }
+.has-weather .access-navigation { background: #f8faf9ed; backdrop-filter: blur(16px); }
+.weather-forecast-bar { position: absolute; top: 193px; left: 256px; right: 28px; min-height: 73px; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 13px 17px; border: 1px solid #ffffff7d; border-radius: 12px; background: #ffffffc9; backdrop-filter: blur(16px); box-shadow: 0 6px 22px #163c2710; color: #244c3b; }
+.weather-location { text-align: left; min-width: 0; }
+.weather-location > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #537265; }
+.weather-location strong { display: block; font-size: 14px; font-weight: 600; margin-top: 3px; }
+.weather-upcoming { display: flex; gap: 18px; margin-left: auto; padding: 0 16px; border-left: 1px solid #37674920; }
+.weather-upcoming > span { display: grid; gap: 2px; text-align: center; }
+.weather-upcoming small { font-size: 9px; color: #5e7a6e; }
+.weather-upcoming b { font-size: 13px; }
+.weather-source { display: grid; gap: 4px; font-size: 9px; margin-left: auto; color: #557263; }
+.weather-source a { text-decoration: underline; text-underline-offset: 2px; }
+.weather-motion { border: 1px solid #6d978047; border-radius: 7px; padding: 7px; }
+.weather-location-editor { position: fixed; top: 205px; right: 30px; z-index: 45; width: min(360px,calc(100vw - 30px)); padding: 20px; border-radius: 12px; border: 1px solid #ccdad0; background: white; box-shadow: 0 18px 60px #142e2733; display: grid; gap: 12px; }
+.weather-location-editor p { font-size: 12px; color: #667a6e; }
+.weather-location-editor label { font-size: 12px; }
+.weather-location-editor input { border: 1px solid #c3d1c8; border-radius: 6px; padding: 9px; width: 100%; }
+.weather-location-save { background: #1b743e; color: white; border-radius: 6px; padding: 9px; }
+@keyframes weather-drift { from { transform: translateX(-70px); } to { transform: translateX(160px); } }
+@keyframes weather-glow { from { opacity: .7; transform: scale(.97); } to { opacity: 1; transform: scale(1.03); } }
+@keyframes weather-fall { from { transform: translate(0,-40px); } to { transform: translate(-70px,115vh); } }
+@media (prefers-reduced-motion: reduce) { .weather-landscape *, .weather-landscape::after { animation: none !important; } }
+@media (max-width: 1100px) { .weather-source { display: none; } .weather-upcoming { gap: 10px; padding: 0 8px; } }
+@media (max-width: 767px) { .weather-forecast-bar { left: 17px; right: 17px; padding: 12px; gap: 8px; } .weather-upcoming { display: none; } .weather-motion { margin-left: auto; } .weather-location strong { font-size: 12px; } }
+@media print { .weather-landscape, .weather-forecast-bar, .weather-location-editor { display: none !important; } .has-weather .access-document-area { padding-top: 0; } }
+.has-weather .access-document-content { background: #ffffffda; }
+.weather-orb { top: 39%; right: 5%; }
+.cloud-one { top: 45%; }
+.cloud-two { top: 28%; }
+.cloud-three { top: 68%; }
+.has-weather:not(:has(.access-navigation)) .weather-forecast-bar { left: 28px; }
+@media (max-width: 767px) { .has-weather:not(:has(.access-navigation)) .weather-forecast-bar { left: 17px; } }

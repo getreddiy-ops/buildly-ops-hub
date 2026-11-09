@@ -1,4 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { emailDeliveryStatus } from "../_shared/message-delivery.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -16,7 +17,7 @@ const corsHeaders = {
 };
 
 type Channel = "sms" | "email";
-type AdminClient = ReturnType<typeof createClient>;
+type AdminClient = SupabaseClient;
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -44,6 +45,7 @@ async function requireMember(req: Request, organizationId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!member) throw new Error("Forbidden");
+  if (!["owner", "admin"].includes(member.role)) throw new Error("Forbidden");
 
   return { admin, user: userData.user };
 }
@@ -152,7 +154,7 @@ async function queueEmail(args: {
   }
 
   const dispatch = await runEmailDispatcher();
-  return { ...data, dispatch };
+  return { ...data, messageId: typeof data.messageId === "string" ? data.messageId : null, dispatch };
 }
 
 async function logMessage(admin: AdminClient, record: {
@@ -190,7 +192,19 @@ Deno.serve(async (req) => {
     const customerId = String(body.customerId ?? body.customer_id ?? "").trim();
     const message = String(body.message ?? "").trim();
     const requestedChannel = String(body.channel ?? "sms").toLowerCase();
+    if (!["sms", "email"].includes(requestedChannel)) return json({ error: "Invalid message channel" }, 400);
     const channel: Channel = requestedChannel === "email" ? "email" : "sms";
+
+    if (body.action === "status" && organizationId) {
+      const { admin } = await requireMember(req, organizationId);
+      const { data: number } = await admin.from("phone_assistants").select("twilio_phone_number")
+        .eq("organization_id", organizationId).eq("enabled", true)
+        .not("twilio_phone_number", "is", null).limit(1).maybeSingle();
+      return json({
+        emailReady: Boolean(Deno.env.get("RESEND_API_KEY") || LOVABLE_API_KEY),
+        smsReady: Boolean(((TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) || (LOVABLE_API_KEY && TWILIO_API_KEY)) && number?.twilio_phone_number),
+      });
+    }
 
     if (!organizationId || !customerId || !message) {
       return json({ error: "organizationId, customerId and message are required" }, 400);
@@ -215,6 +229,9 @@ Deno.serve(async (req) => {
 
     if (channel === "email") {
       if (!customer.email) return json({ error: "Customer has no email address" }, 400);
+      if (!Deno.env.get("RESEND_API_KEY") && !LOVABLE_API_KEY) {
+        return json({ error: "Email delivery is not configured. Connect an email provider before sending.", code: "email_not_configured" }, 503);
+      }
 
       const queued = await queueEmail({
         recipientEmail: customer.email,
@@ -224,7 +241,11 @@ Deno.serve(async (req) => {
       });
 
       const dispatch = queued.dispatch as { dispatched?: boolean } | undefined;
-      const status = dispatch?.dispatched ? "dispatched" : "queued";
+      const { data: delivery } = typeof queued.messageId === "string"
+        ? await admin.from("email_send_log").select("status").eq("message_id", queued.messageId)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle()
+        : { data: null };
+      const status = emailDeliveryStatus(delivery?.status);
       const logWarning = await logMessage(admin, {
         organization_id: organizationId,
         customer_id: customer.id,
@@ -239,16 +260,20 @@ Deno.serve(async (req) => {
         metadata: { dispatcher: dispatch ?? null },
       });
 
+      if (status === "failed") return json({ error: "The email provider could not send this message. Check delivery settings before retrying.", status }, 502);
       return json({
-        message: dispatch?.dispatched
-          ? `Email dispatched for ${customer.name}.`
-          : `Email queued for ${customer.name}.`,
+        message: status === "submitted"
+          ? `Email accepted by the sending provider for ${customer.name}. Delivery is not yet confirmed.`
+          : `Email queued for ${customer.name}. Delivery is not yet confirmed.`,
         status,
         logWarning,
       });
     }
 
     if (!customer.phone) return json({ error: "Customer has no phone number" }, 400);
+    if (!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) && !(LOVABLE_API_KEY && TWILIO_API_KEY)) {
+      return json({ error: "Text delivery is not configured. Connect an SMS provider before sending.", code: "sms_not_configured" }, 503);
+    }
 
     const { data: phoneAssistant } = await admin
       .from("phone_assistants")
@@ -260,7 +285,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const senderNumber = phoneAssistant?.twilio_phone_number || org.phone;
+    const senderNumber = phoneAssistant?.twilio_phone_number;
     if (!senderNumber) {
       return json({ error: "Configure a FastTract phone number before sending texts" }, 400);
     }
@@ -287,7 +312,7 @@ Deno.serve(async (req) => {
     });
 
     return json({
-      message: `Text sent to ${customer.name}.`,
+      message: `Text submitted for ${customer.name} (${status}). Delivery is not yet confirmed.`,
       providerId,
       status,
       logWarning,

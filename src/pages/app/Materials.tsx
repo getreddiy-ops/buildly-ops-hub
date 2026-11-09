@@ -1,3 +1,4 @@
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,6 +151,11 @@ export default function Materials() {
                   />
                 </div>
               </DialogHeader>
+<FormWizard footer={<DialogFooter>
+                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              </DialogFooter>}>
+
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">
@@ -171,10 +177,8 @@ export default function Materials() {
                 </Field>
                 <Field label="Notes"><Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
               </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-              </DialogFooter>
+
+</FormWizard>
             </DialogContent>
           </Dialog>
         }

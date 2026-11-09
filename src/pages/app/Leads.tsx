@@ -1,3 +1,5 @@
+import { addressFields, emptyAddressParts, formatAddress, parseAddress } from "@/components/AddressFields";
+import { FormWizard } from "@/components/FormWizard";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +43,7 @@ const schema = z.object({
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
-const empty = { name: "", email: "", phone: "", address: "", source: "", status: "new" as LeadStatus, notes: "" };
+const empty = { ...emptyAddressParts, name: "", email: "", phone: "", address: "", source: "", status: "new" as LeadStatus, notes: "" };
 
 export default function Leads() {
   const { activeOrg, user } = useAuth();
@@ -72,14 +74,14 @@ export default function Leads() {
     setEditing(l);
     setForm({
       name: l.name ?? "", email: l.email ?? "", phone: l.phone ?? "",
-      address: l.address ?? "", source: l.source ?? "",
+      ...parseAddress(l.address ?? ""), source: l.source ?? "",
       status: l.status, notes: l.notes ?? "",
     });
     setOpen(true);
   };
 
   const save = async () => {
-    const parsed = schema.safeParse(form);
+    const parsed = schema.safeParse({ ...form, address: formatAddress(form) });
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (!activeOrg || !user) return;
     setSaving(true);
@@ -152,13 +154,18 @@ export default function Leads() {
                   />
                 </div>
               </DialogHeader>
+<FormWizard footer={<DialogFooter>
+                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              </DialogFooter>}>
+
               <div className="grid gap-3">
                 <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Email"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
                   <Field label="Phone"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
                 </div>
-                <Field label="Address"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
+                {addressFields(form, (parts) => setForm({ ...form, ...parts }))}
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Source"><Input placeholder="Referral, web…" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /></Field>
                   <Field label="Status">
@@ -170,10 +177,8 @@ export default function Leads() {
                 </div>
                 <Field label="Notes"><Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
               </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-              </DialogFooter>
+
+</FormWizard>
             </DialogContent>
           </Dialog>
         }

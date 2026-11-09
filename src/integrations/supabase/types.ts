@@ -520,8 +520,16 @@ export type Database = {
           },
         ]
       }
+      invoice_item_catalog: {
+        Row: { id: string; organization_id: string; category: string; description: string; unit: string; quantity: number; unit_price: number; created_at: string }
+        Insert: { id?: string; organization_id: string; category: string; description: string; unit: string; quantity?: number; unit_price?: number; created_at?: string }
+        Update: { id?: string; organization_id?: string; category?: string; description?: string; unit?: string; quantity?: number; unit_price?: number; created_at?: string }
+        Relationships: []
+      }
       org_invoice_line_items: {
         Row: {
+          category: string
+          unit: string
           created_at: string
           description: string
           id: string
@@ -532,6 +540,8 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          category?: string
+          unit?: string
           created_at?: string
           description: string
           id?: string
@@ -542,6 +552,8 @@ export type Database = {
           unit_price?: number
         }
         Update: {
+          category?: string
+          unit?: string
           created_at?: string
           description?: string
           id?: string
@@ -1476,6 +1488,8 @@ export type Database = {
       }
       contractor_time_entries: {
         Row: {
+          entry_source: string
+          entered_by: string | null
           approved_at: string | null
           approved_by: string | null
           approved_hours: number | null
@@ -1496,6 +1510,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          entry_source?: string
+          entered_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_hours?: number | null
@@ -1516,6 +1532,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          entry_source?: string
+          entered_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_hours?: number | null
@@ -1752,6 +1770,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      record_manual_job_time: {
+        Args: { p_entry_id: string; p_organization_id: string; p_user_id: string; p_job_id: string; p_clock_in: string; p_clock_out: string; p_note?: string | null }
+        Returns: string
+      }
+      get_account_deletion_request: {
+        Args: Record<PropertyKey, never>
+        Returns: { requested_at: string; status: string }[]
+      }
+      request_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

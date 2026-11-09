@@ -5,7 +5,7 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 // Keep the Lovable MCP generator in local dev only. In CI/production the
 // generated Supabase function is already committed and must not be rewritten.
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, isPreview }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -13,7 +13,7 @@ export default defineConfig(({ command }) => ({
       overlay: false,
     },
   },
-  plugins: command === "serve" ? [react(), mcpPlugin()] : [react()],
+  plugins: command === "serve" && !isPreview ? [react(), mcpPlugin()] : [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
