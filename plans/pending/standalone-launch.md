@@ -1,7 +1,7 @@
 # FastTract standalone launch: consolidate, own the backend, Stripe, bring-your-own AI
 
 Ticket: none yet. This plan is the source of truth until tickets exist.
-Status: **awaiting approval** (drafted 2026-11-09)
+Status: **approved by Morgan 2026-11-09**; Phase 1 in progress
 
 ## Where things stand (verified 2026-11-09)
 
@@ -208,9 +208,35 @@ Verified when: a fresh account on production completes, in order: signup → tri
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 1. One source of truth | not started |
+| 1. One source of truth | 1.1–1.3 done; 1.4 PR open, awaiting Morgan's merge + promote |
 | 2. Remove GHL, set prices | not started |
 | 3. Own Supabase | not started |
 | 4. Stripe subscriptions | not started |
 | 5. Bring-your-own AI | not started |
 | 6. Launch check | not started |
+
+## Execution record
+
+### Phase 1 (2026-11-09)
+- **1.1** `release/consolidation` = `6150b94` (production) + merges of `codex/fasttract-chatgpt-connection`, `codex/finish-release-deployment` and `codex/ios-submission-prep-20261026`.
+  - `src/lib/mcp-edge.test.ts`: kept the chatgpt-connection version, which already contains every finish-release case plus the authentication and business-selection tests.
+  - `package.json`: union of both sides (`@capacitor/*` pinned at 8.4.3 per iOS prep, plus `@electric-sql/pglite`); lockfile rebuilt with `npm install`.
+  - `types.ts`: union of `record_manual_job_time` and the account-deletion functions. **Deviation:** combined by hand rather than regenerated, because the Lovable-hosted database is not reachable from here. It gets regenerated in Phase 3.1.
+  - Result: 41 test files, 149 tests pass; build passes.
+  - **Lint is not green and was not green before:** 240 errors on production `6150b94`, 239 on `main`, 244 on this branch (+4 brought in by the merged branches). 228 of them are `no-explicit-any`. Lint cleanup is not in this plan; the bar is "no new errors from our own changes".
+- **1.2** Cherry-picked from `hyperagent/critical-security-and-ios-blockers`:
+  - Both tenant-isolation migrations. No later migration re-creates the removed policies or grants. Every `organizations` column the app writes (Onboarding, Branding, BusinessProfile) is inside the new column grant.
+  - The email sender name fix.
+  - The two iOS keys the release lacked (`NSPhotoLibraryUsageDescription`, `ITSAppUsesNonExemptEncryption`). The newer iOS-prep wording for camera, location and microphone was kept.
+  - Brand, theme and font commits were left out, per Assumption 3.
+  - **Finding for Phase 3:** the migration header says the repo's migration history and the live database's history are "two different lineages" (54 files vs 26 applied, with different version stamps), so `supabase db push` against the live DB is unsafe. Phase 3.1 already diffs the replayed schema against a dump; that diff is now expected to be non-empty and must be reconciled table by table.
+- **1.3** Older branches (`git cherry` against `release/consolidation`). Nothing was deleted.
+  - Fully included already: `feat/fasttract-business-assistant`, `feat/folder-workspace`, `fix/mobile-permission-descriptions`, `claude/zen-hopper-flgj7u`, `finish-fasttract`, `codex/fix-live-login-routing`, `codex/full-site-readiness`, `codex/self-time-location-main`, `codex/launch-readiness-100`.
+  - GoHighLevel work, superseded by the decision to drop GHL: `fix/fasttract-mcp-estimate-write`, `claude/wonderful-euler-g4o0s2`, `codex/highlevel-oauth-callback`, `chatgpt/finish-fasttract-deployment`, `chatgpt/fasttract-ghl-flawless`, `chatgpt/highlevel-primary-backend`, `chatgpt/fasttract-release-workflows` (its HighLevel workflows; the release already has newer deploy workflows).
+  - Not product code: `export-fasttract-zip`.
+  - Used later: `codex/stripe-migration` (Phase 4.1).
+  - Older wording superseded by the current signup and pricing pages: `launch-hardening`. Out of scope as the brand redesign: `codex/fasttract-brand-site`.
+  - **Unique features that never shipped (Morgan to decide; not in this plan):**
+    - "Screen Takeover" mode, from the `codex/developer-admin-only` family (108 commits on an August lineage).
+    - Complimentary-subscription date handling, from `codex/fix-comp-dates`. **Relevant to Phase 4** if comp accounts are given out.
+    - State-aware document compliance guardrails, from `codex/state-compliance-guardrails` (19 files).
