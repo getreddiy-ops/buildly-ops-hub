@@ -1,6 +1,5 @@
 // FastTract MCP — native Supabase implementation.
-// FastTract is the system of record. No customer/job/estimate/invoice/time
-// action in this server depends on GoHighLevel.
+// FastTract is the system of record for customers, jobs, estimates, invoices and time.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";

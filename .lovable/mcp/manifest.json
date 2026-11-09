@@ -92,7 +92,7 @@
       {
         "name": "create_customer",
         "title": "Create customer",
-        "description": "Preview, then create a customer directly in FastTract.",
+        "description": "Preview, then create a customer in FastTract.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
