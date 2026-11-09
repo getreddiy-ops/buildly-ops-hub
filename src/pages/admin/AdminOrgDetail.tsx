@@ -269,9 +269,9 @@ export default function AdminOrgDetail() {
           <div><Label className="text-xs">Tier</Label>
             <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
               className="block w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="base">Base — $69</option>
-              <option value="plus">Plus — $169</option>
-              <option value="premium">Premium — $269</option>
+              <option value="base">Base — $197</option>
+              <option value="plus">Plus — $297</option>
+              <option value="premium">Premium — $397</option>
             </select>
           </div>
           <div><Label className="text-xs">Days (blank = ∞)</Label>

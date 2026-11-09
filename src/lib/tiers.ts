@@ -6,19 +6,19 @@ export type Tier = "base" | "plus" | "premium";
 export const TIERS: Record<Tier, { name: string; price: number; priceId: string; productId: string }> = {
   base: {
     name: "FastTract",
-    price: 69,
+    price: 197,
     priceId: "contractor_os_pro_monthly",
     productId: "contractor_os_pro",
   },
   plus: {
     name: "FastTract Plus",
-    price: 169,
+    price: 297,
     priceId: "contractor_os_plus_monthly",
     productId: "contractor_os_plus",
   },
   premium: {
     name: "FastTract Premium",
-    price: 269,
+    price: 397,
     priceId: "contractor_os_premium_monthly",
     productId: "contractor_os_premium",
   },
