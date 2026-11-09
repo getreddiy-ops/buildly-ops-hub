@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Building2, CreditCard, FileText, Loader2, LogOut, Mail, Palette, Phone, Save, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AiConnectionCard } from "@/components/settings/AiConnectionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,6 +207,8 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      <AiConnectionCard />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <SettingsCard

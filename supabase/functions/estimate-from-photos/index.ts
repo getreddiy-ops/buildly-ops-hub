@@ -7,9 +7,8 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const USE_OPENAI = !!OPENAI_API_KEY;
+import { aiErrorResponse, chatForOrg } from "../_shared/ai-provider.ts";
+import type { ToolDef } from "../_shared/ai-translate.ts";
 
 const MAX_IMAGES = 6;
 
@@ -211,53 +210,38 @@ Deno.serve(async (req) => {
       ...images.map((url): ContentPart => ({ type: "image_url", image_url: { url } })),
     ];
 
-    const model = USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash";
-    const payload = {
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      tools,
-      tool_choice: { type: "function", function: { name: "propose_estimate_from_photos" } },
-    };
-
-    const url = USE_OPENAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const authHeaders: Record<string, string> = USE_OPENAI
-      ? { Authorization: `Bearer ${OPENAI_API_KEY}` }
-      : { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      const status = res.status === 429 || res.status === 402 ? res.status : 500;
-      return json(status, { error: `AI provider error: ${text}` });
+    // Bring-your-own AI: the business's own provider and key (Settings → AI).
+    let result;
+    try {
+      result = await chatForOrg(admin, organizationId, {
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+        tools: tools as ToolDef[],
+        tool_choice: { type: "function", function: { name: "propose_estimate_from_photos" } },
+        max_tokens: 8000,
+      }, 90000);
+    } catch (e) {
+      const handled = aiErrorResponse(e, corsHeaders);
+      if (handled) return handled;
+      throw e;
     }
-
-    const data = await res.json();
-    const choice = data.choices?.[0]?.message ?? {};
-    const call = (choice.tool_calls ?? [])[0];
+    const model = result.model;
+    const call = result.tool_calls[0];
     if (!call) return json(502, { error: "AI did not return a structured estimate" });
 
     let draft: unknown;
     try {
-      draft = JSON.parse(call.function?.arguments ?? "{}");
+      draft = JSON.parse(call.function.arguments || "{}");
     } catch {
       return json(502, { error: "AI returned an unparsable estimate" });
     }
 
     try {
       const { logAiUsage, estimateChatCostUsd } = await import("../_shared/ai-usage.ts");
-      const usage = data.usage ?? {};
-      const pt = Number(usage.prompt_tokens ?? 0);
-      const ct = Number(usage.completion_tokens ?? 0);
+      const pt = result.usage.prompt_tokens;
+      const ct = result.usage.completion_tokens;
       await logAiUsage(admin, {
         organizationId,
         userId: userData.user.id,
@@ -265,7 +249,7 @@ Deno.serve(async (req) => {
         model,
         promptTokens: pt,
         completionTokens: ct,
-        totalTokens: Number(usage.total_tokens ?? pt + ct),
+        totalTokens: result.usage.total_tokens,
         estimatedCostUsd: estimateChatCostUsd(model, pt, ct),
       });
     } catch (_) { /* never break the response on logging */ }

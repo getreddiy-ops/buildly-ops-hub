@@ -36,10 +36,11 @@ export function PaywallGate({
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Lock className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-2xl font-semibold">{feature} is optional</h2>
+        <h2 className="text-2xl font-semibold">{feature} is part of {requires === "premium" ? "FastTract Enterprise" : "FastTract Pro and Enterprise"}</h2>
         <p className="mt-2 text-muted-foreground">
-          {feature} is not part of the FastTract core launch plan. Your customer, estimate, job, scheduling, and crew workflows work without AI. Bring-your-own AI connections are planned for later.
+          Your customer, estimate, job, scheduling and crew workflows work on every plan. Upgrade from Plan &amp; billing to use {feature}, then connect your own AI provider in Settings.
         </p>
+        <a href="/app/billing" className="mt-6 inline-flex min-h-11 items-center rounded-md bg-primary px-5 font-medium text-primary-foreground">Open Plan &amp; billing</a>
       </Card>
     </div>
   );

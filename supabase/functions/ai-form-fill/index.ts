@@ -4,7 +4,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 import { requireAuthedUser } from "../_shared/require-user.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+import { aiErrorResponse, chatForOrg } from "../_shared/ai-provider.ts";
+import { getServiceClient, getUserIdFromAuth, resolvePrimaryOrgId } from "../_shared/ai-usage.ts";
 
 type Field = {
   name: string;
@@ -18,6 +19,8 @@ type Body = {
   formName?: string;
   fields: Field[];
   context?: Record<string, unknown>;
+  /** Which business to use; defaults to the caller's first business. */
+  organizationId?: string;
 };
 
 Deno.serve(async (req) => {
@@ -83,42 +86,39 @@ ${body.fields.map((f) => `- ${f.name} (${f.type ?? "string"}): ${f.description ?
       },
     };
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+    // Bring-your-own AI: resolve the business, check membership, call its own provider.
+    const admin = getServiceClient();
+    const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
+    if (!uid) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    let orgId = body.organizationId ?? null;
+    if (orgId) {
+      const { data: member } = await admin.rpc("is_org_member", { _user_id: uid, _org_id: orgId });
+      if (!member) return new Response(JSON.stringify({ error: "Not a member of that business" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else {
+      orgId = await resolvePrimaryOrgId(admin, uid);
+    }
+    if (!orgId) return new Response(JSON.stringify({ error: "No business found for this account" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    let result;
+    try {
+      result = await chatForOrg(admin, orgId, {
         messages: [
           { role: "system", content: system },
           { role: "user", content: userMsg },
         ],
-        tools: [tool],
+        tools: [tool as never],
         tool_choice: { type: "function", function: { name: "fill_form" } },
-      }),
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      if (resp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit. Try again in a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (resp.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: `AI gateway: ${txt}` }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        max_tokens: 2000,
+      }, 45000);
+    } catch (e) {
+      const handled = aiErrorResponse(e, corsHeaders);
+      if (handled) return handled;
+      throw e;
     }
 
-    const data = await resp.json();
-    const call = data?.choices?.[0]?.message?.tool_calls?.[0];
+    const call = result.tool_calls[0];
     let values: Record<string, unknown> = {};
     try {
       values = call?.function?.arguments ? JSON.parse(call.function.arguments) : {};
@@ -132,27 +132,18 @@ ${body.fields.map((f) => `- ${f.name} (${f.type ?? "string"}): ${f.description ?
       if (v !== null && v !== undefined && v !== "") cleaned[k] = v;
     }
 
-    // Track per-org AI usage
+    // Track per-org AI usage (the business pays its provider; this is for its own visibility)
     try {
-      const {
-        logAiUsage, estimateChatCostUsd, getServiceClient,
-        getUserIdFromAuth, resolvePrimaryOrgId,
-      } = await import("../_shared/ai-usage.ts");
-      const admin = getServiceClient();
-      const uid = await getUserIdFromAuth(req.headers.get("Authorization"));
-      const orgId = uid ? await resolvePrimaryOrgId(admin, uid) : null;
-      const usage = data.usage ?? {};
-      const pt = Number(usage.prompt_tokens ?? 0);
-      const ct = Number(usage.completion_tokens ?? 0);
+      const { logAiUsage, estimateChatCostUsd } = await import("../_shared/ai-usage.ts");
       await logAiUsage(admin, {
         organizationId: orgId,
         userId: uid,
         functionName: "ai-form-fill",
-        model: "google/gemini-2.5-flash",
-        promptTokens: pt,
-        completionTokens: ct,
-        estimatedCostUsd: estimateChatCostUsd("google/gemini-2.5-flash", pt, ct),
-        metadata: { formName: body.formName ?? null },
+        model: result.model,
+        promptTokens: result.usage.prompt_tokens,
+        completionTokens: result.usage.completion_tokens,
+        estimatedCostUsd: estimateChatCostUsd(result.model, result.usage.prompt_tokens, result.usage.completion_tokens),
+        metadata: { formName: body.formName ?? null, provider: result.provider },
       });
     } catch (_) { /* ignore */ }
 

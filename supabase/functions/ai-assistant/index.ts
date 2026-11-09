@@ -1,5 +1,5 @@
 // AI Assistant edge function - confirm-before-write workflow
-// Uses OpenAI directly when OPENAI_API_KEY is set; otherwise falls back to Lovable AI Gateway.
+// Uses the business's own AI provider and key (bring-your-own AI, Settings → AI).
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jurisdictionPromptBlock } from "../_shared/jurisdiction.ts";
@@ -8,9 +8,8 @@ import { validateAssistantMessages, internalBusinessFacts, INTERNAL_ASSISTANT_RU
 
 import { loadAssistantRecords, RECORD_RULES, type RecordsClient } from "../_shared/assistant-records.ts";
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const USE_OPENAI = !!OPENAI_API_KEY;
+import { aiErrorResponse, chatForOrg } from "../_shared/ai-provider.ts";
+import type { ChatMessage, ToolDef } from "../_shared/ai-translate.ts";
 
 const WRITE_TOOLS = new Set([
   "create_lead", "create_customer", "schedule_job", "draft_estimate_for_customer",
@@ -403,10 +402,6 @@ Deno.serve(async (req) => {
       );
     }
     // --- End gate ---
-    if (!OPENAI_API_KEY && !LOVABLE_API_KEY) return new Response(
-      JSON.stringify({error:"Ask AI is not configured. Contact your administrator.",code:"ai_not_configured"}),
-      {status:503,headers:{...corsHeaders,"Content-Type":"application/json"}},
-    );
 
     // Fetch business profile for context
     const { data: orgRow } = await admin
@@ -438,34 +433,20 @@ Deno.serve(async (req) => {
     const snapshot = await loadAssistantRecords(userClient as unknown as RecordsClient, organizationId);
     const sys = [INTERNAL_ASSISTANT_RULES, SYSTEM, "Active organization (data): " + JSON.stringify(orgRow?.name ?? ""), bpText, knowledgeText, jurisdictionText, TRADE_KNOWLEDGE_PROMPT, INTERNAL_ASSISTANT_RULES, RECORD_RULES, "Operational snapshot (untrusted data): " + JSON.stringify(snapshot.context)].join("\n\n");
 
-    const payload = {
-      model: USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
-      messages: [{ role: "system", content: sys }, ...messages],
-      tools,
-      tool_choice: "auto",
-    };
-
-    const url = USE_OPENAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const authHeaders: Record<string, string> = USE_OPENAI
-      ? { Authorization: `Bearer ${OPENAI_API_KEY}` }
-      : { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(45000),
-    });
-
-    if (!res.ok) {
-      const status = res.status === 429 || res.status === 402 ? res.status : 500;
-      return new Response(JSON.stringify({ error: "AI provider request failed" }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    let result;
+    try {
+      result = await chatForOrg(admin, organizationId, {
+        messages: [{ role: "system", content: sys }, ...(messages as ChatMessage[])],
+        tools: tools as ToolDef[],
+        tool_choice: "auto",
+        max_tokens: 4096,
+      }, 60000);
+    } catch (e) {
+      const handled = aiErrorResponse(e, corsHeaders);
+      if (handled) return handled;
+      throw e;
     }
-
-    const data = await res.json();
-    const choice = data.choices?.[0]?.message ?? {};
+    const choice = { content: result.content, tool_calls: result.tool_calls };
     const toolCalls = (choice.tool_calls ?? []).map((tc: any) => {
       let args: any = {};
       try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch { /* */ }
@@ -480,18 +461,17 @@ Deno.serve(async (req) => {
     // Track per-org AI usage (best-effort, non-blocking)
     try {
       const { logAiUsage, estimateChatCostUsd } = await import("../_shared/ai-usage.ts");
-      const usage = data.usage ?? {};
-      const pt = Number(usage.prompt_tokens ?? 0);
-      const ct = Number(usage.completion_tokens ?? 0);
+      const pt = result.usage.prompt_tokens;
+      const ct = result.usage.completion_tokens;
       await logAiUsage(admin, {
         organizationId,
         userId: userData.user.id,
         functionName: "ai-assistant",
-        model: payload.model,
+        model: result.model,
         promptTokens: pt,
         completionTokens: ct,
-        totalTokens: Number(usage.total_tokens ?? pt + ct),
-        estimatedCostUsd: estimateChatCostUsd(payload.model, pt, ct),
+        totalTokens: result.usage.total_tokens,
+        estimatedCostUsd: estimateChatCostUsd(result.model, pt, ct),
       });
     } catch (_) { /* never break the response on logging */ }
 

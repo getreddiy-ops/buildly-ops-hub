@@ -206,7 +206,9 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
     } catch (e: any) {
       if (!alive.current) return;
       const message = e?.code === "subscription_required"
-        ? "Your company needs an active Plus or Premium plan to use the assistant."
+        ? "Your company needs the Pro or Enterprise plan to use the assistant."
+        : e?.code === "ai_not_connected"
+        ? "Connect your AI provider in Settings → AI to use the assistant."
         : e?.message ?? "Assistant failed";
       toast.error(message);
       setMessages((m) => [
@@ -214,7 +216,9 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         {
           role: "assistant",
           content: e?.code === "subscription_required"
-            ? "Your company needs an active Plus or Premium plan to use the assistant. Open Billing to review your plan."
+            ? "Your company needs the Pro or Enterprise plan to use the assistant. Open Plan & billing to review your plan."
+            : e?.code === "ai_not_connected"
+            ? "I run on your own AI account. Connect OpenAI, Anthropic or Google in Settings → AI, then ask me again."
             : `I couldn’t complete that request: ${message}. No proposed changes were applied.`,
         },
       ]);
