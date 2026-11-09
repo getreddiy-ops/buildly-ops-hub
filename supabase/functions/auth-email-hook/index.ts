@@ -1,7 +1,7 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { parseEmailWebhookPayload } from 'npm:@lovable.dev/email-js'
-import { WebhookError, verifyWebhookRequest } from 'npm:@lovable.dev/webhooks-js'
+import { Webhook } from 'npm:standardwebhooks@1.0.0'
+import { authEmailsFromHook, hookSecret } from '../_shared/auth-email.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { SignupEmail } from '../_shared/email-templates/signup.tsx'
 import { InviteEmail } from '../_shared/email-templates/invite.tsx'
@@ -13,7 +13,7 @@ import { ReauthenticationEmail } from '../_shared/email-templates/reauthenticati
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'authorization, x-client-info, apikey, content-type, webhook-id, webhook-timestamp, webhook-signature, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
@@ -35,11 +35,11 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 const SITE_NAME = 'FastTract'
-const SENDER_DOMAIN = 'notify.contractoros.online'
-const ROOT_DOMAIN = 'contractoros.online'
-const FROM_DOMAIN = 'notify.contractoros.online'
+// Sender and links come from configuration so the domain can move without a code change.
+const SITE_URL = (Deno.env.get('PUBLIC_APP_URL') || 'https://fasttract.org').replace(/\/$/, '')
+const FROM_ADDRESS = Deno.env.get('RESEND_FROM_EMAIL') || `${SITE_NAME} <noreply@fasttract.org>`
 
-const SAMPLE_PROJECT_URL = 'https://contractoros.online'
+const SAMPLE_PROJECT_URL = SITE_URL
 const SAMPLE_EMAIL = 'user@example.test'
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
@@ -69,7 +69,8 @@ async function handlePreview(req: Request): Promise<Response> {
 
   if (req.method === 'OPTIONS') return new Response(null, { headers: previewCorsHeaders })
 
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  // Template previews are for FastTract staff: gated by a dedicated secret, never the service key.
+  const apiKey = Deno.env.get('EMAIL_PREVIEW_SECRET')
   if (!apiKey || req.headers.get('Authorization') !== `Bearer ${apiKey}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -125,121 +126,96 @@ async function dispatchEmailQueue(supabaseUrl: string, serviceRole: string) {
   }
 }
 
+function hookError(status: number, message: string): Response {
+  // Supabase Auth reads { error: { http_code, message } } from a failed hook.
+  return new Response(JSON.stringify({ error: { http_code: status, message } }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
 async function handleWebhook(req: Request): Promise<Response> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const hookSecretRaw = Deno.env.get('SEND_EMAIL_HOOK_SECRET')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-  if (!apiKey || !supabaseUrl || !serviceRole) {
+  if (!hookSecretRaw || !supabaseUrl || !serviceRole) {
     console.error('Missing required auth-email configuration')
-    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return hookError(500, 'Server configuration error')
   }
 
+  const rawBody = await req.text()
   let payload: any
   try {
-    const verified = await verifyWebhookRequest({
-      req,
-      secret: apiKey,
-      parser: parseEmailWebhookPayload,
-    })
-    payload = verified.payload
+    payload = new Webhook(hookSecret(hookSecretRaw)).verify(rawBody, Object.fromEntries(req.headers))
   } catch (error) {
-    if (error instanceof WebhookError) {
-      const signatureErrors = new Set(['invalid_signature', 'missing_timestamp', 'invalid_timestamp', 'stale_timestamp'])
-      const status = signatureErrors.has(error.code) ? 401 : 400
-      return new Response(JSON.stringify({ error: status === 401 ? 'Invalid signature' : 'Invalid webhook payload' }), {
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-    console.error('Webhook verification failed', error)
-    return new Response(JSON.stringify({ error: 'Invalid webhook payload' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    console.error('Send-email hook signature check failed', error)
+    return hookError(401, 'Invalid signature')
   }
 
-  const runId = String(payload?.run_id || '')
-  const emailType = String(payload?.data?.action_type || '')
-  const recipient = String(payload?.data?.email || '')
-
-  if (!runId || payload?.version !== '1' || !emailType || !recipient) {
-    return new Response(JSON.stringify({ error: 'Invalid webhook payload' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+  let emails
+  try {
+    emails = authEmailsFromHook(payload, supabaseUrl)
+  } catch (error) {
+    return hookError(400, error instanceof Error ? error.message : 'Invalid webhook payload')
   }
 
-  const EmailTemplate = EMAIL_TEMPLATES[emailType]
-  if (!EmailTemplate) {
-    return new Response(JSON.stringify({ error: `Unknown email type: ${emailType}` }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
-  const templateProps = {
-    siteName: SITE_NAME,
-    siteUrl: `https://${ROOT_DOMAIN}`,
-    recipient,
-    confirmationUrl: payload.data.url,
-    token: payload.data.token,
-    email: recipient,
-    oldEmail: payload.data.old_email,
-    newEmail: payload.data.new_email,
-  }
-
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), { plainText: true })
   const supabase = createClient(supabaseUrl, serviceRole)
-  const messageId = crypto.randomUUID()
+  for (const mail of emails) {
+    const EmailTemplate = EMAIL_TEMPLATES[mail.type]
+    const templateProps = {
+      siteName: SITE_NAME,
+      siteUrl: SITE_URL,
+      recipient: mail.to,
+      confirmationUrl: mail.confirmationUrl,
+      token: mail.token,
+      email: mail.to,
+      oldEmail: mail.oldEmail,
+      newEmail: mail.newEmail,
+    }
+    const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+    const text = await renderAsync(React.createElement(EmailTemplate, templateProps), { plainText: true })
+    const messageId = crypto.randomUUID()
 
-  await supabase.from('email_send_log').insert({
-    message_id: messageId,
-    template_name: emailType,
-    recipient_email: recipient,
-    status: 'pending',
-  })
-
-  const { error: enqueueError } = await supabase.rpc('enqueue_email', {
-    queue_name: 'auth_emails',
-    payload: {
-      run_id: runId,
-      message_id: messageId,
-      to: recipient,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
-      html,
-      text,
-      purpose: 'transactional',
-      label: emailType,
-      queued_at: new Date().toISOString(),
-    },
-  })
-
-  if (enqueueError) {
-    console.error('Failed to enqueue auth email', { enqueueError, runId, emailType })
     await supabase.from('email_send_log').insert({
       message_id: messageId,
-      template_name: emailType,
-      recipient_email: recipient,
-      status: 'failed',
-      error_message: 'Failed to enqueue email',
+      template_name: mail.type,
+      recipient_email: mail.to,
+      status: 'pending',
     })
-    return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+    const { error: enqueueError } = await supabase.rpc('enqueue_email', {
+      queue_name: 'auth_emails',
+      payload: {
+        message_id: messageId,
+        to: mail.to,
+        from: FROM_ADDRESS,
+        subject: EMAIL_SUBJECTS[mail.type] || 'Notification',
+        html,
+        text,
+        purpose: 'transactional',
+        label: mail.type,
+        idempotency_key: `auth-${messageId}`,
+        queued_at: new Date().toISOString(),
+      },
     })
+
+    if (enqueueError) {
+      console.error('Failed to enqueue auth email', { enqueueError, type: mail.type })
+      await supabase.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: mail.type,
+        recipient_email: mail.to,
+        status: 'failed',
+        error_message: 'Failed to enqueue email',
+      })
+      return hookError(500, 'Failed to enqueue email')
+    }
   }
 
   const dispatched = await dispatchEmailQueue(supabaseUrl, serviceRole)
-  console.log('Auth email queued', { emailType, recipient, runId, dispatched })
-
-  return new Response(JSON.stringify({ success: true, queued: true, dispatched }), {
+  console.log('Auth email queued', { types: emails.map((m) => m.type), dispatched })
+  return new Response(JSON.stringify({}), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
