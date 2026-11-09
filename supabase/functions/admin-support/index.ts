@@ -3,7 +3,10 @@
 // before using the service-role key for privileged operations.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { getPaddleClient, gatewayFetch, type PaddleEnv } from "../_shared/paddle.ts";
+import { getStripe } from "../_shared/stripe.ts";
+import { planPrice } from "../_shared/plans.ts";
+
+type BillingEnv = "sandbox" | "live";
 
 type Tier = "base" | "plus" | "premium";
 
@@ -22,16 +25,25 @@ type Action =
   | { type: "remove_member"; organization_id: string; user_id: string }
   | { type: "transfer_ownership"; organization_id: string; new_owner_user_id: string }
   | { type: "org_snapshot"; organization_id: string }
-  | { type: "list_transactions"; organization_id: string; environment?: PaddleEnv; per_page?: number }
-  | { type: "refund_transaction"; transaction_id: string; environment?: PaddleEnv; reason?: string; type_action?: "full" | "partial"; amount?: string; currency_code?: string }
+  | { type: "list_transactions"; organization_id: string; environment?: BillingEnv; per_page?: number }
+  | { type: "refund_transaction"; transaction_id: string; organization_id: string; reason?: string; amount_cents?: number }
   | { type: "mark_invoice_paid"; invoice_id: string }
   | { type: "void_invoice"; invoice_id: string };
 
 const TIER_PRICE: Record<Tier, { price_id: string; product_id: string }> = {
-  base:    { price_id: "contractor_os_pro_monthly",     product_id: "contractor_os_pro" },
-  plus:    { price_id: "contractor_os_plus_monthly",    product_id: "contractor_os_plus" },
-  premium: { price_id: "contractor_os_premium_monthly", product_id: "contractor_os_premium" },
+  base: { price_id: planPrice("base", "month").priceId, product_id: planPrice("base", "month").productId },
+  plus: { price_id: planPrice("plus", "month").priceId, product_id: planPrice("plus", "month").productId },
+  premium: { price_id: planPrice("premium", "month").priceId, product_id: planPrice("premium", "month").productId },
 };
+
+/** A subscription row and, when Stripe bills it, the Stripe id to act on. */
+// deno-lint-ignore no-explicit-any
+async function loadSub(admin: any, id: string) {
+  const { data } = await admin.from("subscriptions")
+    .select("id, billing_provider, stripe_subscription_id, current_period_end").eq("id", id).maybeSingle();
+  if (!data) throw new Error("subscription not found");
+  return data as { id: string; billing_provider: string; stripe_subscription_id: string | null; current_period_end: string | null };
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -96,11 +108,16 @@ Deno.serve(async (req) => {
 
     if (body.type === "comp_trial") {
       if (!body.subscription_id || !body.days) throw new Error("subscription_id + days required");
-      const { data: sub } = await admin
-        .from("subscriptions").select("current_period_end")
-        .eq("id", body.subscription_id).maybeSingle();
-      const base = sub?.current_period_end ? new Date(sub.current_period_end) : new Date();
+      const sub = await loadSub(admin, body.subscription_id);
+      const base = sub.current_period_end ? new Date(sub.current_period_end) : new Date();
       const newEnd = new Date(base.getTime() + body.days * 86400_000);
+      if (sub.billing_provider === "stripe" && sub.stripe_subscription_id) {
+        await getStripe().subscriptions.update(sub.stripe_subscription_id, {
+          trial_end: Math.floor(newEnd.getTime() / 1000),
+          proration_behavior: "none",
+        });
+        return ok({ current_period_end: newEnd.toISOString(), via: "stripe" });
+      }
       const { error } = await admin.from("subscriptions").update({
         status: "trialing",
         current_period_end: newEnd.toISOString(),
@@ -111,6 +128,13 @@ Deno.serve(async (req) => {
     }
 
     if (body.type === "cancel_subscription") {
+      const sub = await loadSub(admin, body.subscription_id);
+      if (sub.billing_provider === "stripe" && sub.stripe_subscription_id) {
+        const stripe = getStripe();
+        if (body.at_period_end) await stripe.subscriptions.update(sub.stripe_subscription_id, { cancel_at_period_end: true });
+        else await stripe.subscriptions.cancel(sub.stripe_subscription_id);
+        return ok({ canceled: true, via: "stripe" });
+      }
       const patch = body.at_period_end
         ? { cancel_at_period_end: true }
         : { status: "canceled", cancel_at_period_end: true };
@@ -218,8 +242,8 @@ Deno.serve(async (req) => {
         : new Date(now.getTime() + Number(body.days) * 86400_000).toISOString();
 
       const { error } = await admin.from("subscriptions").upsert({
-        paddle_subscription_id: compId,
-        paddle_customer_id: `comp_customer_${body.organization_id}`,
+        comp_reference: compId,
+        billing_provider: "internal",
         user_id: owner.user_id,
         organization_id: body.organization_id,
         product_id: t.product_id,
@@ -229,7 +253,7 @@ Deno.serve(async (req) => {
         current_period_end: endIso,
         cancel_at_period_end: false,
         environment: env,
-      }, { onConflict: "paddle_subscription_id" });
+      }, { onConflict: "comp_reference" });
       if (error) throw error;
 
       await admin.from("organizations").update({ plan: body.tier }).eq("id", body.organization_id);
@@ -240,7 +264,7 @@ Deno.serve(async (req) => {
       if (!body.organization_id) throw new Error("organization_id required");
       const env = body.environment ?? "live";
       const compId = `comp_${body.organization_id}_${env}`;
-      const { error } = await admin.from("subscriptions").delete().eq("paddle_subscription_id", compId);
+      const { error } = await admin.from("subscriptions").delete().eq("comp_reference", compId);
       if (error) throw error;
       return ok({ removed: true });
     }
@@ -325,42 +349,49 @@ Deno.serve(async (req) => {
     }
 
     if (body.type === "list_transactions") {
-      const env = body.environment ?? "live";
-      // Get org owner's paddle_customer_id from subscriptions
+      // Stripe invoices for this business's FastTract subscription. Uses the Stripe keys this
+      // deployment runs with (test or live, per STRIPE_ENV).
       const { data: subs } = await admin.from("subscriptions")
-        .select("paddle_customer_id").eq("organization_id", body.organization_id).eq("environment", env);
-      const customerIds = [...new Set((subs ?? []).map((s: any) => s.paddle_customer_id).filter((c: string) => c && !c.startsWith("comp_")))];
-      if (customerIds.length === 0) return ok({ transactions: [] });
-      const per = body.per_page ?? 25;
-      const res = await gatewayFetch(env, `/transactions?customer_id=${customerIds.join(",")}&per_page=${per}&order_by=created_at[DESC]`);
-      const data = await res.json();
-      return ok({ transactions: data.data ?? [] });
+        .select("stripe_customer_id").eq("organization_id", body.organization_id).eq("billing_provider", "stripe");
+      const customerIds = [...new Set((subs ?? []).map((s: any) => s.stripe_customer_id).filter(Boolean))] as string[];
+      const stripe = getStripe();
+      const transactions = [];
+      for (const customer of customerIds) {
+        const invoices = await stripe.invoices.list({ customer, limit: Math.min(body.per_page ?? 25, 100) });
+        for (const inv of invoices.data) {
+          transactions.push({
+            id: inv.id,
+            status: inv.status ?? "unknown",
+            created_at: new Date(inv.created * 1000).toISOString(),
+            total_cents: inv.total,
+            amount_paid_cents: inv.amount_paid,
+            currency: inv.currency,
+            hosted_invoice_url: inv.hosted_invoice_url ?? null,
+          });
+        }
+      }
+      transactions.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return ok({ transactions });
     }
 
     if (body.type === "refund_transaction") {
-      const env = body.environment ?? "live";
-      if (!body.transaction_id) throw new Error("transaction_id required");
-      const paddle = getPaddleClient(env);
-      // Fetch transaction to find line items
-      const txRes = await gatewayFetch(env, `/transactions/${body.transaction_id}`);
-      const tx = (await txRes.json()).data;
-      const items = (tx?.details?.line_items ?? tx?.items ?? []).map((li: any) => ({
-        item_id: li.id,
-        type: body.type_action === "partial" && body.amount ? "partial" : "full",
-        ...(body.type_action === "partial" && body.amount ? { amount: body.amount } : {}),
-      }));
-      const adjRes = await gatewayFetch(env, `/adjustments`, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "refund",
-          transaction_id: body.transaction_id,
-          reason: body.reason ?? "Admin refund",
-          items,
-        }),
+      if (!body.transaction_id || !body.organization_id) throw new Error("transaction_id and organization_id required");
+      const stripe = getStripe();
+      const invoice = await stripe.invoices.retrieve(body.transaction_id);
+      // Refuse to refund an invoice that does not belong to this business's Stripe customer.
+      const { data: owned } = await admin.from("subscriptions").select("id")
+        .eq("organization_id", body.organization_id).eq("stripe_customer_id", String(invoice.customer)).limit(1).maybeSingle();
+      if (!owned) throw new Error("invoice does not belong to this organization");
+      const payments = await stripe.invoicePayments.list({ invoice: invoice.id!, status: "paid" });
+      const paymentIntent = payments.data.map((p) => p.payment?.payment_intent).find(Boolean);
+      if (!paymentIntent) throw new Error("invoice has no captured payment to refund");
+      const refund = await stripe.refunds.create({
+        payment_intent: typeof paymentIntent === "string" ? paymentIntent : paymentIntent.id,
+        ...(body.amount_cents ? { amount: body.amount_cents } : {}),
+        reason: "requested_by_customer",
+        metadata: { note: body.reason ?? "Admin refund", organization_id: body.organization_id },
       });
-      const adj = await adjRes.json();
-      if (adj.error) throw new Error(adj.error.detail ?? adj.error.code ?? "refund failed");
-      return ok({ adjustment: adj.data });
+      return ok({ refund: { id: refund.id, status: refund.status, amount_cents: refund.amount } });
     }
 
     if (body.type === "mark_invoice_paid") {

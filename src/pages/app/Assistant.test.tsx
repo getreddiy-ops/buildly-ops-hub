@@ -7,7 +7,7 @@ const mocks=vi.hoisted(()=>({
 }));
 vi.mock('@/contexts/AuthContext',()=>({useAuth:()=>mocks.auth}));
 vi.mock('@/integrations/supabase/client',()=>({supabase:{functions:{invoke:mocks.invoke},from:mocks.from}}));
-vi.mock('@/lib/paddle',()=>({getPaddleEnvironment:()=> 'live'}));
+vi.mock('@/lib/billing',()=>({getBillingEnvironment:()=> 'live'}));
 vi.mock('@/hooks/useVoice',()=>({
  useVoiceRecorder:()=>({recording:false,transcribing:false,start:vi.fn(),stop:vi.fn()}),
  useVoiceSpeaker:()=>({speak:vi.fn(),stop:vi.fn(),speakingId:null,loadingId:null}),

@@ -31,8 +31,13 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = false
   [functions.public-estimate]
     verify_jwt = false
-  [functions.payments-webhook]
+  [functions.stripe-webhook]
+    # Public: Stripe signs every call (STRIPE_WEBHOOK_SECRET); the function verifies it.
     verify_jwt = false
+  [functions.create-stripe-checkout]
+    verify_jwt = true
+  [functions.stripe-customer-portal]
+    verify_jwt = true
   [functions.process-email-queue]
     verify_jwt = true
   [functions.send-document]

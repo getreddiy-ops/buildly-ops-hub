@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Camera, Loader2, X, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getBillingEnvironment } from "@/lib/billing";
 
 const MAX_IMAGES = 6;
 const MAX_DIMENSION = 1600;
@@ -101,7 +101,7 @@ export function PhotoEstimateDialog({ organizationId, onDraftReady }: PhotoEstim
       const { data, error } = await supabase.functions.invoke("estimate-from-photos", {
         body: {
           organizationId,
-          environment: getPaddleEnvironment(),
+          environment: getBillingEnvironment(),
           images,
           jobTitle: jobTitle || undefined,
           notes: notes || undefined,

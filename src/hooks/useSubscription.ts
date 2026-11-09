@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getBillingEnvironment } from "@/lib/billing";
 import { tierFromPriceId, hasAssistant, hasPhoneAssistant } from "@/lib/tiers";
 import { hasSubscriptionAccess } from "@/lib/subscription-access";
 
@@ -16,12 +16,13 @@ export type SubscriptionRow = {
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
   environment: string;
+  billing_provider?: string;
   created_at: string;
 };
 
 /**
  * Org-scoped subscription state. Any member of the active org sees the org's
- * Pro subscription. The owner is the one who can actually purchase / manage it.
+ * FastTract subscription. The owner is the one who can actually purchase / manage it.
  */
 export function useSubscription() {
   const { user, activeOrg } = useAuth();
@@ -39,10 +40,10 @@ export function useSubscription() {
     const { data } = await supabase
       .from("subscriptions")
       .select(
-        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,environment,created_at",
+        "id,user_id,organization_id,product_id,price_id,status,current_period_start,current_period_end,cancel_at_period_end,environment,billing_provider,created_at",
       )
       .eq("organization_id", orgId)
-      .eq("environment", getPaddleEnvironment())
+      .eq("environment", getBillingEnvironment())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

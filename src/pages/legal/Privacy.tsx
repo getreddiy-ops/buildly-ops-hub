@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-dark text-foreground">
-      <SEO title="Privacy Policy — FastTract" description="How FastTract, operated by Lynchmarc LLC, collects, uses, shares, and retains personal data, including Paddle as merchant of record." path="/legal/privacy" />
+      <SEO title="Privacy Policy — FastTract" description="How FastTract, operated by Lynchmarc LLC, collects, uses, shares, and retains personal data." path="/legal/privacy" />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">Home</Link>
@@ -39,7 +39,7 @@ export default function Privacy() {
         <h2 className="mt-8 text-2xl font-semibold">3. Data Sharing</h2>
         <p>We share personal data with:</p>
         <ul className="list-disc pl-6">
-          <li><strong>Payment providers</strong> — the provider that processes your FastTract subscription (currently Paddle). Customer payments for contracting work use the connected payment provider.</li>
+          <li><strong>Payment providers</strong> — Stripe, which processes FastTract subscription payments. Customer payments for contracting work use the connected payment provider.</li>
           <li><strong>Service providers / subprocessors</strong> — hosting, database, AI providers (for AI Assistant and Phone Assistant features), telephony providers (Twilio, ElevenLabs) when you enable phone features.</li>
           <li><strong>Professional advisers</strong> — legal and accounting where necessary.</li>
           <li><strong>Authorities</strong> — when required by law.</li>

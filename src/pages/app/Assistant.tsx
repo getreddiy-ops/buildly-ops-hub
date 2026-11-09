@@ -131,12 +131,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         }
         return { role: m.role, content: m.content };
       });
-      const { getPaddleEnvironment } = await import("@/lib/paddle");
+      const { getBillingEnvironment } = await import("@/lib/billing");
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
           messages: apiMessages,
           organizationId: activeOrg?.organization_id,
-          environment: getPaddleEnvironment(),
+          environment: getBillingEnvironment(),
         },
       });
       if (!alive.current) return;

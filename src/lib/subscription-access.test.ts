@@ -12,11 +12,11 @@ describe("hasSubscriptionAccess", () => {
     },
   );
 
-  it("keeps access during a scheduled cancellation because Paddle still reports active", () => {
+  it("keeps access during a scheduled cancellation because Stripe still reports active", () => {
     expect(hasSubscriptionAccess({ status: "active", current_period_end: FUTURE }, NOW)).toBe(true);
   });
 
-  it("denies access immediately once Paddle reports canceled", () => {
+  it("denies access immediately once Stripe reports canceled", () => {
     expect(hasSubscriptionAccess({ status: "canceled", current_period_end: FUTURE }, NOW)).toBe(false);
   });
 
