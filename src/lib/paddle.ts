@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isNativeApp } from "./native";
 
 const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN;
 
@@ -21,6 +22,7 @@ let paddleInitialized = false;
 let paddleInitPromise: Promise<void> | null = null;
 
 export async function initializePaddle() {
+  if (isNativeApp()) throw new Error("Subscription checkout is unavailable in the native app.");
   if (paddleInitialized) return;
   if (paddleInitPromise) return paddleInitPromise;
   if (!clientToken) throw new Error("VITE_PAYMENTS_CLIENT_TOKEN is not set");

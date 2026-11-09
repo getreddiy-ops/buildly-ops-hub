@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolvePostLoginRoute, safeNextPath } from "@/lib/post-login-route";
+import { authEmailRedirect, isNativeApp } from "@/lib/native";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function Login() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: window.location.origin + "/onboarding" },
+      options: { emailRedirectTo: authEmailRedirect("/onboarding") },
     });
     setResending(false);
     if (error) {
@@ -55,7 +56,7 @@ export default function Login() {
     setResetSending(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: authEmailRedirect("/reset-password"),
       });
       if (error) throw error;
       toast({
@@ -197,6 +198,8 @@ export default function Login() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             No account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
           </p>
+          {isNativeApp() && <p className="mt-3 text-center text-xs text-muted-foreground">Email confirmation and password reset open in your browser. After completing them, return here to sign in.</p>}
+          <p className="mt-3 text-center text-xs"><Link to="/account" className="underline">Account & privacy</Link></p>
         </div>
       </div>
     </div>
