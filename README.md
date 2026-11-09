@@ -71,6 +71,9 @@ needs `SUPABASE_DB_PASSWORD` (project Settings -> Database).
 | `OPENAI_API_KEY` | `ai-assistant`, `estimate-from-photos` | Optional | If set, calls OpenAI directly instead of the Lovable AI Gateway. |
 | `PADDLE_SANDBOX_API_KEY`, `PADDLE_LIVE_API_KEY` | `get-paddle-price`, `paddle-customer-portal` | Required for billing | Paddle dashboard -> Developer Tools -> Authentication. FastTract's own SaaS subscription billing only -- never customer invoices. |
 | `PAYMENTS_SANDBOX_WEBHOOK_SECRET`, `PAYMENTS_LIVE_WEBHOOK_SECRET` | `payments-webhook` | Required for billing | Paddle dashboard -> Developer Tools -> Notifications -> your webhook destination. |
+| `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET` | `quickbooks`, `quickbooks-callback` | Required for QuickBooks | developer.intuit.com -> your FastTract app -> Keys & credentials (Production keys for real companies). Add the redirect URI below to the app. |
+| `QUICKBOOKS_ENV` | `quickbooks`, `quickbooks-callback` | Optional | `sandbox` to test against an Intuit sandbox company; anything else is production. |
+| `QUICKBOOKS_REDIRECT_URI` | `quickbooks`, `quickbooks-callback` | Optional | Defaults to `<SUPABASE_URL>/functions/v1/quickbooks-callback`; must match the Intuit app exactly. |
 | `TWILIO_AUTH_TOKEN` | `twilio-voice-webhook` | Required for phone | Twilio Console -> Account -> verifies inbound webhook signatures. |
 | `TWILIO_API_KEY` | `phone-assistant-provision`, `send-document` | Required for phone | Lovable connector API key for outbound Twilio calls (buying numbers, sending SMS) via the Lovable gateway. |
 | `ELEVENLABS_API_KEY` | `phone-assistant`, `phone-assistant-token` | Required for phone | ElevenLabs Voice AI agent (Premium tier). |

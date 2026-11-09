@@ -51,3 +51,8 @@ project_id = "qjusjfdrtposrthlcjeu"
     verify_jwt = true
   [functions.voice-transcribe]
     verify_jwt = true
+  [functions.quickbooks]
+    verify_jwt = true
+  [functions.quickbooks-callback]
+    # Public: Intuit redirects the browser here; the signed state identifies the business.
+    verify_jwt = false
