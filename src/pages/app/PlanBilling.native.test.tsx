@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Billing from "./GhlBilling";
+import Billing from "./PlanBilling";
 const { native } = vi.hoisted(() => ({ native: vi.fn() }));
 vi.mock("@/lib/native", () => ({ isNativeApp: native }));
 vi.mock("@/hooks/useSubscription", () => ({ useSubscription: () => ({ isActive: true, loading: false, refetch: vi.fn() }) }));
@@ -10,12 +10,12 @@ describe("native subscription screen", () => {
     native.mockReturnValue(true);
     render(<MemoryRouter><Billing /></MemoryRouter>);
     expect(screen.getByText(/active app access record/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Open secure checkout" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Contact us" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Compare plans" })).not.toBeInTheDocument();
   });
-  it("preserves the web checkout", () => {
+  it("shows the sign-up contact on the web", () => {
     native.mockReturnValue(false);
     render(<MemoryRouter><Billing /></MemoryRouter>);
-    expect(screen.getByRole("link", { name: "Open secure checkout" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Contact us" })).toBeInTheDocument();
   });
 });

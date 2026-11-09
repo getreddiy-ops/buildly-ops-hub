@@ -173,6 +173,72 @@ Verified when: with no key, every non-AI workflow works and AI surfaces say "Con
 Verified when: a fresh account on production completes, in order: signup → trial → connect AI → customer → photo estimate → send estimate → client pays the invoice through Stripe Connect → time entry → subscription charge. Runtime errors stay clean for 48h.
 - Blocked by: 4.2, 5.3
 
+### Phase 7: Plan upload and concrete takeoff (after launch)
+Verified when: for each of Morgan's three sample plan sets (one foundation, one flatwork, one retaining wall), FastTract's takeoff lands within 5% of Morgan's hand takeoff on concrete yards and within 10% on rebar weight. Every rebar, bolt and joint item cites the sheet and detail it came from. Anything the plans don't show is listed as "Not on plans — confirm with engineer", never filled in.
+Scope: footings and stem walls, slabs and flatwork, retaining walls. Not commercial or tilt-up.
+Rule: FastTract **reads** what the engineer's drawings specify. It never designs rebar, anchor bolts or hold-downs. The only thing it proposes is pour-break and bulkhead locations, marked "proposed" and limited to where the plans allow construction joints.
+
+#### Step 7.0 (human): Morgan supplies 3 sample plan sets with his own takeoffs
+- One per scope type, as PDFs, each with Morgan's quantities (yards, form footage, rebar by size, bolt count). These become the acceptance tests.
+- Blocked by: none
+
+#### Step 7.1: Upload and sheet sorting (Size: M)
+- Acceptance criteria:
+  - The job page accepts a plan PDF up to 50 MB; pages are stored as images in the org's storage bucket.
+  - AI labels each sheet (foundation plan, sections and details, general notes, other). The user can fix a label.
+  - The user sets scale by clicking two ends of one known dimension; the scale is stored per sheet.
+- Verification command: `npm test` (new `plan-upload.test.ts`); upload each sample set
+- Files likely touched: new `plan_sets` and `plan_sheets` migration, `supabase/functions/plan-sheets/`, `src/components/PlanUpload.tsx`, `src/pages/app/JobFolder.tsx`
+- Test seams: storage RLS test (one org cannot read another's sheets); component test
+- Blocked by: 5.2
+
+#### Step 7.2: Read elements and callouts (Size: M)
+- Acceptance criteria:
+  - Vision AI (through the customer's own AI key) returns structured items: footing, stem wall, slab and retaining-wall segments with dimensions; rebar callouts (size, spacing, laps, dowels); anchor bolts and hold-downs (size, spacing, embedment, edge distance); joints. Each item carries sheet, detail and confidence.
+  - Items with no source on the plans are "Not on plans — confirm with engineer".
+  - Low-confidence items are flagged for review.
+- Verification command: extraction test against the three sample sets (fixtures)
+- Files likely touched: `supabase/functions/plan-takeoff/`, `_shared/ai-provider.ts` (vision), `_shared/takeoff-schema.ts`
+- Test seams: schema-validation unit tests; fixture comparison
+- Blocked by: 7.1
+
+#### Step 7.3: Review screen (Size: S)
+- Acceptance criteria:
+  - The contractor sees every extracted item next to its spot on the sheet, and can confirm, edit or delete it.
+  - Nothing reaches the estimate until it is confirmed.
+- Verification command: `npm test` (new `TakeoffReview.test.tsx`)
+- Files likely touched: `src/components/TakeoffReview.tsx`
+- Test seams: component test
+- Blocked by: 7.2
+
+#### Step 7.4: Quantities and rebar schedule (Size: M)
+- Acceptance criteria:
+  - From confirmed items: concrete yards (with a waste % the user sets), form footage by element, and a rebar schedule (mark, size, count, cut length including laps and hooks, bends, weight in lb by bar size).
+  - Also an anchor bolt and hold-down list.
+  - Matches Morgan's sample takeoffs within the Phase 7 tolerances.
+- Verification command: `npm test` (`concreteCalc.test.ts` extended with hand-checked cases)
+- Files likely touched: `src/lib/concreteCalc.ts`, new `src/lib/rebarSchedule.ts`
+- Test seams: pure-function unit tests
+- Blocked by: 7.3
+
+#### Step 7.5: Marked-up plan sheet and PDF (Size: M)
+- Acceptance criteria:
+  - Over the uploaded sheet: form lines, proposed pour breaks and bulkheads (labeled "proposed"), and anchor-bolt and hold-down marks with spacing, plus the rebar schedule on a cover page.
+  - Exports a PDF for the crew; scale matches the calibrated sheet.
+- Verification command: export the PDF for each sample set and compare against the sheet at three marked dimensions
+- Files likely touched: `src/components/PlanMarkup.tsx`, `src/lib/generateDocumentPdf.ts`
+- Test seams: unit test for geometry-to-sheet scaling; PDF export test
+- Blocked by: 7.4
+
+#### Step 7.6: Into the estimate (Size: S)
+- Acceptance criteria:
+  - One button turns the confirmed quantities into estimate lines (concrete, forms, rebar by size, bolts, labor), using the org's saved prices, then the normal estimate flow takes over.
+  - The estimate shows the plan set it came from.
+- Verification command: `npm test`; create an estimate from one sample set
+- Files likely touched: `src/pages/app/EstimateDetail.tsx`, `src/lib/estimateKnowledge.ts`
+- Test seams: unit test for quantity-to-line mapping
+- Blocked by: 7.4
+
 ## Decision log
 | Decision | Chosen option | Why |
 | --- | --- | --- |
@@ -184,6 +250,10 @@ Verified when: a fresh account on production completes, in order: signup → tri
 | Existing Paddle subscribers | None, so no customer migration | Morgan |
 | Launch surface | Web first; app-store release is a later plan | Morgan |
 | Base for consolidation | The production commit `6150b94`, not `main` | It is what customers run today; it avoids regressing production |
+| Plan takeoff: rebar, bolts, joints | Read from the engineer's drawings only; never designed. Missing items are flagged | Morgan, 2026-11-09. Structural design is the engineer's |
+| Plan takeoff scope | Footings and stem walls, slabs and flatwork, retaining walls | Morgan |
+| Form layout output | Marked-up plan sheet plus a crew PDF | Morgan |
+| Plan takeoff timing | Right after launch (Phase 7) | Morgan; needs bring-your-own vision AI from Phase 5 |
 | Email after Lovable | Resend | A partial Resend path already exists in `process-email-queue` |
 
 ## Assumptions (correct any of these before approving)
@@ -196,6 +266,7 @@ Verified when: a fresh account on production completes, in order: signup → tri
 ## Not yet specified
 - Phase 3.0: fog. What Lovable Cloud lets Morgan export (full `pg_dump`? auth hashes? storage?) is researched at pickup and decides the shape of 3.3.
 - Phase 3.2: which sender address (`hello@fasttract.org`?) and whether Morgan already has a Resend account.
+- Phase 7.2: which AI providers read plan sheets well enough. Measured against the sample sets at pickup, not guessed.
 - Phase 4.2: whether Stripe Tax is turned on (Paddle handled sales tax; Stripe does not unless Stripe Tax is enabled).
 
 ## Always / Never
@@ -203,17 +274,19 @@ Verified when: a fresh account on production completes, in order: signup → tri
 - Always: get Morgan's approval before any production deploy, Stripe change, env-var change, paid service or email to customers.
 - Never: delete branches, Lovable Cloud data or production data in this plan.
 - Never: store an AI key where the browser can read it.
-- Never in this plan: App Store or Play Store submission, the brand redesign, new product features.
+- Never in this plan: App Store or Play Store submission, new product features beyond Phase 7.
+- Never: FastTract designs structural rebar, anchor bolts or hold-downs.
 
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 1. One source of truth | 1.1–1.3 done; 1.4 PR open, awaiting Morgan's merge + promote |
-| 2. Remove GHL, set prices | not started |
+| 1. One source of truth | 1.1–1.3 done; PR #39 open, `verify` green; awaiting Morgan's merge (merge = production deploy) |
+| 2. Remove GHL, set prices | PR #40 open (stacked on #39) |
 | 3. Own Supabase | not started |
 | 4. Stripe subscriptions | not started |
 | 5. Bring-your-own AI | not started |
 | 6. Launch check | not started |
+| 7. Plan takeoff (after launch) | not started; waiting on Morgan's 3 sample plan sets |
 
 ## Execution record
 
@@ -240,3 +313,11 @@ Verified when: a fresh account on production completes, in order: signup → tri
     - "Screen Takeover" mode, from the `codex/developer-admin-only` family (108 commits on an August lineage).
     - Complimentary-subscription date handling, from `codex/fix-comp-dates`. **Relevant to Phase 4** if comp accounts are given out.
     - State-aware document compliance guardrails, from `codex/state-compliance-guardrails` (19 files).
+
+### Phase 2 (2026-11-09)
+- PR #40 merges `remove-gohighlevel` and `prices-197-297-397-main`.
+  - Conflicts resolved: `config.toml` keeps MCP `verify_jwt = false`; the manifest keeps the newer version with the GHL wording removed; `GhlBilling` becomes `PlanBilling` with the native-app guard and test carried over.
+  - The Privacy page no longer mentions HighLevel.
+  - Tests pass (149), the build passes, and pricing shows $197 / $297 / $397.
+- **For Phase 4:** plan names disagree (`sales.ts` says Basic / Pro / Enterprise; `tiers.ts` says FastTract / Plus / Premium). The Paddle price IDs in `tiers.ts` still point at the old products; checkout is paused, so nobody can be charged the old price.
+- **For Phase 3:** the removed GHL functions stay deployed on the Lovable project. The deploy workflow only deploys; it never deletes.

@@ -39,7 +39,7 @@ export default function Privacy() {
         <h2 className="mt-8 text-2xl font-semibold">3. Data Sharing</h2>
         <p>We share personal data with:</p>
         <ul className="list-disc pl-6">
-          <li><strong>Payment providers</strong> — your original FastTract checkout and billing provider, including HighLevel and its payment processors or Paddle where applicable. Customer payments for contracting work use the connected payment provider.</li>
+          <li><strong>Payment providers</strong> — the provider that processes your FastTract subscription (currently Paddle). Customer payments for contracting work use the connected payment provider.</li>
           <li><strong>Service providers / subprocessors</strong> — hosting, database, AI providers (for AI Assistant and Phone Assistant features), telephony providers (Twilio, ElevenLabs) when you enable phone features.</li>
           <li><strong>Professional advisers</strong> — legal and accounting where necessary.</li>
           <li><strong>Authorities</strong> — when required by law.</li>

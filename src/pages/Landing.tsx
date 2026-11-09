@@ -228,7 +228,7 @@ export default function Landing() {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Simple monthly pricing</p>
             <h2 className="mt-3 text-3xl font-bold">Choose the FastTract plan for your business.</h2>
-            <p className="mt-4 text-muted-foreground">Choose Basic, Pro, or Enterprise through FastTract’s existing secure checkout. Your subscription and billing stay with your original account.</p>
+            <p className="mt-4 text-muted-foreground">Choose Basic, Pro, or Enterprise, monthly or annual. Online checkout is coming soon. Contact us and we'll get you set up.</p>
             <Button className="mt-6" asChild><Link to="/pricing">Compare FastTract plans <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
           <div className="grid gap-4">
