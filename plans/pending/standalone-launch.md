@@ -208,8 +208,8 @@ Verified when: a fresh account on production completes, in order: signup → tri
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 1. One source of truth | 1.1–1.3 done; 1.4 PR open, awaiting Morgan's merge + promote |
-| 2. Remove GHL, set prices | not started |
+| 1. One source of truth | 1.1–1.3 done; PR #39 open, `verify` green; awaiting Morgan's merge (merge = production deploy) |
+| 2. Remove GHL, set prices | PR #40 open (stacked on #39) |
 | 3. Own Supabase | not started |
 | 4. Stripe subscriptions | not started |
 | 5. Bring-your-own AI | not started |
@@ -240,3 +240,11 @@ Verified when: a fresh account on production completes, in order: signup → tri
     - "Screen Takeover" mode, from the `codex/developer-admin-only` family (108 commits on an August lineage).
     - Complimentary-subscription date handling, from `codex/fix-comp-dates`. **Relevant to Phase 4** if comp accounts are given out.
     - State-aware document compliance guardrails, from `codex/state-compliance-guardrails` (19 files).
+
+### Phase 2 (2026-11-09)
+- PR #40 merges `remove-gohighlevel` and `prices-197-297-397-main`.
+  - Conflicts resolved: `config.toml` keeps MCP `verify_jwt = false`; the manifest keeps the newer version with the GHL wording removed; `GhlBilling` becomes `PlanBilling` with the native-app guard and test carried over.
+  - The Privacy page no longer mentions HighLevel.
+  - Tests pass (149), the build passes, and pricing shows $197 / $297 / $397.
+- **For Phase 4:** plan names disagree (`sales.ts` says Basic / Pro / Enterprise; `tiers.ts` says FastTract / Plus / Premium). The Paddle price IDs in `tiers.ts` still point at the old products; checkout is paused, so nobody can be charged the old price.
+- **For Phase 3:** the removed GHL functions stay deployed on the Lovable project. The deploy workflow only deploys; it never deletes.
