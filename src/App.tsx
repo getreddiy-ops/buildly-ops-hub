@@ -1,5 +1,7 @@
 import WorkspaceHub from "./pages/app/WorkspaceHub";
 import JobFolder from "./pages/app/JobFolder";
+import Takeoffs from "./pages/app/Takeoffs";
+import TakeoffDetail from "./pages/app/TakeoffDetail";
 import WorkspacePreview from "./pages/WorkspacePreview";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
@@ -160,6 +162,8 @@ const App = () => (
               <Route path="contracts" element={<Contracts />} />
               <Route path="jobs" element={<Jobs />} />
               <Route path="jobs/:id" element={<JobFolder />} />
+              <Route path="takeoffs" element={<Takeoffs />} />
+              <Route path="takeoffs/:id" element={<TakeoffDetail />} />
               <Route path="money" element={<WorkspaceHub section="Money" />} />
               <Route path="company" element={<WorkspaceHub section="Company" />} />
               <Route path="crew" element={<Crew />} />
