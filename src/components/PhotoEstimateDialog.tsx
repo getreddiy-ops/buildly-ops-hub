@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Camera, Loader2, X, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getBillingEnvironment } from "@/lib/billing";
+import { AI_CONNECT_PATH, AI_NOT_CONNECTED, readFunctionError } from "@/lib/function-error";
 
 const MAX_IMAGES = 6;
 const MAX_DIMENSION = 1600;
@@ -101,7 +102,7 @@ export function PhotoEstimateDialog({ organizationId, onDraftReady }: PhotoEstim
       const { data, error } = await supabase.functions.invoke("estimate-from-photos", {
         body: {
           organizationId,
-          environment: getPaddleEnvironment(),
+          environment: getBillingEnvironment(),
           images,
           jobTitle: jobTitle || undefined,
           notes: notes || undefined,
@@ -111,10 +112,12 @@ export function PhotoEstimateDialog({ organizationId, onDraftReady }: PhotoEstim
       if (data?.error) throw new Error(data.error);
       setDraft(data.draft as Draft);
     } catch (error) {
-      const message = (error as Error).message || "Could not analyze those photos";
-      toast.error(message.includes("subscription_required") || message.includes("Subscription")
-        ? "AI photo estimates need a Plus or Premium plan"
-        : message);
+      const { message, code } = await readFunctionError(error, "Could not analyze those photos");
+      if (code === AI_NOT_CONNECTED) {
+        toast.error("Connect your AI provider first.", { action: { label: "Open Settings", onClick: () => { window.location.assign(AI_CONNECT_PATH); } } });
+      } else {
+        toast.error(code === "subscription_required" ? "AI photo estimates need the Pro or Enterprise plan" : message);
+      }
     }
     setAnalyzing(false);
   };

@@ -57,8 +57,9 @@ Deno.test("ai-assistant e2e: authenticated, subscribed user gets structured resp
       .insert({
         user_id: userId,
         organization_id: orgId,
-        paddle_subscription_id: `test_sub_${uniq()}`,
-        paddle_customer_id: `test_cus_${uniq()}`,
+        stripe_subscription_id: `test_sub_${uniq()}`,
+        billing_provider: "stripe",
+        stripe_customer_id: `test_cus_${uniq()}`,
         product_id: "contractor_os_plus",
         price_id: "contractor_os_plus_monthly",
         status: "active",

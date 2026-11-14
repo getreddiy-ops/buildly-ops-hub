@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { AI_CONNECT_PATH, AI_NOT_CONNECTED, readFunctionError } from "@/lib/function-error";
 
 export type AiField = {
   name: string;
@@ -32,6 +34,7 @@ export function AiFormHelper<T extends Record<string, any>>({
 }: Props<T>) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const { activeOrg } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
@@ -40,7 +43,7 @@ export function AiFormHelper<T extends Record<string, any>>({
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-form-fill", {
-        body: { prompt: text, formName, fields, context },
+        body: { prompt: text, formName, fields, context, organizationId: activeOrg?.organization_id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -53,8 +56,10 @@ export function AiFormHelper<T extends Record<string, any>>({
       toast.success(`Filled ${Object.keys(values).length} field${Object.keys(values).length > 1 ? "s" : ""}`);
       setOpen(false);
       setPrompt("");
-    } catch (e: any) {
-      toast.error(e?.message ?? "AI fill failed");
+    } catch (e: unknown) {
+      const { message, code } = await readFunctionError(e, "AI fill failed");
+      if (code === AI_NOT_CONNECTED) toast.error("Connect your AI provider first.", { action: { label: "Open Settings", onClick: () => { window.location.assign(AI_CONNECT_PATH); } } });
+      else toast.error(message);
     } finally {
       setLoading(false);
     }

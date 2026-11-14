@@ -5,12 +5,12 @@ money, company operations, and AI-assisted everyday workflows.
 
 ## Revenue funnel
 
-1. Visitor chooses a plan or starts from the landing page.
-2. Account creation confirms the user will review pricing before payment.
-3. Company onboarding creates an owner-scoped organization.
-4. The owner returns to pricing and starts a 7-day Paddle trial.
-5. The Paddle webhook writes the organization subscription to Supabase.
-6. Subscription gates unlock the plan's features.
+1. Visitor picks a plan on `/pricing` and signs up.
+2. Company onboarding creates an owner-scoped organization.
+3. The office app sends a business with no active plan to Plan & billing (`/app/billing`).
+4. The owner starts a 7-day Stripe trial (card required, one trial per business) through `create-stripe-checkout`.
+5. `stripe-webhook` writes the subscription row; the office app unlocks.
+6. Pro and Enterprise unlock the AI features, which run on the business's own AI key (Settings → AI).
 
 ## Local verification
 
@@ -40,8 +40,8 @@ backend logic lives in `supabase/functions/`.
 auto-detects the Vite framework from `vercel.json`) and every push to `main`
 deploys automatically -- no custom build config needed. The `.env` /
 `.env.production` files already committed to this repo contain the real,
-non-secret `VITE_*` values (an anon Supabase key and a publishable Paddle
-token), so a from-scratch Vercel import builds correctly with zero extra
+non-secret `VITE_*` values (an anon Supabase key and the Stripe test/live
+mode flag), so a from-scratch Vercel import builds correctly with zero extra
 environment configuration. `.github/workflows/deploy-vercel-production.yml`
 is an alternative, manual, confirmation-gated path for pushing a specific
 commit to production on demand (useful if native Git integration isn't set
@@ -66,16 +66,21 @@ needs `SUPABASE_DB_PASSWORD` (project Settings -> Database).
 | Variable | Where used | Required? | Purpose |
 |---|---|---|---|
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` | Frontend build | Required (already committed) | Supabase client connection. Anon key -- safe client-side, RLS enforces access. |
-| `VITE_PAYMENTS_CLIENT_TOKEN` | Frontend build | Required (already committed) | Paddle.js client-side checkout token. |
-| `LOVABLE_API_KEY` | `ai-assistant`, `estimate-from-photos`, Paddle/Twilio gateway calls | Required unless `OPENAI_API_KEY` is set | Lovable's connector gateway key -- used as the AI/Paddle/Twilio proxy when no direct provider key is configured. |
-| `OPENAI_API_KEY` | `ai-assistant`, `estimate-from-photos` | Optional | If set, calls OpenAI directly instead of the Lovable AI Gateway. |
-| `PADDLE_SANDBOX_API_KEY`, `PADDLE_LIVE_API_KEY` | `get-paddle-price`, `paddle-customer-portal` | Required for billing | Paddle dashboard -> Developer Tools -> Authentication. FastTract's own SaaS subscription billing only -- never customer invoices. |
-| `PAYMENTS_SANDBOX_WEBHOOK_SECRET`, `PAYMENTS_LIVE_WEBHOOK_SECRET` | `payments-webhook` | Required for billing | Paddle dashboard -> Developer Tools -> Notifications -> your webhook destination. |
+| `VITE_STRIPE_ENV` | Frontend build | Required (committed) | `sandbox` while Stripe runs on test keys, `live` after launch. Must match `STRIPE_ENV`. |
+| `STRIPE_SECRET_KEY` | billing functions, `admin-support`, `stripe-connect` | Required for billing | Stripe dashboard -> Developers -> API keys. Test key (`sk_test_`) until launch. |
+| `STRIPE_ENV` | billing functions | Required for billing | `sandbox` or `live`; tags subscription rows so test and live never mix. |
+| `STRIPE_WEBHOOK_SECRET` | `stripe-webhook` | Required for billing | Stripe -> Developers -> Webhooks -> endpoint `/functions/v1/stripe-webhook`, events `customer.subscription.created/updated/deleted`. |
+| `STRIPE_PRICE_BASIC_MONTHLY`, `STRIPE_PRICE_BASIC_YEARLY`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_ENTERPRISE_MONTHLY`, `STRIPE_PRICE_ENTERPRISE_YEARLY` | billing functions | Required for billing | Stripe price ids (`price_...`) for $197/$1,970, $297/$2,970, $397/$3,970. Catalog: `supabase/functions/_shared/plans.ts`. |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | email functions | Required for email | Resend API key and a verified sender, e.g. `FastTract <noreply@fasttract.org>`. |
+| `SEND_EMAIL_HOOK_SECRET` | `auth-email-hook` | Required for sign-up/reset emails | Supabase -> Authentication -> Hooks -> Send Email (HTTPS) pointing at `/functions/v1/auth-email-hook`; paste the generated `v1,whsec_...` secret. |
+| `RESEND_WEBHOOK_SECRET` | `handle-email-suppression` | Recommended | Resend -> Webhooks -> endpoint `/functions/v1/handle-email-suppression`, events `email.bounced`, `email.complained`. |
+| `EMAIL_PREVIEW_SECRET` | `preview-transactional-email`, `auth-email-hook/preview` | Optional | Any long random string; lets staff preview email templates. |
+| (none) | AI features | -- | Bring-your-own AI: each business connects its own OpenAI, Anthropic or Google key in Settings -> AI. Keys are stored in Supabase Vault (`org_ai_connections`), never in an env var, and FastTract never pays for customer AI usage. |
 | `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET` | `quickbooks`, `quickbooks-callback` | Required for QuickBooks | developer.intuit.com -> your FastTract app -> Keys & credentials (Production keys for real companies). Add the redirect URI below to the app. |
 | `QUICKBOOKS_ENV` | `quickbooks`, `quickbooks-callback` | Optional | `sandbox` to test against an Intuit sandbox company; anything else is production. |
 | `QUICKBOOKS_REDIRECT_URI` | `quickbooks`, `quickbooks-callback` | Optional | Defaults to `<SUPABASE_URL>/functions/v1/quickbooks-callback`; must match the Intuit app exactly. |
 | `TWILIO_AUTH_TOKEN` | `twilio-voice-webhook` | Required for phone | Twilio Console -> Account -> verifies inbound webhook signatures. |
-| `TWILIO_API_KEY` | `phone-assistant-provision`, `send-document` | Required for phone | Lovable connector API key for outbound Twilio calls (buying numbers, sending SMS) via the Lovable gateway. |
+| `TWILIO_ACCOUNT_SID` | `phone-assistant-provision`, `send-document`, `fasttract-message` | Required for phone/SMS | Twilio Console -> Account info. With `TWILIO_AUTH_TOKEN`, FastTract calls Twilio directly (the Lovable Twilio gateway is not used off Lovable Cloud). |
 | `ELEVENLABS_API_KEY` | `phone-assistant`, `phone-assistant-token` | Required for phone | ElevenLabs Voice AI agent (Premium tier). |
 | `ELEVENLABS_VOICE_ID` | `phone-assistant` | Optional | Default voice for new phone assistants. |
 | `ELEVENLABS_WEBHOOK_SECRET` | `elevenlabs-postcall` | Required for phone | Verifies the post-call webhook signature. |
@@ -130,7 +135,7 @@ clock-in/out, and customer messages. Writes use a preview/confirmation step.
 `mark_invoice_paid` records a payment already received; it does not transfer
 funds. Payroll processing and bank transfers are not implemented by these tools.
 
-Do not commit Supabase service-role keys, Paddle secrets, Twilio credentials, or
+Do not commit Supabase service-role keys, Stripe secrets, Twilio credentials, or
 other production secrets. Public client tokens belong only in the documented
 frontend environment variables; server secrets belong in Supabase function
 secrets or the hosting provider.

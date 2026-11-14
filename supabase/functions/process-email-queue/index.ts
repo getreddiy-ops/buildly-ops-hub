@@ -1,4 +1,3 @@
-import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const MAX_RETRIES = 5
@@ -58,62 +57,42 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
 
 async function sendEmail(payload: Record<string, any>): Promise<void> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? ''
+  if (!resendApiKey) throw new EmailProviderError('FastTract email provider is not configured yet (RESEND_API_KEY)', 503)
   const resendFrom = Deno.env.get('RESEND_FROM_EMAIL')?.trim() || String(payload.from || '')
+  if (!resendFrom) throw new EmailProviderError('RESEND_FROM_EMAIL or queued from address is required', 400)
+  const appUrl = (Deno.env.get('PUBLIC_APP_URL') || 'https://fasttract.org').replace(/\/$/, '')
 
-  if (resendApiKey) {
-    if (!resendFrom) throw new EmailProviderError('RESEND_FROM_EMAIL or queued from address is required', 400)
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-        ...(payload.idempotency_key ? { 'Idempotency-Key': String(payload.idempotency_key) } : {}),
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: [payload.to],
-        subject: payload.subject,
-        html: payload.html,
-        text: payload.text,
-        headers: payload.unsubscribe_token
-          ? { 'List-Unsubscribe': `<${Deno.env.get('PUBLIC_APP_URL') || 'https://fasttract-app.vercel.app'}/unsubscribe?token=${encodeURIComponent(String(payload.unsubscribe_token))}>` }
-          : undefined,
-      }),
-    })
-
-    if (!response.ok) {
-      const text = await response.text()
-      const retryAfter = Number(response.headers.get('Retry-After') || '')
-      throw new EmailProviderError(
-        `Resend ${response.status}: ${text}`,
-        response.status,
-        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
-      )
-    }
-    return
-  }
-
-  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY') ?? ''
-  if (!lovableApiKey) throw new EmailProviderError('FastTract email provider is not configured yet', 503)
-
-  await sendLovableEmail(
-    {
-      run_id: payload.run_id,
-      to: payload.to,
-      from: payload.from,
-      sender_domain: payload.sender_domain,
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+      ...(payload.idempotency_key ? { 'Idempotency-Key': String(payload.idempotency_key) } : {}),
+    },
+    body: JSON.stringify({
+      from: resendFrom,
+      to: [payload.to],
       subject: payload.subject,
       html: payload.html,
       text: payload.text,
-      purpose: payload.purpose,
-      label: payload.label,
-      idempotency_key: payload.idempotency_key,
-      unsubscribe_token: payload.unsubscribe_token,
-      message_id: payload.message_id,
-    },
-    { apiKey: lovableApiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
-  )
+      headers: payload.unsubscribe_token
+        ? {
+            'List-Unsubscribe': `<${appUrl}/unsubscribe?token=${encodeURIComponent(String(payload.unsubscribe_token))}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          }
+        : undefined,
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    const retryAfter = Number(response.headers.get('Retry-After') || '')
+    throw new EmailProviderError(
+      `Resend ${response.status}: ${text}`,
+      response.status,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+    )
+  }
 }
 
 async function moveToDlq(

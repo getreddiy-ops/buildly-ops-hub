@@ -131,12 +131,12 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         }
         return { role: m.role, content: m.content };
       });
-      const { getPaddleEnvironment } = await import("@/lib/paddle");
+      const { getBillingEnvironment } = await import("@/lib/billing");
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
         body: {
           messages: apiMessages,
           organizationId: activeOrg?.organization_id,
-          environment: getPaddleEnvironment(),
+          environment: getBillingEnvironment(),
         },
       });
       if (!alive.current) return;
@@ -206,7 +206,9 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
     } catch (e: any) {
       if (!alive.current) return;
       const message = e?.code === "subscription_required"
-        ? "Your company needs an active Plus or Premium plan to use the assistant."
+        ? "Your company needs the Pro or Enterprise plan to use the assistant."
+        : e?.code === "ai_not_connected"
+        ? "Connect your AI provider in Settings → AI to use the assistant."
         : e?.message ?? "Assistant failed";
       toast.error(message);
       setMessages((m) => [
@@ -214,7 +216,9 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
         {
           role: "assistant",
           content: e?.code === "subscription_required"
-            ? "Your company needs an active Plus or Premium plan to use the assistant. Open Billing to review your plan."
+            ? "Your company needs the Pro or Enterprise plan to use the assistant. Open Plan & billing to review your plan."
+            : e?.code === "ai_not_connected"
+            ? "I run on your own AI account. Connect OpenAI, Anthropic or Google in Settings → AI, then ask me again."
             : `I couldn’t complete that request: ${message}. No proposed changes were applied.`,
         },
       ]);

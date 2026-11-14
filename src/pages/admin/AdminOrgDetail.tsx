@@ -30,7 +30,7 @@ type Snapshot = {
   recent_invoices: Invoice[];
   revenue_paid_recent: number;
 };
-type Transaction = { id: string; status: string; created_at: string; details?: { totals?: { grand_total?: string; currency_code?: string } } };
+type Transaction = { id: string; status: string; created_at: string; total_cents: number; amount_paid_cents: number; currency: string; hosted_invoice_url: string | null };
 
 const ROLES = ["owner", "admin", "manager", "worker", "agent"] as const;
 
@@ -44,7 +44,6 @@ export default function AdminOrgDetail() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [txs, setTxs] = useState<Transaction[]>([]);
-  const [txEnv, setTxEnv] = useState<"live" | "sandbox">("live");
   const [noteBody, setNoteBody] = useState("");
   const [trialDays, setTrialDays] = useState(7);
   const [compTier, setCompTier] = useState<"base" | "plus" | "premium">("premium");
@@ -114,7 +113,7 @@ export default function AdminOrgDetail() {
 
   const loadTransactions = async () => {
     try {
-      const r = await callAdmin({ type: "list_transactions", organization_id: id, environment: txEnv });
+      const r = await callAdmin({ type: "list_transactions", organization_id: id });
       setTxs(r.transactions ?? []);
     } catch (e) { toast.error((e as Error).message); }
   };
@@ -177,8 +176,8 @@ export default function AdminOrgDetail() {
 
   const refundTx = async (txId: string) => {
     const reason = prompt("Refund reason?", "Admin refund") ?? "Admin refund";
-    if (!confirm("Issue a full refund for this transaction?")) return;
-    try { await callAdmin({ type: "refund_transaction", transaction_id: txId, environment: txEnv, reason });
+    if (!confirm("Issue a full refund for this Stripe invoice?")) return;
+    try { await callAdmin({ type: "refund_transaction", transaction_id: txId, organization_id: id, reason });
       toast.success("Refund submitted"); loadTransactions();
     } catch (e) { toast.error((e as Error).message); }
   };
@@ -264,7 +263,7 @@ export default function AdminOrgDetail() {
       {/* Plan / comp */}
       <Card className="p-4 mb-6 border-primary/30">
         <h3 className="font-semibold mb-1">Plan assignment (comp / free)</h3>
-        <p className="text-xs text-muted-foreground mb-3">Grants an internal subscription that bypasses Paddle. Blank days = free forever.</p>
+        <p className="text-xs text-muted-foreground mb-3">Grants a complimentary plan with no Stripe billing. Blank days = free forever.</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
           <div><Label className="text-xs">Tier</Label>
             <select value={compTier} onChange={(e) => setCompTier(e.target.value as any)}
@@ -401,18 +400,15 @@ export default function AdminOrgDetail() {
         </Card>
       )}
 
-      {/* Paddle transactions */}
+      {/* Stripe invoices */}
       <Card className="p-4 mt-6">
         <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-          <h3 className="font-semibold">Paddle transactions</h3>
+          <h3 className="font-semibold">Stripe invoices</h3>
           <div className="flex items-center gap-2">
-            <select value={txEnv} onChange={(e) => setTxEnv(e.target.value as any)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="live">live</option><option value="sandbox">test</option>
-            </select>
             <Button size="sm" variant="outline" onClick={loadTransactions} disabled={busy}><RefreshCw className="h-3 w-3 mr-1" /> Load</Button>
           </div>
         </div>
-        {txs.length === 0 ? <p className="text-sm text-muted-foreground">No transactions loaded. Click "Load" to fetch from Paddle.</p> : (
+        {txs.length === 0 ? <p className="text-sm text-muted-foreground">No invoices loaded. Click "Load" to fetch from Stripe.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground">
@@ -423,16 +419,16 @@ export default function AdminOrgDetail() {
               </thead>
               <tbody>
                 {txs.map((t) => {
-                  const total = t.details?.totals?.grand_total ? (Number(t.details.totals.grand_total) / 100).toFixed(2) : "—";
-                  const cur = t.details?.totals?.currency_code ?? "";
+                  const total = (t.total_cents / 100).toFixed(2);
+                  const cur = t.currency.toUpperCase();
                   return (
                     <tr key={t.id} className="border-b border-border/50">
-                      <td className="py-2 pr-2 font-mono text-xs break-all">{t.id}</td>
+                      <td className="py-2 pr-2 font-mono text-xs break-all">{t.hosted_invoice_url ? <a className="underline" href={t.hosted_invoice_url} target="_blank" rel="noreferrer">{t.id}</a> : t.id}</td>
                       <td className="py-2 pr-2">{total} {cur}</td>
-                      <td className="py-2 pr-2"><Badge variant={t.status === "completed" ? "default" : "secondary"}>{t.status}</Badge></td>
+                      <td className="py-2 pr-2"><Badge variant={t.status === "paid" ? "default" : "secondary"}>{t.status}</Badge></td>
                       <td className="py-2 pr-2 text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</td>
                       <td className="py-2 text-right">
-                        {t.status === "completed" && (
+                        {t.status === "paid" && t.amount_paid_cents > 0 && (
                           <Button size="sm" variant="outline" className="h-8" disabled={busy} onClick={() => refundTx(t.id)}>
                             <DollarSign className="h-3 w-3 mr-1" /> Refund
                           </Button>
