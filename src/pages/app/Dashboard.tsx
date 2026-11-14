@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Database } from "@/integrations/supabase/types";
 import { TIME_ENTRY_TABLE } from "@/lib/time-clock";
+import { SetupProgressCard } from "@/components/SetupProgressCard";
 
 type Job = Database["public"]["Tables"]["org_jobs"]["Row"] & { customers?: { name: string } | null };
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
@@ -120,6 +121,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader title={`Welcome back, ${firstName}`} description={todayLabel} actions={<Button asChild><Link to="/app/jobs">Open job folders <ArrowRight className="h-4 w-4" /></Link></Button>} />
+      {isAdmin && activeOrg && <SetupProgressCard orgId={activeOrg.organization_id} />}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{workspaceGroups.slice(1).map(g => <Link key={g.to} to={g.to} className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/50"><g.icon className="mb-4 h-5 w-5 text-primary" /><p className="text-sm font-semibold">{g.label}</p><p className="mt-1 text-xs text-muted-foreground">{g.description}</p></Link>)}</div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

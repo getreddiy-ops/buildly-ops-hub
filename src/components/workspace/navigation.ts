@@ -1,7 +1,7 @@
-import { Home, Users, FolderOpen, Wallet, Building2, CalendarDays, FileText, Receipt, Clock3, Boxes, Wrench, Settings, Sparkles, ClipboardCheck, PhoneCall, MessageSquare, TerminalSquare, BadgeDollarSign } from "lucide-react";
+import { Rocket, Home, Users, FolderOpen, Wallet, Building2, CalendarDays, FileText, Receipt, Clock3, Boxes, Wrench, Settings, Sparkles, ClipboardCheck, PhoneCall, MessageSquare, TerminalSquare, BadgeDollarSign } from "lucide-react";
 export const workspaceGroups = [
   { label: "Home", to: "/app", icon: Home, description: "Your day, at a glance", items: [
-    { to: "/app", label: "Overview", icon: Home }, { to: "/app/calendar", label: "Calendar", icon: CalendarDays }, { to: "/app/approvals", label: "Approvals", icon: ClipboardCheck },
+    { to: "/app", label: "Overview", icon: Home }, { to: "/app/calendar", label: "Calendar", icon: CalendarDays }, { to: "/app/approvals", label: "Approvals", icon: ClipboardCheck }, { to: "/app/getting-started", label: "Getting started", icon: Rocket },
   ] },
   { label: "Customers", to: "/app/customers", icon: Users, description: "Relationships & conversations", items: [
     { to: "/app/customers", label: "All customers", icon: Users }, { to: "/app/leads", label: "Leads & follow-up", icon: Sparkles }, { to: "/app/messages", label: "Messages", icon: MessageSquare },

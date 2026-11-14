@@ -91,6 +91,7 @@ import SuperData from "./pages/super/SuperData";
 import SuperLive from "./pages/super/SuperLive";
 import { FieldProfile } from "./pages/stubs";
 import Settings from "./pages/app/Settings";
+import GettingStarted from "./pages/app/GettingStarted";
 import Unsubscribe from "./pages/Unsubscribe";
 import PublicEstimate from "./pages/PublicEstimate";
 import OAuthConsent from "./pages/OAuthConsent";
@@ -148,6 +149,7 @@ const App = () => (
             {import.meta.env.DEV && (
               <Route path="/design-preview" element={<BrandingProvider><AppShell /></BrandingProvider>}>
                 <Route index element={<Dashboard />} />
+                <Route path="getting-started" element={<GettingStarted />} />
               </Route>
             )}
             <Route path="/app" element={<RequireAuth><RequireOrg><RequireOfficeRole><BrandingProvider><AppShell /></BrandingProvider></RequireOfficeRole></RequireOrg></RequireAuth>}>
@@ -178,6 +180,7 @@ const App = () => (
               <Route path="branding" element={<Branding />} />
               <Route path="developer" element={<RequirePlatformAdmin redirectTo="/app/settings"><Developer /></RequirePlatformAdmin>} />
               <Route path="settings" element={<Settings />} />
+              <Route path="getting-started" element={<GettingStarted />} />
             </Route>
 
             <Route path="/field" element={<RequireAuth><RequireOrg><FieldAppShell /></RequireOrg></RequireAuth>}>
