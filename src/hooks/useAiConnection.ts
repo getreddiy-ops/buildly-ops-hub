@@ -21,6 +21,7 @@ export function useAiConnection() {
   const refetch = useCallback(async () => {
     if (!orgId) { setConnection(null); setLoading(false); return; }
     // Table added by the bring-your-own AI migration; typed loosely until types are regenerated.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("org_ai_connections")
       .select("provider,model,key_last4,status,last_error,verified_at")

@@ -1,7 +1,7 @@
 # FastTract standalone launch: consolidate, own the backend, Stripe, bring-your-own AI
 
 Ticket: none yet. This plan is the source of truth until tickets exist.
-Status: **approved by Morgan 2026-11-09**; Phase 1 in progress
+Status: **approved by Morgan 2026-11-09**; code for every phase written. Production deploys are blocked (Vercel Hobby), and Phases 3.0/3.1/3.3/3.4/4.2/6/7.0 wait on Morgan
 
 ## Where things stand (verified 2026-11-09)
 
@@ -280,13 +280,13 @@ Rule: FastTract **reads** what the engineer's drawings specify. It never designs
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 1. One source of truth | 1.1–1.3 done; PR #39 open, `verify` green; awaiting Morgan's merge (merge = production deploy) |
-| 2. Remove GHL, set prices | PR #40 open (stacked on #39) |
-| 3. Own Supabase | not started |
-| 4. Stripe subscriptions | not started |
-| 5. Bring-your-own AI | not started |
+| 1. One source of truth | done: #39 merged (production deploy BLOCKED by Vercel Hobby plan; see record) |
+| 2. Remove GHL, set prices | done: #40 merged; Jobsite theme #41 merged |
+| 3. Own Supabase | project `fasttract` (dtjgwculyctshyccsyne) created; Resend email code in draft #42; schema apply, data import and cutover wait on Morgan |
+| 4. Stripe subscriptions | code in draft #42; Stripe products, keys and webhook wait on Morgan's Stripe account |
+| 5. Bring-your-own AI | code in draft #42; live test needs a real provider key |
 | 6. Launch check | not started |
-| 7. Plan takeoff (after launch) | not started; waiting on Morgan's 3 sample plan sets |
+| 7. Plan takeoff (after launch) | code in draft #43; acceptance test waits on Morgan's 3 sample plan sets |
 
 ## Execution record
 
@@ -321,3 +321,23 @@ Rule: FastTract **reads** what the engineer's drawings specify. It never designs
   - Tests pass (149), the build passes, and pricing shows $197 / $297 / $397.
 - **For Phase 4:** plan names disagree (`sales.ts` says Basic / Pro / Enterprise; `tiers.ts` says FastTract / Plus / Premium). The Paddle price IDs in `tiers.ts` still point at the old products; checkout is paused, so nobody can be charged the old price.
 - **For Phase 3:** the removed GHL functions stay deployed on the Lovable project. The deploy workflow only deploys; it never deletes.
+
+### Morgan said "finish the build autonomously" (2026-11-09, 09:07)
+Read as permission to merge PRs (which deploys) and to make routine calls such as the theme pick (A · Jobsite). Spending money, Stripe live mode and deleting data were still held.
+
+- **#39 merged → production deploy BLOCKED.** Vercel marked the deployment BLOCKED ("team configuration"): the Hobby plan blocks deploys it treats as collaboration, and the merged history now includes Claude-authored commits. Hobby is also non-commercial only. Fix: Vercel Pro (Morgan's decision). History was **not** rewritten to dodge the check. Production still serves the Oct 29 build.
+- **Supabase functions deploy has never worked from CI:** no `SUPABASE_ACCESS_TOKEN` secret (it also failed Oct 12). Lovable deploys the functions today.
+- **#40 and #41 merged.** Theme: Archivo + Inter, warm light ground, charcoal, safety orange #C2410C. Success greens kept.
+- **3.1:** created Supabase project `fasttract` (`dtjgwculyctshyccsyne`, us-west-1, free, $0 quoted). Migrations were **not** applied through the chat connector (316 KB of SQL). The clean path is `deploy-supabase-production.yml` with `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` set for the new project. The migrations need pgmq, pg_cron, pg_net and Vault, so a local dry run wasn't meaningful.
+- **3.2, 4, 5 → draft #42.** Deviations from the plan:
+  - The office app now requires an active plan; the plan hadn't stated this. Billing, settings and profile stay open, and admins always get through.
+  - Comps are keyed by `comp_reference`.
+  - Admin cancel/extend act in Stripe.
+  - Yearly prices were added, because the pricing page already advertised them.
+- **Twilio:** the functions already call Twilio directly when `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` are set, so no code change was needed.
+- **Still on Lovable, not touched:** `src/lib/mcp/*` (the Lovable MCP manifest; the native `mcp` function is separate) and the Lovable OAuth consent path in the README.
+- **7 → draft #43.** Deviation: form lines are **traced by the contractor**, not placed by the AI, because vision models aren't reliable at positions on a drawing. Bolt marks and pour breaks are generated from the trace, with a trace-vs-plan length check. Checks run:
+  - Math: hand-calculated tests.
+  - PDF rendering and the crew PDF: run in a real browser.
+  - Review and markup screens: screenshot-checked with sample data.
+  - Not yet run against a real plan set or a real AI key.
