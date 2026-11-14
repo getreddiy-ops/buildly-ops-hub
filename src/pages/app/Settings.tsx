@@ -4,6 +4,7 @@ import { Building2, CreditCard, FileText, Loader2, LogOut, Mail, Palette, Phone,
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AiConnectionCard } from "@/components/settings/AiConnectionCard";
+import { QuickBooksCard } from "@/components/settings/QuickBooksCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -209,6 +210,7 @@ export default function Settings() {
       </Card>
 
       <AiConnectionCard />
+      <QuickBooksCard />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <SettingsCard

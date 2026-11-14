@@ -76,6 +76,9 @@ needs `SUPABASE_DB_PASSWORD` (project Settings -> Database).
 | `RESEND_WEBHOOK_SECRET` | `handle-email-suppression` | Recommended | Resend -> Webhooks -> endpoint `/functions/v1/handle-email-suppression`, events `email.bounced`, `email.complained`. |
 | `EMAIL_PREVIEW_SECRET` | `preview-transactional-email`, `auth-email-hook/preview` | Optional | Any long random string; lets staff preview email templates. |
 | (none) | AI features | -- | Bring-your-own AI: each business connects its own OpenAI, Anthropic or Google key in Settings -> AI. Keys are stored in Supabase Vault (`org_ai_connections`), never in an env var, and FastTract never pays for customer AI usage. |
+| `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET` | `quickbooks`, `quickbooks-callback` | Required for QuickBooks | developer.intuit.com -> your FastTract app -> Keys & credentials (Production keys for real companies). Add the redirect URI below to the app. |
+| `QUICKBOOKS_ENV` | `quickbooks`, `quickbooks-callback` | Optional | `sandbox` to test against an Intuit sandbox company; anything else is production. |
+| `QUICKBOOKS_REDIRECT_URI` | `quickbooks`, `quickbooks-callback` | Optional | Defaults to `<SUPABASE_URL>/functions/v1/quickbooks-callback`; must match the Intuit app exactly. |
 | `TWILIO_AUTH_TOKEN` | `twilio-voice-webhook` | Required for phone | Twilio Console -> Account -> verifies inbound webhook signatures. |
 | `TWILIO_ACCOUNT_SID` | `phone-assistant-provision`, `send-document`, `fasttract-message` | Required for phone/SMS | Twilio Console -> Account info. With `TWILIO_AUTH_TOKEN`, FastTract calls Twilio directly (the Lovable Twilio gateway is not used off Lovable Cloud). |
 | `ELEVENLABS_API_KEY` | `phone-assistant`, `phone-assistant-token` | Required for phone | ElevenLabs Voice AI agent (Premium tier). |

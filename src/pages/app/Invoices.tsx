@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { SendDocumentDialog } from "@/components/SendDocumentDialog";
 import { QuickCreateCustomerButton } from "@/components/QuickCreateCustomerButton";
 import { toLocalDateInputValue } from "@/lib/local-date";
+import { autoSyncQuickBooks, syncToQuickBooks } from "@/lib/quickbooks";
 
 type LineItem = InvoiceLine;
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
@@ -109,6 +110,10 @@ export default function Invoices() {
   };
 
   useEffect(() => { load(); }, [activeOrg?.organization_id]);
+  // Office users catch QuickBooks up (payments from Stripe, status changes) when they open invoices.
+  useEffect(() => {
+    if (activeOrg && (activeOrg.role === "owner" || activeOrg.role === "admin")) autoSyncQuickBooks(activeOrg.organization_id);
+  }, [activeOrg]);
 
   const resetForm = () => {
     setNumber(""); setCustomerId(""); setStatus("draft");
@@ -186,6 +191,8 @@ export default function Invoices() {
     setSaving(false);
     if (liErr) return toast.error(liErr.message);
     toast.success(editing ? "Invoice updated" : "Invoice created");
+    // Sent/paid/void invoices are copied to QuickBooks when the business has it connected.
+    if (status !== "draft") void syncToQuickBooks(activeOrg.organization_id, [invoiceId]);
     setOpen(false);
     load();
   };
