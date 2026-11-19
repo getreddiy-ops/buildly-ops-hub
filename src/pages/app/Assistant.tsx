@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, Check, Download, FileText, ImagePlus, Loader2, Mic, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, Check, Download, FileText, ImagePlus, Loader2, Mic, Search, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
 import { generateDocumentPdf, type DocArgs } from "@/lib/generateDocumentPdf";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -15,19 +15,36 @@ import { toast } from "sonner";
 
 type ToolCall = { id: string; name: string; args: any; needsApproval: boolean };
 type ProposalStatus = "pending" | "approved" | "rejected" | "executing" | "error";
-type Proposal = ToolCall & { status: ProposalStatus; error?: string; organizationId: string; userId: string };
+type Proposal = ToolCall & { status: ProposalStatus; error?: string; result?: string; organizationId: string; userId: string };
+type AgentStep = { name: string; summary: string };
 
 type DocAttachment = { id: string; filename: string; url: string; docType: string; title: string };
 
 type RecordSource = { label: string; path: string; available: boolean; shown: number; total: number | null; truncated: boolean; asOf: string };
 
 type Msg =
-  | { role: "user"; content: string; images?: string[] }
-  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[]; sources?: RecordSource[] };
+  | { role: "user"; content: string; images?: string[]; hidden?: boolean }
+  | { role: "assistant"; content: string; proposals?: Proposal[]; documents?: DocAttachment[]; sources?: RecordSource[]; steps?: AgentStep[] };
+
+// After the user finishes approving/rejecting an agent's proposals, the results are sent back
+// (as a hidden message) so the agent can carry on with any remaining steps of the request.
+function approvalResultsNote(proposals: Proposal[]): string {
+  const lines = proposals.map((p) => {
+    const title = TITLES[p.name] ?? p.name;
+    if (p.status === "approved") return `- ${title}: APPLIED${p.result ? ` — ${p.result}` : ""}`;
+    if (p.status === "rejected") return `- ${title}: REJECTED by the user — do not retry it unless asked`;
+    return `- ${title}: FAILED — ${p.error ?? "unknown error"}`;
+  });
+  return [
+    "Approval results (sent automatically by the app):",
+    ...lines,
+    "Continue my original request if steps remain (look up anything you need, then propose the next changes). If everything is done, reply with a one-line wrap-up.",
+  ].join("\n");
+}
 
 const SUGGESTIONS = [
   "Give me a briefing from my recent jobs, estimates, and invoices.",
-  "Which of my recent invoices still need payment?",
+  "Who owes me money right now, and how overdue are they?",
   "Help me draft an estimate using my business pricing rules.",
   "Help me add a customer and schedule their job.",
 ];
@@ -58,6 +75,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
   const alive = useRef(true);
   const sending = useRef(false);
   const applying = useRef(new Set<string>());
+  const continued = useRef(new Set<number>());
   const documentUrls = useRef<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -103,18 +121,21 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
     }
   };
 
-  const send = async (text?: string) => {
+  const send = async (text?: string, opts: { hidden?: boolean } = {}) => {
+    const hidden = !!opts.hidden;
     const content = (text ?? input).trim();
-    const images = pendingImages;
+    const images = hidden ? [] : pendingImages;
     if ((!content && images.length === 0) || sending.current) return;
     if (!activeOrg?.organization_id || !user) return toast.error("Choose a company before using Ask AI.");
-    if (!images.length && onNavigate?.(content)) return;
+    if (!hidden && !images.length && onNavigate?.(content)) return;
     sending.current = true;
-    setInput("");
-    setPendingImages([]);
+    if (!hidden) {
+      setInput("");
+      setPendingImages([]);
+    }
     const next: Msg[] = [
       ...messages,
-      { role: "user", content: content || "(image attached)", images: images.length ? images : undefined },
+      { role: "user", content: content || "(image attached)", images: images.length ? images : undefined, hidden: hidden || undefined },
     ];
     setMessages(next);
     setLoading(true);
@@ -201,7 +222,8 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           : proposals.length
           ? `I drafted ${proposals.length} action${proposals.length > 1 ? "s" : ""} for your approval below.`
           : "Done.");
-      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents, sources: data.sources }]);
+      const steps = Array.isArray(data.steps) ? (data.steps as AgentStep[]) : undefined;
+      setMessages((m) => [...m, { role: "assistant", content: assistantText, proposals, documents, sources: data.sources, steps }]);
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
       if (!alive.current) return;
@@ -223,6 +245,25 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
       if (alive.current) setLoading(false);
     }
   };
+
+  // Agent continuation: once every proposal in the latest batch is settled and at least one was
+  // applied, hand the results back so the agent can take the next step (e.g. schedule the job
+  // for the customer that was just created). Stops if the user has typed something since.
+  useEffect(() => {
+    if (loading || sending.current) return;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "user") return;
+      if (!m.proposals?.length) continue;
+      if (continued.current.has(i)) return;
+      if (m.proposals.some((p) => p.status === "pending" || p.status === "executing")) return;
+      if (!m.proposals.some((p) => p.status === "approved")) return;
+      continued.current.add(i);
+      void send(approvalResultsNote(m.proposals), { hidden: true });
+      return;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `send` is recreated every render; messages/loading drive this
+  }, [messages, loading]);
 
   const updateProposal = (msgIdx: number, propId: string, patch: Partial<Proposal>) => {
     setMessages((all) =>
@@ -413,7 +454,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
       });
 
       if (!alive.current) return;
-      updateProposal(msgIdx, p.id, { status: "approved" });
+      updateProposal(msgIdx, p.id, { status: "approved", result: resultLabel });
       setMessages(current => [...current, { role: "assistant", content: resultLabel + "." }]);
       toast.success(resultLabel);
     } catch (e: any) {
@@ -450,7 +491,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
               <Sparkles className="h-5 w-5" />
               <h3 className="font-semibold">What are we getting done today?</h3>
             </div>
-            <p className="text-sm text-muted-foreground">Ask about recent business records, draft an estimate, or schedule a job. You review every change before it is applied.</p>
+            <p className="text-sm text-muted-foreground">Ask about any customer, job, estimate, or invoice — the assistant looks things up itself and can handle multi-step requests. You review every change before it is applied.</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((s) => (
                 <button
@@ -465,7 +506,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
           </Card>
         )}
 
-        {messages.map((m, i) => (
+        {messages.map((m, i) => m.role === "user" && m.hidden ? null : (
           <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
             {m.role === "assistant" && (
               <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
@@ -473,6 +514,15 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
               </div>
             )}
             <div className={`max-w-[85%] space-y-3 ${m.role === "user" ? "" : "flex-1"}`}>
+              {m.role === "assistant" && m.steps?.length ? (
+                <ul aria-label="Agent steps" className="space-y-1 text-xs text-muted-foreground">
+                  {m.steps.map((step, idx) => (
+                    <li key={idx} className="flex items-center gap-1.5">
+                      <Search className="h-3 w-3 shrink-0" /> {step.summary}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <div className={`rounded-lg px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                 {m.role === "assistant" ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -546,7 +596,7 @@ function AssistantSession({ compact = false, onNavigate }: AssistantProps) {
               <Bot className="h-4 w-4 text-primary" />
             </div>
             <div className="rounded-lg px-4 py-3 bg-muted flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Thinking…
+              <Loader2 className="h-4 w-4 animate-spin" /> Working on it…
             </div>
           </div>
         )}

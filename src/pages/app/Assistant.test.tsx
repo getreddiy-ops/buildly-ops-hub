@@ -86,3 +86,42 @@ it('refuses an ambiguous customer match before scheduling a job', async()=>{
  expect(mocks.from).toHaveBeenCalledTimes(1);
  expect(mocks.from).toHaveBeenCalledWith('customers');
 });
+describe('Ask AI agent mode',()=>{
+ it('shows the lookups the agent ran on its own',async()=>{
+  mocks.invoke.mockResolvedValue({data:{content:'Dana owes $750.',tool_calls:[],steps:[{name:'find_customers',summary:'Searched customers matching "Dana" — 1 found'},{name:'find_invoices',summary:'Searched unpaid invoices — 1 found'}]},error:null});
+  render(<Assistant/>);send();
+  await screen.findByText('Dana owes $750.');
+  const steps=screen.getByRole('list',{name:'Agent steps'});
+  expect(steps).toHaveTextContent('Searched customers matching "Dana" — 1 found');
+  expect(steps).toHaveTextContent('Searched unpaid invoices — 1 found');
+ });
+ it('hands approval results back so the agent can take the next step',async()=>{
+  mocks.invoke
+   .mockResolvedValueOnce({data:{content:'First I need to add the customer.',tool_calls:[{id:'p1',name:'create_customer',args:{name:'Dana Smith'},needsApproval:true}]},error:null})
+   .mockResolvedValueOnce({data:{content:'Now the job.',tool_calls:[{id:'p2',name:'schedule_job',args:{customer_name:'Dana Smith',title:'Patio'},needsApproval:true}]},error:null});
+  const insert=vi.fn().mockResolvedValue({error:null});
+  mocks.from.mockReturnValue({insert});
+  render(<Assistant/>);send();
+  fireEvent.click(await screen.findByRole('button',{name:'Approve & apply'}));
+  await screen.findByText('Now the job.');
+  expect(mocks.invoke).toHaveBeenCalledTimes(2);
+  const sent=mocks.invoke.mock.calls[1][1].body.messages;
+  const last=sent[sent.length-1];
+  expect(last.role).toBe('user');
+  expect(last.content).toMatch(/Approval results[\s\S]*Create customer: APPLIED — Customer "Dana Smith" created/);
+  // The internal results note is not shown as a chat bubble.
+  expect(screen.queryByText(/Approval results/)).not.toBeInTheDocument();
+  // Exactly one continuation per batch.
+  await new Promise(r=>setTimeout(r,20));
+  expect(mocks.invoke).toHaveBeenCalledTimes(2);
+ });
+ it('does not continue when every proposal was rejected',async()=>{
+  mocks.invoke.mockResolvedValueOnce({data:{content:'Proposed.',tool_calls:[{id:'p1',name:'create_lead',args:{name:'X'}, needsApproval:true}]},error:null});
+  mocks.from.mockReturnValue({insert:vi.fn().mockResolvedValue({error:null})});
+  render(<Assistant/>);send();
+  fireEvent.click(await screen.findByRole('button',{name:'Reject'}));
+  await screen.findByText('Rejected');
+  await new Promise(r=>setTimeout(r,20));
+  expect(mocks.invoke).toHaveBeenCalledTimes(1);
+ });
+});
