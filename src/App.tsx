@@ -20,6 +20,7 @@ import Demo from "./pages/Demo";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Signup from "./pages/Signup";
+import JoinTeam from "./pages/JoinTeam";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
@@ -119,6 +120,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/join" element={<JoinTeam />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
             {import.meta.env.DEV && <Route path="/onboarding-preview" element={<Onboarding />} />}
             <Route path="/legal/privacy" element={<Privacy />} />
