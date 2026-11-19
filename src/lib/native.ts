@@ -4,6 +4,6 @@ export const isNativeApp = () => Capacitor.isNativePlatform();
 
 // Email links open in the system browser. Never send capacitor://localhost to
 // the authentication service as a public email callback.
-export function authEmailRedirect(path: "/onboarding" | "/reset-password") {
+export function authEmailRedirect(path: "/onboarding" | "/reset-password" | `/join?invite=${string}`) {
   return `${isNativeApp() ? "https://fasttract-app.vercel.app" : window.location.origin}${path}`;
 }
