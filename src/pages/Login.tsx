@@ -40,7 +40,7 @@ export default function Login() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: authEmailRedirect("/onboarding") },
+      options: { emailRedirectTo: authEmailRedirect(nextPath?.startsWith("/join?invite=") ? nextPath : "/onboarding") },
     });
     setResending(false);
     if (error) {
@@ -196,7 +196,7 @@ export default function Login() {
           )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            No account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
+            No account? <Link to={nextPath?.startsWith("/join?invite=") ? `/signup${nextPath.slice("/join".length)}` : "/signup"} className="text-primary hover:underline">Sign up</Link>
           </p>
           {isNativeApp() && <p className="mt-3 text-center text-xs text-muted-foreground">Email confirmation and password reset open in your browser. After completing them, return here to sign in.</p>}
           <p className="mt-3 text-center text-xs"><Link to="/account" className="underline">Account & privacy</Link></p>
