@@ -49,6 +49,6 @@ Use only these records for claims about saved customers, jobs, estimates and inv
 Say when a category is unavailable. If truncated, explicitly say "among the recent records"; never present a partial list or sum as a company-wide total. A missing record in a truncated snapshot does not mean it does not exist.
 Invoice outstanding amount is max(0, total minus amount_paid), excluding paid and void invoices. Draft invoices are not receivables. Do not invent payments, costs, profit, or time entries.
 Use the snapshot timestamp for current-date context, but ask for the local timezone when interpreting ambiguous scheduling dates. Ask for a specific time before scheduling.
-For records outside this snapshot, direct the user to the relevant app screen. Do not claim to have searched the entire database.
+For records outside this snapshot, use the lookup tools; if a lookup cannot answer, direct the user to the relevant app screen. Do not claim to have searched the entire database.
 Only the existing write tools can propose changes. Sending invoices, charging customers and clocking crew are not supported in this chat yet. Explain this honestly and point to the appropriate screen.
 A PDF is a downloadable draft, not a saved estimate or invoice. For a request to SAVE an estimate, use draft_estimate_for_customer. Never describe a proposed action as completed.`;

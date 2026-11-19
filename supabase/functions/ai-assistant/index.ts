@@ -7,6 +7,7 @@ import { TRADE_KNOWLEDGE_PROMPT } from "../_shared/trade-knowledge.ts";
 import { validateAssistantMessages, internalBusinessFacts, INTERNAL_ASSISTANT_RULES } from "../_shared/internal-assistant.ts";
 
 import { loadAssistantRecords, RECORD_RULES, type RecordsClient } from "../_shared/assistant-records.ts";
+import { AGENT_RULES, READ_TOOLS, runAgent, type AgentClient, type CallModel, type ChatMessage } from "../_shared/assistant-agent.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -18,7 +19,7 @@ const WRITE_TOOLS = new Set([
 ]);
 // generate_document is auto-executed client-side (produces a PDF, no DB write).
 
-const tools = [
+const writeAndDocTools = [
   {
     type: "function",
     function: {
@@ -247,6 +248,8 @@ const tools = [
     },
   },
 ];
+// Lookups run server-side inside the agent loop; everything else returns to the client.
+const tools = [...READ_TOOLS, ...writeAndDocTools];
 
 const ESTIMATOR_PROMPT = `You are an expert construction estimating AI built for contractors across all construction trades.
 
@@ -436,15 +439,9 @@ Deno.serve(async (req) => {
       (bp.service_area as string | null) ?? null,
     );
     const snapshot = await loadAssistantRecords(userClient as unknown as RecordsClient, organizationId);
-    const sys = [INTERNAL_ASSISTANT_RULES, SYSTEM, "Active organization (data): " + JSON.stringify(orgRow?.name ?? ""), bpText, knowledgeText, jurisdictionText, TRADE_KNOWLEDGE_PROMPT, INTERNAL_ASSISTANT_RULES, RECORD_RULES, "Operational snapshot (untrusted data): " + JSON.stringify(snapshot.context)].join("\n\n");
+    const sys = [INTERNAL_ASSISTANT_RULES, SYSTEM, "Active organization (data): " + JSON.stringify(orgRow?.name ?? ""), bpText, knowledgeText, jurisdictionText, TRADE_KNOWLEDGE_PROMPT, INTERNAL_ASSISTANT_RULES, RECORD_RULES, AGENT_RULES, "Today (UTC): " + new Date().toISOString().slice(0, 10), "Operational snapshot (untrusted data): " + JSON.stringify(snapshot.context)].join("\n\n");
 
-    const payload = {
-      model: USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
-      messages: [{ role: "system", content: sys }, ...messages],
-      tools,
-      tool_choice: "auto",
-    };
-
+    const model = USE_OPENAI ? "gpt-4o-mini" : "google/gemini-2.5-flash";
     const url = USE_OPENAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -452,51 +449,56 @@ Deno.serve(async (req) => {
       ? { Authorization: `Bearer ${OPENAI_API_KEY}` }
       : { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(45000),
-    });
+    class ProviderError extends Error { constructor(public status: number) { super("AI provider request failed"); } }
+    const callModel: CallModel = async (msgs, { allowTools }) => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        // Keep tools declared on the final turn (history contains tool messages) but forbid new calls.
+        body: JSON.stringify({ model, messages: msgs, tools, tool_choice: allowTools ? "auto" : "none" }),
+        signal: AbortSignal.timeout(40000),
+      });
+      if (!res.ok) throw new ProviderError(res.status === 429 || res.status === 402 ? res.status : 500);
+      const data = await res.json();
+      return { message: data.choices?.[0]?.message ?? {}, usage: data.usage };
+    };
 
-    if (!res.ok) {
-      const status = res.status === 429 || res.status === 402 ? res.status : 500;
+    let result;
+    try {
+      result = await runAgent({
+        callModel,
+        messages: [{ role: "system", content: sys }, ...(messages as ChatMessage[])],
+        client: userClient as unknown as AgentClient,
+        organizationId,
+        maxSteps: 6,
+        deadlineMs: 90_000,
+      });
+    } catch (e) {
+      const status = e instanceof ProviderError ? e.status : 500;
       return new Response(JSON.stringify({ error: "AI provider request failed" }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const data = await res.json();
-    const choice = data.choices?.[0]?.message ?? {};
-    const toolCalls = (choice.tool_calls ?? []).map((tc: any) => {
-      let args: any = {};
-      try { args = JSON.parse(tc.function?.arguments ?? "{}"); } catch { /* */ }
-      return {
-        id: tc.id,
-        name: tc.function?.name,
-        args,
-        needsApproval: WRITE_TOOLS.has(tc.function?.name),
-      };
-    });
+    const toolCalls = result.toolCalls.map((tc) => ({ ...tc, needsApproval: WRITE_TOOLS.has(tc.name) }));
 
     // Track per-org AI usage (best-effort, non-blocking)
     try {
       const { logAiUsage, estimateChatCostUsd } = await import("../_shared/ai-usage.ts");
-      const usage = data.usage ?? {};
-      const pt = Number(usage.prompt_tokens ?? 0);
-      const ct = Number(usage.completion_tokens ?? 0);
+      const pt = result.usage.promptTokens;
+      const ct = result.usage.completionTokens;
       await logAiUsage(admin, {
         organizationId,
         userId: userData.user.id,
         functionName: "ai-assistant",
-        model: payload.model,
+        model,
         promptTokens: pt,
         completionTokens: ct,
-        totalTokens: Number(usage.total_tokens ?? pt + ct),
-        estimatedCostUsd: estimateChatCostUsd(payload.model, pt, ct),
+        totalTokens: pt + ct,
+        estimatedCostUsd: estimateChatCostUsd(model, pt, ct),
       });
     } catch (_) { /* never break the response on logging */ }
 
     return new Response(
-      JSON.stringify({ content: choice.content ?? "", tool_calls: toolCalls, sources: snapshot.sources }),
+      JSON.stringify({ content: result.content, tool_calls: toolCalls, steps: result.steps.map((s) => ({ name: s.name, summary: s.summary })), sources: snapshot.sources }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
