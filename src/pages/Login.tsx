@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolvePostLoginRoute, safeNextPath } from "@/lib/post-login-route";
-import { authEmailRedirect, isNativeApp } from "@/lib/native";
+import { authEmailRedirect, isJoinInvitePath, isNativeApp } from "@/lib/native";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function Login() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: authEmailRedirect(nextPath?.startsWith("/join?invite=") ? nextPath : "/onboarding") },
+      options: { emailRedirectTo: authEmailRedirect(isJoinInvitePath(nextPath) ? nextPath : "/onboarding") },
     });
     setResending(false);
     if (error) {

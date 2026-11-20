@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { trackSignup } from "@/lib/gtag";
-import { authEmailRedirect, isNativeApp } from "@/lib/native";
+import { authEmailRedirect, isNativeApp, type JoinInvitePath } from "@/lib/native";
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
@@ -21,7 +21,7 @@ async function sha256Hex(input: string) {
 export default function Signup() {
   const navigate = useNavigate();
   const inviteToken = new URLSearchParams(window.location.search).get("invite");
-  const destination = inviteToken ? `/join?invite=${encodeURIComponent(inviteToken)}` : "/onboarding";
+  const destination: JoinInvitePath | "/onboarding" = inviteToken ? `/join?invite=${encodeURIComponent(inviteToken)}` : "/onboarding";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
