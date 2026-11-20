@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { trackSignup } from "@/lib/gtag";
-import { authEmailRedirect, isNativeApp } from "@/lib/native";
+import { authEmailRedirect, isNativeApp, type JoinInvitePath } from "@/lib/native";
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
@@ -21,6 +21,7 @@ async function sha256Hex(input: string) {
 export default function Signup() {
   const navigate = useNavigate();
   const inviteToken = new URLSearchParams(window.location.search).get("invite");
+  const destination: JoinInvitePath | "/onboarding" = inviteToken ? `/join?invite=${encodeURIComponent(inviteToken)}` : "/onboarding";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,7 +55,7 @@ export default function Signup() {
           full_name: fullName,
           ...(inviteTokenHash ? { invite_token_hash: inviteTokenHash } : {}),
         },
-        emailRedirectTo: authEmailRedirect("/onboarding"),
+        emailRedirectTo: authEmailRedirect(destination),
       },
     });
     setLoading(false);
@@ -78,7 +79,7 @@ export default function Signup() {
       title: "Account created",
       description: inviteToken ? "Your team access is ready." : "Next, set up your company workspace.",
     });
-    navigate("/onboarding");
+    navigate(destination);
   };
 
   const handleResend = async () => {
@@ -172,7 +173,7 @@ export default function Signup() {
                 </p>
               )}
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                Already have one? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+                Already have one? <Link to={inviteToken ? `/login?next=${encodeURIComponent(destination)}` : "/login"} className="text-primary hover:underline">Sign in</Link>
               </p>
             </>
           )}

@@ -1770,6 +1770,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { invite_token: string }; Returns: string }
       record_manual_job_time: {
         Args: { p_entry_id: string; p_organization_id: string; p_user_id: string; p_job_id: string; p_clock_in: string; p_clock_out: string; p_note?: string | null }
         Returns: string
